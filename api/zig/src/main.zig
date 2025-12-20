@@ -57,7 +57,7 @@ fn extractPalette(ctx: *tk.Context, allocator: std.mem.Allocator) anyerror!void 
     const result = palette_api.handleExtractPalette(allocator, body) catch |err| {
         ctx.res.status = 400;
         ctx.res.body = switch (err) {
-            error.InvalidContentType => "{\"error\":\"Invalid content type, expected multipart/form-data\"}",
+            error.InvalidContentType => "{\"error\":\"Invalid content type, expected multipart/form-data  \"}",
             error.NoImageProvided => "{\"error\":\"No image file provided in request\"}",
             error.NotAnImage => "{\"error\":\"Could not decode image - unsupported format\"}",
             error.NoColors => "{\"error\":\"No colors found in image\"}",

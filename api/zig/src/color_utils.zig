@@ -272,6 +272,52 @@ pub fn isDarkColor(hex: []const u8) bool {
     return isDarkColorFromRgb(rgb);
 }
 
+/// Rules for reducing saturation/brightness
+const VibrancyRule = struct {
+    min_s: f32,
+    min_l: f32,
+    max_l: ?f32 = null,
+
+    target_l_min: f32,
+    target_l_max: f32,
+
+    s_min_mul: f32,
+    s_max_mul: f32,
+
+    ease_range: f32,
+};
+
+/// Desired rules
+const dark_bg_rules = [_]VibrancyRule{
+    .{
+        .min_s = 0.6,
+        .min_l = 0.55,
+        .max_l = null,
+        .target_l_min = 0.52,
+        .target_l_max = 0.65,
+        .s_min_mul = 0.85,
+        .s_max_mul = 0.70,
+        .ease_range = 0.35,
+    },
+};
+
+const light_bg_rules = [_]VibrancyRule{
+    .{
+        .min_s = 0.8,
+        .min_l = 0.4,
+        .max_l = 0.6,
+        .target_l_min = 0.4,
+        .target_l_max = 0.6,
+        .s_min_mul = 0.7,
+        .s_max_mul = 0.7,
+        .ease_range = 0.2,
+    },
+};
+
+inline fn easeOut(t: f32) f32 {
+    return 1.0 - (1.0 - t) * (1.0 - t);
+}
+
 /// Adjusts a foreground color to meet minimum contrast ratio against a background.
 /// First reduces saturation/brightness of overly vibrant colors, then iteratively
 /// lightens or darkens until min_contrast is met.
@@ -280,27 +326,35 @@ pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []co
     var iterations: u32 = 0;
     const dark_bg = isDarkColor(bg);
 
-    const hsl = hexToHsl(color);
-    if (dark_bg) {
-        if (hsl.s > 0.6 and hsl.l > 0.55) {
-            const new_l = 0.48 + (hsl.l - 0.55) * 0.3;
-            const new_s = @min(hsl.s, 0.75);
-            const rgb = hslToRgb(hsl.h, new_s, new_l);
-            color = rgbToHex(rgb.r, rgb.g, rgb.b);
-        } else if (hsl.s > 0.75 and hsl.l > 0.45) {
-            const new_l = hsl.l * 0.92;
-            const new_s = hsl.s * 0.85;
-            const rgb = hslToRgb(hsl.h, new_s, new_l);
-            color = rgbToHex(rgb.r, rgb.g, rgb.b);
+    const rules = if (dark_bg) &dark_bg_rules else &light_bg_rules;
+    const initial_hsl = hexToHsl(color);
+    for (rules) |rule| {
+        if (initial_hsl.s <= rule.min_s) continue;
+        if (initial_hsl.l <= rule.min_l) continue;
+        if (rule.max_l) |max_l| {
+            if (initial_hsl.l >= max_l) continue;
         }
-    } else if (!dark_bg and hsl.s > 0.8 and hsl.l > 0.4 and hsl.l < 0.6) {
-        const new_s = hsl.s * 0.7;
-        const rgb = hslToRgb(hsl.h, new_s, hsl.l);
+
+        const t_raw = (initial_hsl.l - rule.min_l) / rule.ease_range;
+        const t = @min(@max(t_raw, 0.0), 1.0);
+        const eased = easeOut(t);
+
+        const new_l = rule.target_l_min +
+            eased * (rule.target_l_max - rule.target_l_min);
+
+        const s_mul = rule.s_min_mul +
+            eased * (rule.s_max_mul - rule.s_min_mul);
+
+        const new_s = initial_hsl.s * s_mul;
+
+        const rgb = hslToRgb(initial_hsl.h, new_s, new_l);
         color = rgbToHex(rgb.r, rgb.g, rgb.b);
+        break;
     }
 
     while (contrastRatio(color, bg) < min_contrast and iterations < 20) : (iterations += 1) {
-        color = if (dark_bg) lightenColor(color, 0.1) else darkenColor(color, 0.1);
+        const step: f32 = if (iterations < 4) 0.12 else 0.06;
+        color = if (dark_bg) lightenColor(color, step) else darkenColor(color, step);
     }
 
     return color;

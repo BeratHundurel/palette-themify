@@ -9,9 +9,6 @@ const ZedThemeEntry = types.ZedThemeEntry;
 const ZedSyntax = types.ZedSyntax;
 const SyntaxStyle = types.SyntaxStyle;
 const Player = types.Player;
-const Appearance = types.Appearance;
-const BackgroundAppearance = types.BackgroundAppearance;
-const FontStyle = types.FontStyle;
 
 pub fn generateZedTheme(
     allocator: std.mem.Allocator,
@@ -66,8 +63,8 @@ pub fn generateZedTheme(
     const fg_66 = color_utils.addAlpha(foreground, "66");
     const fg_80 = color_utils.addAlpha(foreground, "80");
 
-    const c1 = color_utils.adjustForContrast(c1_raw, bg_very_dark, 3.5);
-    const c2 = color_utils.adjustForContrast(c2_raw, bg_very_dark, 3.5);
+    const c1 = color_utils.adjustForContrast(c1_raw, background, 3.5);
+    const c2 = color_utils.adjustForContrast(c2_raw, background, 3.5);
 
     const numbers_raw = color_utils.getHarmonicColor(c2, .complementary);
     const numbers = color_utils.adjustForContrast(numbers_raw, background, 3.5);
@@ -102,7 +99,6 @@ pub fn generateZedTheme(
     const accent_bright = if (dark_base) color_utils.lightenColor(c2, 0.33) else color_utils.darkenColor(c2, 0.33);
 
     const accents = try allocator.alloc([]const u8, 8);
-    accents[7] = c1;
     accents[0] = c2;
     accents[1] = c3;
     accents[2] = c4;
@@ -110,6 +106,7 @@ pub fn generateZedTheme(
     accents[4] = c6;
     accents[5] = c7;
     accents[6] = c8;
+    accents[7] = c1;
 
     const players = try allocator.alloc(Player, 8);
     players[0] = .{ .cursor = foreground, .selection = fg_40, .background = foreground };

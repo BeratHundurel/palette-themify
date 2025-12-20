@@ -1,7 +1,7 @@
 const std = @import("std");
-const types = @import("vscode_types.zig");
-const color_utils = @import("color_utils.zig");
 
+const color_utils = @import("color_utils.zig");
+const types = @import("vscode_types.zig");
 pub const VSCodeTheme = types.VSCodeTheme;
 pub const VSCodeThemeColors = types.VSCodeThemeColors;
 pub const VSCodeTokenColor = types.VSCodeTokenColor;

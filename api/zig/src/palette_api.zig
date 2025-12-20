@@ -171,6 +171,7 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
 
     const req = parsed.value;
 
+    //TODO: We need to make sure that we always working with 10+ colors using harmony genreator
     if (req.colors.len < 5) {
         return error.NotEnoughColors;
     }
