@@ -20,7 +20,7 @@
 	import { tick } from 'svelte';
 	import Search from '$lib/components/search/Search.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import ThemeExportPopover from '$lib/theme/components/ThemeExportPopover.svelte';
+	import ThemeExportPopover from '$lib/components/toolbar/popovers/ThemeExportPopover.svelte';
 
 	let showAuthModal = $state(false);
 
