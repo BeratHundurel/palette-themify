@@ -227,7 +227,7 @@
 				<button
 					type="button"
 					onclick={() => popoverStore.close('themeExport')}
-					class="hover:text-brand rounded-md p-2 text-zinc-400 transition-colors hover:bg-zinc-800"
+					class="hover:text-brand rounded-lg p-2 text-zinc-400 transition-all duration-300 hover:bg-zinc-800/50"
 					aria-label="Close"
 				>
 					<svg
@@ -249,18 +249,18 @@
 
 			<div class="custom-scrollbar flex-1 overflow-y-auto px-6 py-6">
 				<div class="mb-8">
-					<div class="mb-4 flex items-center gap-2">
+					<div class="mb-6 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Editor Type</h3>
 						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
 					</div>
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-2 gap-6">
 						<button
 							type="button"
 							onclick={() => handleEditorTypeChange('vscode')}
 							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-all duration-300 {editorType ===
 							'vscode'
 								? 'border-brand bg-brand/10 shadow-brand/20 shadow-lg'
-								: 'border-zinc-600 hover:border-zinc-500 hover:bg-zinc-800/50'}"
+								: 'hover:border-brand/50 border-zinc-600 hover:bg-zinc-800/50'}"
 						>
 							<div class="flex items-center gap-2">
 								<div
@@ -273,7 +273,7 @@
 										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
 									{/if}
 								</div>
-								<span class="text-sm font-semibold {editorType === 'vscode' ? 'text-brand' : 'text-zinc-200'}"
+								<span class="text-sm font-medium {editorType === 'vscode' ? 'text-brand' : 'text-zinc-200'}"
 									>VS Code</span
 								>
 							</div>
@@ -286,7 +286,7 @@
 							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-all duration-300 {editorType ===
 							'zed'
 								? 'border-brand bg-brand/10 shadow-brand/20 shadow-lg'
-								: 'border-zinc-600 hover:border-zinc-500 hover:bg-zinc-800/50'}"
+								: 'hover:border-brand/50 border-zinc-600 hover:bg-zinc-800/50'}"
 						>
 							<div class="flex items-center gap-2">
 								<div
@@ -299,7 +299,7 @@
 										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
 									{/if}
 								</div>
-								<span class="text-sm font-semibold {editorType === 'zed' ? 'text-brand' : 'text-zinc-200'}">Zed</span>
+								<span class="text-sm font-medium {editorType === 'zed' ? 'text-brand' : 'text-zinc-200'}">Zed</span>
 							</div>
 							<p class="mt-1.5 ml-7 text-xs text-zinc-400">Generate theme for Zed editor</p>
 						</button>
@@ -319,7 +319,7 @@
 						{#each sortedThemeColors as item, index (item.baseColor)}
 							<div
 								class={cn(
-									'group hover:border-brand/30 hover:shadow-brand/10 overflow-hidden rounded-xl border-2 border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm transition-all duration-300',
+									'group hover:border-brand/50 hover:shadow-brand/10 overflow-hidden rounded-xl border-2 border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm transition-all duration-300',
 									isExpanded(index) && 'border-brand/50 shadow-brand/20 shadow-lg'
 								)}
 							>
@@ -329,7 +329,7 @@
 										expandedColorIndices.has(index)
 											? expandedColorIndices.delete(index)
 											: expandedColorIndices.add(index)}
-									class="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-zinc-800/20"
+									class="flex w-full items-center gap-4 p-4 text-left transition-all duration-300 hover:bg-zinc-800/50"
 								>
 									<div class="relative">
 										<div
@@ -343,8 +343,8 @@
 										</div>
 									</div>
 									<div class="min-w-0 flex-1">
-										<div class="flex items-center gap-3">
-											<div class="font-mono text-sm font-bold text-zinc-100">
+										<div class="flex items-center gap-4">
+											<div class="font-mono text-sm font-semibold text-zinc-100">
 												{item.baseColor}
 											</div>
 											<div class="flex gap-2">
@@ -390,7 +390,7 @@
 										</div>
 										<div class="space-y-3">
 											{#each item.variants as variant, variantIndex (variantIndex)}
-												<div class="rounded-lg border border-zinc-700/50 bg-zinc-800/50 p-3">
+												<div class="rounded-lg border border-zinc-700/50 bg-zinc-800/30 p-3">
 													<div class="mb-3 flex items-center gap-3">
 														<div class="relative">
 															<div
@@ -406,7 +406,7 @@
 															{/if}
 														</div>
 														<div class="min-w-0 flex-1">
-															<div class="font-mono text-sm font-semibold text-zinc-200">
+															<div class="font-mono text-sm font-medium text-zinc-200">
 																{variant.color}
 															</div>
 															<div class="mt-0.5 text-xs text-zinc-400">
@@ -415,7 +415,7 @@
 														</div>
 														<div class="text-right">
 															<div class="text-xs text-zinc-500">Frequency</div>
-															<div class="text-brand mt-0.5 text-sm font-bold">
+															<div class="text-brand mt-0.5 text-sm font-semibold">
 																{Math.round((variant.usages.length / item.totalUsages) * 100)}%
 															</div>
 														</div>
@@ -445,7 +445,7 @@
 																		<button
 																			type="button"
 																			onclick={() => copyUsagePath(usage)}
-																			class="opacity-0 transition-opacity group-hover:opacity-100"
+																			class="hover:text-brand rounded p-1 text-zinc-500 opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-zinc-800/50"
 																			title="Copy path"
 																		>
 																			<svg
@@ -480,11 +480,11 @@
 				</div>
 
 				<div>
-					<div class="mb-4 flex items-center gap-2">
+					<div class="mb-6 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme JSON Preview</h3>
 						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
 					</div>
-					<div class="rounded-lg border border-zinc-700 bg-zinc-950/50">
+					<div class="rounded-lg border border-zinc-700/50 bg-zinc-950/50">
 						<pre class="custom-scrollbar max-h-72 overflow-auto p-4 font-mono text-xs text-zinc-300">
 								<code>{generatedTheme ? JSON.stringify(generatedTheme, null, 2) : ''}</code>
 							</pre>
@@ -513,11 +513,11 @@
 						>Theme generated from <span class="text-brand font-semibold">{appStore.state.colors.length}</span> palette colors</span
 					>
 				</div>
-				<div class="flex gap-3">
+				<div class="flex gap-4">
 					<button
 						type="button"
 						onclick={() => popoverStore.close('themeExport')}
-						class="rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-all hover:border-zinc-500 hover:bg-zinc-800"
+						class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-all duration-300 hover:bg-zinc-800/50"
 					>
 						Cancel
 					</button>
@@ -525,7 +525,7 @@
 						type="button"
 						onclick={exportTheme}
 						disabled={!generatedTheme}
-						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 					>
 						Copy Theme JSON
 					</button>

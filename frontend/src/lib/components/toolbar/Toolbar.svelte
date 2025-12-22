@@ -6,8 +6,10 @@
 	import SavedPalettes from './SavedPalettes.svelte';
 	import SavedWorkspaces from './SavedWorkspaces.svelte';
 	import ApplicationSettings from './ApplicationSettings.svelte';
+	import WallhavenSettings from './WallhavenSettings.svelte';
 	import ThemeExport from './ThemeExport.svelte';
 	import ApplicationSettingsPopover from './popovers/ApplicationSettingsPopover.svelte';
+	import WallhavenSettingsPopover from './popovers/WallhavenSettingsPopover.svelte';
 	import CopyOptionsPopover from './popovers/CopyOptionsPopover.svelte';
 	import SavedPalettesPopover from './popovers/SavedPalettesPopover.svelte';
 	import SavedWorkspacesPopover from './popovers/SavedWorkspacesPopover.svelte';
@@ -17,7 +19,7 @@
 
 	// === Drag State ===
 	let right = $state(25);
-	let top = $state(75);
+	let top = $state(100);
 	let moving = $state(false);
 	let dragHandle = $state<HTMLElement | undefined>(undefined);
 
@@ -100,6 +102,16 @@
 
 				<li class="relative mb-4">
 					<div class="mb-2 flex items-center gap-2">
+						<h3 class="text-brand text-xs font-medium uppercase">Image Sources</h3>
+						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+					</div>
+					<div class="flex justify-start gap-2">
+						<WallhavenSettings />
+					</div>
+				</li>
+
+				<li class="relative mb-4">
+					<div class="mb-2 flex items-center gap-2">
 						<h3 class="text-brand text-xs font-medium uppercase">Processing</h3>
 						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
 					</div>
@@ -141,6 +153,10 @@
 
 		{#if popoverStore.state.current === 'application'}
 			<ApplicationSettingsPopover />
+		{/if}
+
+		{#if popoverStore.state.current === 'wallhaven'}
+			<WallhavenSettingsPopover />
 		{/if}
 
 		{#if popoverStore.state.current === 'copy'}
