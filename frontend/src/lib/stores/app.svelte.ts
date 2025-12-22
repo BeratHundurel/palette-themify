@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import type { Color, Selector, PaletteData, WorkspaceData } from '$lib/types/palette';
-import type { WallhavenResult } from '$lib/types/wallhaven';
+import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 import * as api from '$lib/api/palette';
 import * as workspaceApi from '$lib/api/workspace';
 import { authStore } from './auth.svelte';
@@ -36,6 +36,7 @@ interface AppState {
 
 	colors: Color[];
 	wallhavenResults: WallhavenResult[];
+	wallhavenSettings: WallhavenSettings;
 	selectors: Selector[];
 	activeSelectorId: string;
 	newFilterColor: string;
@@ -73,6 +74,17 @@ function createAppStore() {
 
 		colors: [],
 		wallhavenResults: [],
+		wallhavenSettings: {
+			categories: '111',
+			purity: '100',
+			sorting: 'relevance',
+			order: 'desc',
+			topRange: '1M',
+			resolutions: [],
+			ratios: [],
+			colors: [],
+			apikey: ''
+		},
 		selectors: [
 			{ id: UI.DEFAULT_SELECTOR_ID, color: 'oklch(79.2% 0.209 151.711)', selected: true },
 			{ id: 'red', color: 'oklch(64.5% 0.246 16.439)', selected: false },
@@ -325,21 +337,6 @@ function createAppStore() {
 
 			await appStore.drawToCanvas(file);
 			await appStore.extractPalette(file);
-		},
-
-		async searchWallhaven(query: string, page = 1) {
-			if (!query || query.trim() === '') {
-				this.state.wallhavenResults = [];
-				return;
-			}
-
-			try {
-				const { searchWallhaven } = await import('$lib/api/wallhaven');
-				const resp = await searchWallhaven({ q: query, page });
-				this.state.wallhavenResults = resp.data || [];
-			} catch {
-				this.state.wallhavenResults = [];
-			}
 		},
 
 		async loadWallhavenImage(imageUrl: string, existingToastId?: string) {
@@ -729,7 +726,8 @@ function createAppStore() {
 						luminosity: state.luminosity,
 						nearest: state.nearest,
 						power: state.power,
-						maxDistance: state.maxDistance
+						maxDistance: state.maxDistance,
+						wallhavenSettings: state.wallhavenSettings
 					});
 					toast.success('Workspace saved: ' + workspaceName, { id: toastId });
 					await appStore.loadSavedWorkspaces();
@@ -746,6 +744,7 @@ function createAppStore() {
 							nearest: state.nearest,
 							power: state.power,
 							maxDistance: state.maxDistance,
+							wallhavenSettings: state.wallhavenSettings,
 							createdAt: new Date().toISOString()
 						};
 
@@ -798,6 +797,17 @@ function createAppStore() {
 					state.nearest = workspace.nearest || 30;
 					state.power = workspace.power || 4;
 					state.maxDistance = workspace.maxDistance || 0;
+					state.wallhavenSettings = workspace.wallhavenSettings || {
+						categories: '111',
+						purity: '100',
+						sorting: 'relevance',
+						order: 'desc',
+						topRange: '1M',
+						resolutions: [],
+						ratios: [],
+						colors: [],
+						apikey: ''
+					};
 
 					drawImageAndBoxes();
 					toast.success('Workspace loaded: ' + workspace.name, { id: toastId });
@@ -827,7 +837,18 @@ function createAppStore() {
 						luminosity: w.luminosity || 1,
 						nearest: w.nearest || 30,
 						power: w.power || 4,
-						maxDistance: w.maxDistance || 0
+						maxDistance: w.maxDistance || 0,
+						wallhavenSettings: w.wallhavenSettings || {
+							categories: '111',
+							purity: '100',
+							sorting: 'relevance',
+							order: 'desc',
+							topRange: '1M',
+							resolutions: [],
+							ratios: [],
+							colors: [],
+							apikey: ''
+						}
 					}));
 				} else if (authStore.state.isAuthenticated && authStore.isDemoUser()) {
 					const response = await workspaceApi.getWorkspaces();
@@ -839,7 +860,18 @@ function createAppStore() {
 						luminosity: w.luminosity || 1,
 						nearest: w.nearest || 30,
 						power: w.power || 4,
-						maxDistance: w.maxDistance || 0
+						maxDistance: w.maxDistance || 0,
+						wallhavenSettings: w.wallhavenSettings || {
+							categories: '111',
+							purity: '100',
+							sorting: 'relevance',
+							order: 'desc',
+							topRange: '1M',
+							resolutions: [],
+							ratios: [],
+							colors: [],
+							apikey: ''
+						}
 					}));
 
 					const stored = localStorage.getItem('savedWorkspaces');
@@ -912,7 +944,18 @@ function createAppStore() {
 											luminosity: workspace.luminosity || 1,
 											nearest: workspace.nearest || 30,
 											power: workspace.power || 4,
-											maxDistance: workspace.maxDistance || 0
+											maxDistance: workspace.maxDistance || 0,
+											wallhavenSettings: workspace.wallhavenSettings || {
+												categories: '111',
+												purity: '100',
+												sorting: 'relevance',
+												order: 'desc',
+												topRange: '1M',
+												resolutions: [],
+												ratios: [],
+												colors: [],
+												apikey: ''
+											}
 										});
 									} catch (err) {
 										console.error('Failed to sync workspace:', workspace.name, err);

@@ -3,7 +3,6 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import type { WallhavenResult } from '$lib/types/wallhaven';
 	import toast from 'svelte-french-toast';
-	import { fly } from 'svelte/transition';
 
 	let { isOpen = $bindable() } = $props();
 
@@ -15,7 +14,12 @@
 		}
 	});
 
-	let results = $state<WallhavenResult[]>([]);
+	interface PageResult {
+		page: number;
+		items: WallhavenResult[];
+	}
+
+	let pages = $state<PageResult[]>([]);
 	let isSearching = $state(false);
 	let loadingMore = $state(false);
 	let page = $state(1);
@@ -23,7 +27,7 @@
 
 	async function performSearch(q: string, p = 1, append = false) {
 		if (!q) {
-			results = [];
+			pages = [];
 			hasMore = true;
 			page = 1;
 			return;
@@ -36,25 +40,19 @@
 		}
 
 		try {
-			const res = await searchWallhaven({
-				q,
-				page: p,
-				purity: '100',
-				categories: '111',
-				sorting: 'random',
-				order: 'desc'
-			});
+			const res = await searchWallhaven(appStore.state.wallhavenSettings, q, p);
+
 			const data = res.data || [];
 			if (append) {
-				const existingIds = new Set(results.map((r) => r.id));
-				const newItems = data.filter((d) => !existingIds.has(d.id));
+				const allExistingIds = new Set(pages.flatMap((page) => page.items).map((r) => r.id));
+				const newItems = data.filter((d) => !allExistingIds.has(d.id));
 				if (newItems.length > 0) {
-					results = [...results, ...newItems];
+					pages = [...pages, { page: p, items: newItems }];
 				} else {
 					hasMore = false;
 				}
 			} else {
-				results = data;
+				pages = [{ page: 1, items: data }];
 			}
 
 			const meta = res.meta ?? {};
@@ -74,7 +72,7 @@
 			}
 			page = p;
 		} catch {
-			if (!append) results = [];
+			if (!append) pages = [];
 			hasMore = false;
 		} finally {
 			isSearching = false;
@@ -141,66 +139,176 @@
 		}}
 	>
 		<div
-			class="relative w-full max-w-4xl rounded-lg border border-zinc-700 bg-zinc-900"
+			class="animate-scale-in border-brand/50 shadow-brand/20 relative w-full max-w-4xl rounded-xl border bg-zinc-900 shadow-2xl"
 			role="dialog"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.key === 'Escape' && close()}
-			transition:fly={{ y: -50, duration: 250 }}
 		>
-			<div class="flex items-center gap-3 border-b border-zinc-600 p-1">
-				<label for="modal-search" class="sr-only">Search Wallpapers</label>
-				<input
-					id="modal-search"
-					type="text"
-					bind:this={inputEl}
-					bind:value={appStore.state.searchQuery}
-					oninput={() => {
-						scheduleSearch(appStore.state.searchQuery);
-					}}
-					placeholder="Search Wallpapers"
-					class="w-full bg-zinc-900 px-4 py-3 text-sm text-zinc-300 placeholder-zinc-400 focus:outline-none"
-				/>
+			<!-- Close Button Overlay -->
+			<button
+				onclick={close}
+				class="hover:text-brand absolute top-4 right-4 z-10 rounded-lg p-2 text-zinc-400 transition-all duration-300 hover:bg-zinc-800/50"
+				aria-label="Close search"
+			>
+				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+				</svg>
+			</button>
+
+			<!-- Search Input Section -->
+			<div class="border-b border-zinc-700/50 p-6">
+				<div class="relative mx-auto max-w-2xl">
+					<div class="absolute inset-y-0 left-0 flex items-center pl-4">
+						<svg class="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+							/>
+						</svg>
+					</div>
+					<label for="modal-search" class="sr-only">Search Wallpapers</label>
+					<input
+						id="modal-search"
+						type="text"
+						bind:this={inputEl}
+						bind:value={appStore.state.searchQuery}
+						oninput={() => {
+							scheduleSearch(appStore.state.searchQuery);
+						}}
+						placeholder="Search for beautiful wallpapers..."
+						class="focus:border-brand/50 focus:ring-brand/20 w-full rounded-lg border border-zinc-600 bg-zinc-800/50 py-3 pr-12 pl-12 text-base text-zinc-200 placeholder-zinc-500 transition-all duration-300 focus:ring-2 focus:outline-none"
+					/>
+					{#if appStore.state.searchQuery}
+						<button
+							aria-label="Search Query"
+							onclick={() => {
+								appStore.state.searchQuery = '';
+								pages = [];
+								hasMore = true;
+								page = 1;
+							}}
+							class="absolute inset-y-0 right-0 flex items-center pr-4"
+						>
+							<svg
+								class="hover:text-brand h-5 w-5 text-zinc-400 transition-all duration-300"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					{/if}
+				</div>
 			</div>
 
-			<div class="custom-scrollbar mt-3 max-h-[75vh] overflow-auto p-5" onscroll={handleScroll}>
+			<div class="custom-scrollbar max-h-[75vh] overflow-auto px-6 py-6" onscroll={handleScroll}>
 				{#if isSearching}
-					<p class="mb-4 text-sm text-zinc-400">Searching…</p>
-					<div class="flex items-center justify-center py-8">
-						<div class="border-t-brand h-8 w-8 animate-spin rounded-full border-2 border-zinc-600"></div>
+					<div class="flex flex-col items-center py-12">
+						<div
+							class="text-brand border-t-brand mb-4 h-8 w-8 animate-spin rounded-full border-2 border-zinc-600"
+						></div>
+						<p class="text-sm font-medium text-zinc-300">Searching wallpapers...</p>
+						<p class="text-xs text-zinc-500">Finding the perfect images for you</p>
 					</div>
-				{:else if results.length === 0}
+				{:else if pages.length === 0 || pages.every((p) => p.items.length === 0)}
 					{#if appStore.state.searchQuery}
-						<p class="mb-4 text-sm text-zinc-400">No results for “{appStore.state.searchQuery}”</p>
+						<div class="flex flex-col items-center py-12">
+							<svg class="mb-4 h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+							</svg>
+							<p class="mb-2 text-sm font-medium text-zinc-300">No results found</p>
+							<p class="text-xs text-zinc-500">Try adjusting your search terms</p>
+						</div>
 					{:else}
-						<p class="text-sm text-zinc-400">Type to search wallpapers...</p>
+						<div class="flex flex-col items-center py-12">
+							<svg class="mb-4 h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
+							</svg>
+							<p class="mb-2 text-sm font-medium text-zinc-300">Start searching</p>
+							<p class="text-xs text-zinc-500">Type keywords to find wallpapers</p>
+						</div>
 					{/if}
 				{:else}
-					<p class="mb-4 text-sm text-zinc-400">Results for “{appStore.state.searchQuery}”</p>
-					<div class="masonry pe-3">
-						{#each results as result, idx (result.id + '-' + idx)}
-							<div class="masonry-item group relative rounded-sm">
-								{#if result.path && result.thumbs && result.thumbs.original}
-									<button
-										class="h-full w-full cursor-pointer hover:opacity-50"
-										onclick={() => loadWallpaperForPalette(result.path)}
-										onkeypress={() => loadWallpaperForPalette(result.path)}
-									>
-										<img src={result.thumbs.original} alt="wallpaper thumb" />
-									</button>
-								{:else}
-									<div class="placeholder aspect-[16/9] w-full bg-gradient-to-br from-zinc-700 to-zinc-900"></div>
-								{/if}
-							</div>
-						{/each}
+					{@const totalResults = pages.reduce((sum, page) => sum + page.items.length, 0)}
+					<div class="mb-6">
+						<p class="text-sm font-medium text-zinc-300">
+							{totalResults}
+							{totalResults === 1 ? 'result' : 'results'} for "{appStore.state.searchQuery}"
+						</p>
 					</div>
 
-					{#if loadingMore}
-						<div class="flex items-center justify-center py-4">
-							<div class="border-t-brand h-6 w-6 animate-spin rounded-full border-2 border-zinc-600"></div>
+					{#each pages as pageResult (pageResult.page)}
+						{#if pageResult.page > 1}
+							<div class="page-separator">
+								<span class="bg-zinc-900 px-3 text-xs font-medium text-zinc-500">Page {pageResult.page}</span>
+							</div>
+						{/if}
+
+						<div class="masonry pe-3">
+							{#each pageResult.items as result, idx (result.id + '-' + idx)}
+								<div
+									class="masonry-item group hover:border-brand/50 hover:shadow-brand/10 relative overflow-hidden rounded-lg border border-zinc-700/50 transition-all duration-300"
+								>
+									{#if result.path && result.thumbs && result.thumbs.original}
+										<button
+											class="relative block h-full w-full overflow-hidden"
+											onclick={() => loadWallpaperForPalette(result.path)}
+											onkeypress={() => loadWallpaperForPalette(result.path)}
+										>
+											<img
+												src={result.thumbs.original}
+												alt="wallpaper thumb"
+												class="h-full w-full object-cover transition-all duration-300 group-hover:scale-105 group-hover:opacity-90"
+											/>
+											<div
+												class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+											>
+												<div class="absolute right-2 bottom-2 left-2">
+													<p class="text-xs font-medium text-white">Click to extract palette</p>
+												</div>
+											</div>
+										</button>
+									{:else}
+										<div
+											class="flex aspect-[16/9] w-full items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900"
+										>
+											<svg class="h-8 w-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+												/>
+											</svg>
+										</div>
+									{/if}
+								</div>
+							{/each}
 						</div>
-					{:else if !hasMore && results.length > 0}
-						<p class="mt-4 text-center text-xs text-zinc-500">No more results</p>
+					{/each}
+
+					{#if loadingMore}
+						<div class="flex items-center justify-center py-6">
+							<div class="text-brand border-t-brand h-6 w-6 animate-spin rounded-full border-2 border-zinc-600"></div>
+						</div>
+					{:else if !hasMore && totalResults > 0}
+						<div class="mt-6 text-center">
+							<p class="text-xs font-medium text-zinc-500">You've reached the end of the results</p>
+						</div>
 					{/if}
 				{/if}
 			</div>
@@ -236,11 +344,58 @@
 		width: 100%;
 		height: auto;
 		display: block;
-		object-fit: contain;
+		object-fit: cover;
 	}
 
-	.masonry-item .placeholder {
-		width: 100%;
-		height: auto;
+	/* Custom scrollbar styling */
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: rgba(0, 0, 0, 0.1);
+		border-radius: 4px;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: rgba(168, 85, 247, 0.3);
+		border-radius: 4px;
+		transition: background-color 0.3s;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: rgba(168, 85, 247, 0.5);
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb:active {
+		background: rgba(168, 85, 247, 0.7);
+	}
+
+	.page-separator {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 1.5rem 0;
+		position: relative;
+		break-inside: avoid;
+		-webkit-column-break-inside: avoid;
+		page-break-inside: avoid;
+	}
+
+	.page-separator::before,
+	.page-separator::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: linear-gradient(to right, transparent, rgba(168, 85, 247, 0.1), transparent);
+	}
+
+	.page-separator span {
+		font-size: 0.75rem;
+		color: #71717a;
+		background: #18181b;
+		padding: 0 0.75rem;
+		position: relative;
+		z-index: 1;
 	}
 </style>

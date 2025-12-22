@@ -26,6 +26,11 @@ func wallhavenSearchHandler(c *gin.Context) {
 		return
 	}
 
+	// Forward API key header if present
+	if apiKey := c.GetHeader("X-API-Key"); apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to contact wallhaven: " + err.Error()})
@@ -50,6 +55,11 @@ func wallhavenGetWallpaperHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create request"})
 		return
+	}
+
+	// Forward API key header if present
+	if apiKey := c.GetHeader("X-API-Key"); apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
 	}
 
 	resp, err := http.DefaultClient.Do(req)

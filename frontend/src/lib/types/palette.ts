@@ -1,3 +1,5 @@
+import type { WallhavenSettings } from '$lib/types/wallhaven';
+
 export type Color = {
 	hex: string;
 };
@@ -47,6 +49,7 @@ export type WorkspaceData = {
 	nearest?: number;
 	power?: number;
 	maxDistance?: number;
+	wallhavenSettings?: WallhavenSettings;
 	shareToken?: string | null;
 	createdAt: string;
 };
@@ -61,6 +64,7 @@ export type SaveWorkspaceRequest = {
 	nearest: number;
 	power: number;
 	maxDistance: number;
+	wallhavenSettings?: WallhavenSettings;
 };
 
 export type GetWorkspacesResponse = {
