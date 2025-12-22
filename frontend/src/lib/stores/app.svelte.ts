@@ -80,9 +80,7 @@ function createAppStore() {
 			sorting: 'relevance',
 			order: 'desc',
 			topRange: '1M',
-			resolutions: [],
 			ratios: [],
-			colors: [],
 			apikey: ''
 		},
 		selectors: [
@@ -803,9 +801,7 @@ function createAppStore() {
 						sorting: 'relevance',
 						order: 'desc',
 						topRange: '1M',
-						resolutions: [],
 						ratios: [],
-						colors: [],
 						apikey: ''
 					};
 
@@ -844,9 +840,7 @@ function createAppStore() {
 							sorting: 'relevance',
 							order: 'desc',
 							topRange: '1M',
-							resolutions: [],
 							ratios: [],
-							colors: [],
 							apikey: ''
 						}
 					}));
@@ -867,9 +861,7 @@ function createAppStore() {
 							sorting: 'relevance',
 							order: 'desc',
 							topRange: '1M',
-							resolutions: [],
 							ratios: [],
-							colors: [],
 							apikey: ''
 						}
 					}));
@@ -951,9 +943,7 @@ function createAppStore() {
 												sorting: 'relevance',
 												order: 'desc',
 												topRange: '1M',
-												resolutions: [],
 												ratios: [],
-												colors: [],
 												apikey: ''
 											}
 										});
