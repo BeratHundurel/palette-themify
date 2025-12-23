@@ -8,9 +8,9 @@
 }
 
 .toolbar-button-base {
-	@apply relative flex h-11 w-11 cursor-pointer items-center justify-center overflow-hidden rounded-md text-sm font-semibold text-zinc-300;
-	@apply border-brand/50 border bg-zinc-800;
-	@apply focus:ring-brand focus:ring-1 focus:ring-offset-1 focus:ring-offset-zinc-900 focus:outline-none;
+	@apply relative flex h-11 w-11 cursor-pointer items-center justify-center overflow-hidden rounded-lg text-sm font-semibold text-zinc-300;
+	@apply border border-zinc-700/50 bg-zinc-800/50;
+	@apply focus:border-brand/50 focus:ring-brand focus:ring-1 focus:ring-offset-1 focus:ring-offset-zinc-900 focus:outline-none;
 	@apply transition-all duration-300;
 }
 

@@ -55,100 +55,102 @@
 >
 	<div
 		class={cn(
-			'border-brand/50 rounded-md border bg-zinc-900',
-			'hover:shadow-brand hover:border-brand hover:has-[.palette-dropdown-base]:border-brand/50 hover:has-[.palette-dropdown-base]:shadow-none',
+			'border-brand/50 shadow-brand/20 rounded-xl border bg-zinc-900 shadow-2xl',
+			'hover:shadow-brand/40 hover:border-brand/50 hover:has-[.palette-dropdown-base]:border-brand/50 hover:has-[.palette-dropdown-base]:shadow-none',
 			'transition-all duration-300 ease-out'
 		)}
 	>
 		<div
 			bind:this={dragHandle}
 			class={cn(
-				'flex cursor-move items-center justify-center rounded-md border-b border-zinc-700 px-5 py-4',
+				'flex cursor-move items-center justify-center rounded-t-xl border-b border-zinc-700/50 bg-zinc-800/30 px-6 py-4',
 				'hover:border-brand/50 hover:bg-zinc-800/50',
 				'transition-all duration-300 ease-out'
 			)}
 		>
-			<div class="flex flex-col items-center gap-1.5">
+			<div class="flex flex-col items-center gap-2">
 				<div
 					class={cn(
 						'h-0.5 w-8 rounded-full transition-all duration-300 ease-out',
-						moving ? 'bg-brand/80 shadow-brand' : 'bg-zinc-400/80'
+						moving ? 'bg-brand shadow-brand' : 'bg-zinc-500'
 					)}
 				></div>
 				<div
 					class={cn(
 						'h-0.5 w-6 rounded-full transition-all duration-300 ease-out',
-						moving ? 'bg-brand/50 shadow-brand' : 'bg-zinc-400/50'
+						moving ? 'bg-brand/60' : 'bg-zinc-500/60'
 					)}
 				></div>
 			</div>
 		</div>
 
-		<div class="relative p-5">
-			<ul class="flex flex-col gap-3">
+		<div class="px-6 py-6">
+			<div class="flex flex-col space-y-8">
 				{#if appStore.state.selectors.length > 0}
-					<li class="relative mb-4">
-						<div class="mb-3 flex items-center gap-2">
-							<h3 class="text-brand text-xs font-medium uppercase">Selection Tools</h3>
-							<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+					<div class="space-y-3">
+						<div class="flex items-center gap-3">
+							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Selection Tools</h3>
+							<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
 						</div>
-						<div class="flex flex-wrap justify-center gap-2">
+						<div class="flex flex-wrap justify-start gap-3">
 							{#each appStore.state.selectors as selector, i (selector.id)}
 								<SelectorButton {selector} index={i} />
 							{/each}
 						</div>
-					</li>
+					</div>
 				{/if}
 
-				<li class="relative mb-4">
-					<div class="mb-2 flex items-center gap-2">
-						<h3 class="text-brand text-xs font-medium uppercase">Image Sources</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+				<div class="space-y-6">
+					<!-- Image & Processing Group -->
+					<div class="space-y-3">
+						<div class="flex items-center gap-3">
+							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Image & Processing</h3>
+							<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						</div>
+						<div class="flex gap-3">
+							<SavedWorkspaces />
+							<SavedPalettes />
+						</div>
 					</div>
-					<div class="flex justify-start gap-2">
-						<WallhavenSettings />
-					</div>
-				</li>
 
-				<li class="relative mb-4">
-					<div class="mb-2 flex items-center gap-2">
-						<h3 class="text-brand text-xs font-medium uppercase">Processing</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+					<!-- Settings Group -->
+					<div class="space-y-3">
+						<div class="flex items-center gap-3">
+							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Settings</h3>
+							<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						</div>
+						<div class="flex gap-3">
+							<WallhavenSettings />
+							<ApplicationSettings />
+						</div>
 					</div>
-					<div class="flex justify-start gap-2">
-						<SavedWorkspaces />
-						<SavedPalettes />
-						<ApplicationSettings />
-					</div>
-				</li>
 
-				<li class="relative mb-4">
-					<div class="mb-2 flex items-center gap-2">
-						<h3 class="text-brand text-xs font-medium uppercase">Copy</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
-					</div>
-					<div class="flex justify-start gap-2">
-						<CopyOptions />
-						<OpenInCoolors />
-					</div>
-				</li>
+					<!-- Copy & Export Group -->
+					<div class="space-y-6">
+						<div class="space-y-3">
+							<div class="flex items-center gap-3">
+								<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Copy & Export</h3>
+								<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+							</div>
+							<div class="flex gap-3">
+								<CopyOptions />
+								<Download />
+							</div>
+						</div>
 
-				<li class="relative mb-4">
-					<div class="mb-2 flex items-center gap-2">
-						<h3 class="text-brand text-xs font-medium uppercase">Theme Generation</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						<div class="space-y-3">
+							<div class="flex items-center gap-3">
+								<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Generation</h3>
+								<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+							</div>
+							<div class="flex gap-3">
+								<ThemeExport />
+								<OpenInCoolors />
+							</div>
+						</div>
 					</div>
-					<ThemeExport />
-				</li>
-
-				<li class="relative">
-					<div class="mb-2 flex items-center gap-2">
-						<h3 class="text-brand text-xs font-medium uppercase">Export</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
-					</div>
-					<Download />
-				</li>
-			</ul>
+				</div>
+			</div>
 		</div>
 
 		{#if popoverStore.state.current === 'application'}
@@ -184,11 +186,9 @@
 	}
 
 	:global(.toolbar-button-base:hover) {
-		border-color: rgba(161, 161, 170, 0.6);
+		border-color: rgba(238, 179, 143, 0.5);
 		background-color: rgba(39, 39, 42, 0.9);
-		box-shadow:
-			0 10px 15px -3px rgba(0, 0, 0, 0.1),
-			0 4px 6px -2px rgba(0, 0, 0, 0.05);
+		box-shadow: 0 4px 12px rgba(238, 179, 143, 0.15);
 		transform: translateY(-1px);
 	}
 
@@ -213,8 +213,7 @@
 		}
 	}
 
-	/* Enhanced visual feedback for sections */
-	li:hover .from-brand\/50 {
-		background: linear-gradient(to right, rgba(255, 175, 120, 0.785), transparent);
+	.space-y-3:hover .from-brand\/30 {
+		background: linear-gradient(to right, rgba(238, 179, 143, 0.6), transparent);
 	}
 </style>

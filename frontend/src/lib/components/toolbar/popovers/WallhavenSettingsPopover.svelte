@@ -58,7 +58,7 @@
 			<h3 class="text-brand mb-3 text-sm font-semibold tracking-wide uppercase">Search Options</h3>
 
 			<!-- Categories -->
-			<div class="mb-4">
+			<div class="mb-5">
 				<span class="mb-2 block text-xs font-medium text-zinc-300">Categories</span>
 				<div class="flex gap-4">
 					<label for="cat-general" class="flex cursor-pointer items-center gap-2">
@@ -95,7 +95,7 @@
 			</div>
 
 			<!-- Purity -->
-			<div class="mb-4">
+			<div class="mb-5">
 				<span class="mb-2 block text-xs font-medium text-zinc-300">Content Purity</span>
 				<div class="flex gap-3">
 					<label for="pur-sfw" class="flex cursor-pointer items-center gap-2">
@@ -132,7 +132,7 @@
 			</div>
 
 			<!-- Sorting -->
-			<div class="mb-4">
+			<div class="mb-5">
 				<label for="sort-method" class="mb-2 block text-xs font-medium text-zinc-300">Sort By</label>
 				<select
 					id="sort-method"
@@ -150,7 +150,7 @@
 			</div>
 
 			<!-- Order -->
-			<div class="mb-4">
+			<div class="mb-5">
 				<label for="sort-order" class="mb-2 block text-xs font-medium text-zinc-300">Sort Order</label>
 				<select
 					id="sort-order"
@@ -164,7 +164,7 @@
 
 			<!-- Top Range (only for toplist sorting) -->
 			{#if localSettings.sorting === 'toplist'}
-				<div class="mb-4">
+				<div class="mb-5">
 					<label for="time-range" class="mb-2 block text-xs font-medium text-zinc-300">Time Range</label>
 					<select
 						id="time-range"
@@ -184,11 +184,11 @@
 		</section>
 
 		<!-- Advanced Section -->
-		<section class="mb-6">
+		<section class="mb-4">
 			<h3 class="text-brand mb-3 text-sm font-semibold tracking-wide uppercase">Advanced</h3>
 
 			<!-- API Key -->
-			<div class="mb-4">
+			<div class="mb-5">
 				<label for="api-key" class="mb-2 block text-xs font-medium text-zinc-300">
 					API Key
 					<span class="ml-1 font-normal text-zinc-500">(optional, for NSFW content)</span>
@@ -204,7 +204,7 @@
 			</div>
 
 			<!-- Aspect Ratios -->
-			<div class="mb-4">
+			<div class="mb-5">
 				<label for="ratio-filter" class="mb-2 block text-xs font-medium text-zinc-300">
 					Aspect Ratios
 					<span class="ml-1 font-normal text-zinc-500">(optional)</span>

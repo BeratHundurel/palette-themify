@@ -101,7 +101,7 @@
 		</div>
 	{/if}
 
-	<div class="grid min-h-14 grid-cols-2 items-center gap-4 transition-all duration-300 sm:grid-cols-5 md:grid-cols-10">
+	<div class="grid min-h-24 grid-cols-2 items-center gap-4 transition-all duration-300 sm:grid-cols-5 md:grid-cols-10">
 		{#each appStore.state.colors as color, i (`${color.hex}-${i}`)}
 			<div
 				role="button"

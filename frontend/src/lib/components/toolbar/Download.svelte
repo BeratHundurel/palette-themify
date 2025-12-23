@@ -10,7 +10,12 @@
 	aria-label="Download image"
 	title="Download the current image"
 >
-	<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<svg
+		class="hover:text-brand h-5 w-5 text-zinc-400 transition-colors duration-300"
+		fill="none"
+		stroke="currentColor"
+		viewBox="0 0 24 24"
+	>
 		<path
 			stroke-linecap="round"
 			stroke-linejoin="round"
