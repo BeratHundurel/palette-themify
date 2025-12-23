@@ -17,17 +17,8 @@ export async function searchWallhaven(
 		page
 	};
 
-	console.log('Wallhaven search params:', params);
-
-	// Add array parameters as comma-separated strings
-	if (settings.resolutions.length > 0) {
-		params.resolutions = settings.resolutions.join(',');
-	}
 	if (settings.ratios.length > 0) {
 		params.ratios = settings.ratios.join(',');
-	}
-	if (settings.colors.length > 0) {
-		params.colors = settings.colors.join(',');
 	}
 
 	const url = buildURL('/wallhaven/search', params);

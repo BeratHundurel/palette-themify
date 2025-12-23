@@ -122,7 +122,7 @@ pub fn generateThemeJson(
 ) ![]const u8 {
     return switch (theme_type) {
         .vscode => {
-            const theme = try vscode.generateVSCodeTheme(allocator, colors);
+            const theme = try vscode.generateVSCodeTheme(allocator, colors, theme_name);
             return try std.json.Stringify.valueAlloc(allocator, theme, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
         .zed => {

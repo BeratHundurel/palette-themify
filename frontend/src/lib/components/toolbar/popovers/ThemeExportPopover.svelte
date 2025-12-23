@@ -22,10 +22,14 @@
 	const prefs = loadPreferences();
 	let expandedColorIndices = new SvelteSet<number>();
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	const THEME_NAME_DEBOUNCE_MS = 300;
 
 	let editorType = $state<ThemeType>(prefs.editorType);
+	let themeName = $state('Generated Theme');
 	let generatedTheme = $state<Record<string, unknown> | null>(null);
 	let themeColorsWithUsage = $state<ThemeColorWithUsage[]>([]);
+	let themeNameError = $state<string | null>(null);
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
 
 	const sortedThemeColors = $derived(
@@ -45,9 +49,16 @@
 			expandedColorIndices.clear();
 			generatedTheme = null;
 			themeColorsWithUsage.length = 0;
+			themeName = 'Generated Theme';
+			themeNameError = null;
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
 				debounceTimer = null;
+			}
+			// Clear theme name debounce timer
+			if (themeNameDebounceTimer) {
+				clearTimeout(themeNameDebounceTimer);
+				themeNameDebounceTimer = null;
 			}
 		}
 	});
@@ -90,13 +101,101 @@
 		}
 	}
 
+	function validateThemeName(name: string): string | null {
+		const trimmedName = name.trim();
+
+		if (trimmedName.length === 0) {
+			return 'Theme name cannot be empty';
+		}
+
+		// Check for problematic filesystem characters
+		const invalidChars = /[<>:"/\\|?*]/;
+		if (invalidChars.test(trimmedName)) {
+			return 'Theme name contains invalid characters: < > : " / \\ | ? *';
+		}
+
+		return null;
+	}
+
+	function handleThemeNameChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const newName = target.value;
+		themeName = newName;
+		themeNameError = validateThemeName(newName);
+
+		// Clear existing debounce timer
+		if (themeNameDebounceTimer) {
+			clearTimeout(themeNameDebounceTimer);
+		}
+
+		// Debounce theme update
+		themeNameDebounceTimer = setTimeout(() => {
+			updateThemeNameIfValid(newName);
+		}, THEME_NAME_DEBOUNCE_MS);
+	}
+
+	function updateThemeNameIfValid(name: string) {
+		const trimmedName = name.trim();
+
+		// Validation checks
+		if (!generatedTheme || themeNameError || trimmedName.length === 0) {
+			return;
+		}
+
+		if (appStore.state.colors.length === 0) {
+			return;
+		}
+
+		try {
+			// Update theme name directly without API call
+			updateThemeNameInGeneratedTheme(trimmedName);
+
+			// Refresh the theme colors usage analysis for preview
+			themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme);
+		} catch {
+			// Fallback to API regeneration if direct update fails
+			toast.error('Failed to update theme name, regenerating...');
+			generateThemeFromApi();
+		}
+	}
+
+	function updateThemeNameInGeneratedTheme(name: string) {
+		if (!generatedTheme) return;
+
+		try {
+			if (editorType === 'vscode') {
+				// VS Code theme structure
+				const vscodeTheme = generatedTheme as Record<string, unknown>;
+				vscodeTheme.name = name;
+			} else {
+				// Zed theme has name in two places
+				const zedTheme = generatedTheme as Record<string, unknown>;
+				zedTheme.name = name;
+
+				// Update individual theme name within themes array
+				if (zedTheme.themes && Array.isArray(zedTheme.themes) && zedTheme.themes[0]) {
+					const firstTheme = zedTheme.themes[0] as Record<string, unknown>;
+					firstTheme.name = name;
+				}
+			}
+		} catch {
+			throw new Error('Failed to update theme name');
+		}
+	}
+
 	async function generateThemeFromApi() {
 		if (!appStore.state.colors || appStore.state.colors.length === 0) {
 			return;
 		}
 
+		const validationError = validateThemeName(themeName);
+		if (validationError) {
+			themeNameError = validationError;
+			return;
+		}
+
 		try {
-			const theme = await generateTheme(appStore.state.colors, editorType, 'Generated Theme');
+			const theme = await generateTheme(appStore.state.colors, editorType, themeName.trim());
 			generatedTheme = theme;
 			themeColorsWithUsage = extractThemeColorsWithUsage(theme);
 		} catch (err) {
@@ -115,8 +214,10 @@
 				const baseColor = normalizedColor.substring(0, 7);
 
 				const variantsMap = colorMap.get(baseColor) ?? colorMap.set(baseColor, new SvelteMap()).get(baseColor)!;
+
 				const usagesSet =
 					variantsMap.get(normalizedColor) ?? variantsMap.set(normalizedColor, new SvelteSet()).get(normalizedColor)!;
+
 				usagesSet.add(prefix);
 			} else if (typeof obj === 'object' && obj !== null) {
 				if (Array.isArray(obj)) {
@@ -168,6 +269,13 @@
 
 	async function handleEditorTypeChange(type: ThemeType) {
 		if (editorType === type) return;
+
+		// Clear any pending theme name updates
+		if (themeNameDebounceTimer) {
+			clearTimeout(themeNameDebounceTimer);
+			themeNameDebounceTimer = null;
+		}
+
 		editorType = type;
 		savePreferences(editorType);
 
@@ -248,6 +356,32 @@
 			</div>
 
 			<div class="custom-scrollbar flex-1 overflow-y-auto px-6 py-6">
+				<div class="mb-8">
+					<div class="mb-6 flex items-center gap-2">
+						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Name</h3>
+						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+					</div>
+					<div class="space-y-3">
+						<div>
+							<label for="theme-name" class="mb-2 block text-sm font-medium text-zinc-300">
+								Enter a custom name for your theme
+							</label>
+							<input
+								id="theme-name"
+								type="text"
+								bind:value={themeName}
+								oninput={handleThemeNameChange}
+								placeholder="Generated Theme"
+								class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 placeholder-zinc-400 transition-all duration-300 focus:outline-none"
+								class:border-red-500={themeNameError !== null}
+							/>
+							{#if themeNameError}
+								<p class="mt-1.5 text-xs text-red-400">{themeNameError}</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+
 				<div class="mb-8">
 					<div class="mb-6 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Editor Type</h3>
@@ -524,7 +658,7 @@
 					<button
 						type="button"
 						onclick={exportTheme}
-						disabled={!generatedTheme}
+						disabled={!generatedTheme || themeNameError !== null}
 						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 					>
 						Copy Theme JSON

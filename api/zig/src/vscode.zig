@@ -12,6 +12,7 @@ pub const VSCodeTokenColor = types.VSCodeTokenColor;
 pub fn generateVSCodeTheme(
     allocator: std.mem.Allocator,
     colors: []const []const u8,
+    theme_name: []const u8,
 ) !VSCodeTheme {
     const semantic = color_utils.findSemanticColors(colors);
     const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 10);
@@ -395,7 +396,7 @@ pub fn generateVSCodeTheme(
 
     return VSCodeTheme{
         .@"$schema" = "vscode://schemas/color-theme",
-        .name = "Custom Palette Theme",
+        .name = theme_name,
         .type = if (dark_base) .dark else .light,
         .colors = theme_colors,
         .tokenColors = token_colors_slice,
