@@ -67,7 +67,7 @@
 	}
 </script>
 
-<section class={cn('w-full max-w-5xl', appStore.state.imageLoaded ? 'min-h-[160px]' : 'h-0 w-0')}>
+<section class={cn('w-full max-w-5xl', appStore.state.imageLoaded ? 'min-h-[200px]' : 'h-0 w-0')}>
 	{#if appStore.state.colors.length > 0}
 		<div class="mb-4 flex items-center gap-2">
 			<span class="text-sm font-medium text-zinc-300">Sort:</span>
