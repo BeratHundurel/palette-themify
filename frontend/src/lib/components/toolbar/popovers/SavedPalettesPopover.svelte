@@ -4,8 +4,14 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
+	import toast from 'svelte-french-toast';
 
 	function handlePaletteLoad(palette: Color[]) {
+		if (!appStore.state.imageLoaded) {
+			toast.error('Load an image first to apply a palette');
+			return;
+		}
+		
 		appStore.state.colors = palette;
 		appStore.applyPalette();
 		popoverStore.close('saved');

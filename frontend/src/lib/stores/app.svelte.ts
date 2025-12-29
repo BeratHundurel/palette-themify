@@ -523,11 +523,9 @@ function createAppStore() {
 				toast.error(err instanceof Error ? err.message : 'Failed to save palette.');
 			}
 		},
+
 		async applyPalette() {
-			if (!state.imageLoaded) {
-				toast.error('Load an image first');
-				return;
-			}
+			// Before calling this method we are checking if there is an image loaded in the UI
 
 			if (!state.colors || state.colors.length === 0) {
 				toast.error('No palette to apply');
