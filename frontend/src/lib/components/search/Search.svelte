@@ -32,7 +32,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<form class="group relative flex max-w-md flex-1" onsubmit={(e) => onSearchSubmit(e)} aria-label="Search">
+<form class="group relative mx-auto flex max-w-md flex-1" onsubmit={(e) => onSearchSubmit(e)} aria-label="Search">
 	<label for="search" class="sr-only">Search palettes</label>
 	<input
 		id="search"

@@ -157,19 +157,8 @@
 			</button>
 
 			<!-- Search Input Section -->
-			<div class="border-b border-zinc-700/50 p-6">
+			<div class="px-6 py-6">
 				<div class="relative mx-auto max-w-2xl">
-					<div class="absolute inset-y-0 left-0 flex items-center pl-4">
-						<svg class="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-							/>
-						</svg>
-					</div>
-					<label for="modal-search" class="sr-only">Search Wallpapers</label>
 					<input
 						id="modal-search"
 						type="text"
@@ -178,30 +167,12 @@
 						oninput={() => {
 							scheduleSearch(appStore.state.searchQuery);
 						}}
-						placeholder="Search for beautiful wallpapers..."
-						class="focus:border-brand/50 focus:ring-brand/20 w-full rounded-lg border border-zinc-600 bg-zinc-800/50 py-3 pr-12 pl-12 text-base text-zinc-200 placeholder-zinc-500 transition-all duration-300 focus:ring-2 focus:outline-none"
+						placeholder="Search wallpapers..."
+						class="w-full border-none bg-transparent px-0 py-4 text-lg font-light text-zinc-100 placeholder-zinc-500 transition-all duration-300 outline-none"
 					/>
-					{#if appStore.state.searchQuery}
-						<button
-							aria-label="Search Query"
-							onclick={() => {
-								appStore.state.searchQuery = '';
-								pages = [];
-								hasMore = true;
-								page = 1;
-							}}
-							class="absolute inset-y-0 right-0 flex items-center pr-4"
-						>
-							<svg
-								class="hover:text-brand h-5 w-5 text-zinc-400 transition-all duration-300"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-							</svg>
-						</button>
-					{/if}
+					<div
+						class="focus-within:bg-brand absolute bottom-0 left-0 h-px w-full bg-zinc-800 transition-colors duration-300"
+					></div>
 				</div>
 			</div>
 
@@ -325,7 +296,7 @@
 
 	@media (min-width: 1024px) {
 		.masonry {
-			columns: 2;
+			columns: 3;
 		}
 	}
 
