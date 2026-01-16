@@ -1,4 +1,11 @@
-import type { Color, SavePaletteRequest, GetPalettesResponse, SavePaletteResult } from '$lib/types/palette';
+import type {
+	Color,
+	SavePaletteRequest,
+	GetPalettesResponse,
+	SavePaletteResult,
+	ThemeResponse,
+	ZigPaletteResponse
+} from '$lib/types/palette';
 
 import { getAuthHeaders } from './auth';
 import { buildURL, buildZigURL, ensureOk, ZIG_API_BASE } from './base';
@@ -10,17 +17,13 @@ export type ApplyParams = {
 	maxDistance: number;
 };
 
-export type ThemeType = 'vscode' | 'zed';
-
 export type GenerateThemeRequest = {
 	colors: Color[];
-	type: ThemeType;
+	type: EditorThemeType;
 	name?: string;
 };
 
-export type ZigPaletteResponse = {
-	palette: Color[];
-};
+export type EditorThemeType = 'vscode' | 'zed';
 
 export async function extractPalette(file: Blob | File): Promise<ZigPaletteResponse> {
 	if (!file) throw new Error('No files provided');
@@ -51,7 +54,7 @@ export async function extractPalette(file: Blob | File): Promise<ZigPaletteRespo
 	}
 }
 
-export async function generateTheme(colors: Color[], type: ThemeType, name?: string): Promise<Record<string, unknown>> {
+export async function generateTheme(colors: Color[], type: EditorThemeType, name?: string): Promise<ThemeResponse> {
 	const payload: GenerateThemeRequest = { colors, type, name };
 
 	const res = await fetch(buildZigURL('/generate-theme'), {
@@ -63,7 +66,11 @@ export async function generateTheme(colors: Color[], type: ThemeType, name?: str
 	return res.json();
 }
 
-export async function downloadTheme(colors: Color[], type: ThemeType, name: string = 'Generated Theme'): Promise<void> {
+export async function downloadTheme(
+	colors: Color[],
+	type: EditorThemeType,
+	name: string = 'Generated Theme'
+): Promise<void> {
 	const theme = await generateTheme(colors, type, name);
 	const json = JSON.stringify(theme, null, 2);
 	const blob = new Blob([json], { type: 'application/json' });

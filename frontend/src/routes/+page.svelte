@@ -66,28 +66,37 @@
 
 	<div class="z-40 h-max w-full p-4">
 		<div class="flex flex-row items-center justify-between gap-4">
-			<TutorialButton />
+			<div class="flex items-center gap-4">
+				<TutorialButton />
+			</div>
 
-			<Search />
+			<div class="flex flex-1 justify-center">
+				<Search />
+			</div>
 
-			{#if authStore.state.isAuthenticated}
-				<UserProfile />
-			{:else if !authStore.state.isLoading}
-				<button
-					onclick={openAuthModal}
-					class="border-brand/50 hover:shadow-brand-lg flex w-32 cursor-pointer items-center justify-center gap-2 rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-all duration-300"
-				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-						/>
-					</svg>
-					<span>Sign In</span>
-				</button>
-			{/if}
+			<div class="flex items-center gap-4">
+				{#if authStore.state.isAuthenticated}
+					<UserProfile />
+				{:else if !authStore.state.isLoading}
+					<button
+						onclick={openAuthModal}
+						class="border-brand/50 hover:shadow-brand-lg flex w-32 cursor-pointer items-center justify-center gap-2 rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-all duration-300"
+					>
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+							/>
+						</svg>
+						<span>Sign In</span>
+					</button>
+				{:else}
+					<!-- Placeholder to maintain layout during loading -->
+					<div class="w-56"></div>
+				{/if}
+			</div>
 		</div>
 	</div>
 
