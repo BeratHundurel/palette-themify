@@ -20,7 +20,10 @@
 		stroke-linejoin="round"
 		class="hover:text-brand text-zinc-400 transition-colors duration-300"
 	>
-		<circle cx="12" cy="12" r="3"></circle>
-		<path d="M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 1.54l4.24 4.24M20.46 20.46l-4.24-4.24M1.54 20.46l4.24-4.24"></path>
+		<circle cx="6" cy="12" r="3"></circle>
+		<circle cx="18" cy="12" r="3"></circle>
+		<path d="M9 12h6"></path>
+		<path d="M6 9v6"></path>
+		<path d="M18 9v6"></path>
 	</svg>
 </button>

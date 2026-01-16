@@ -5,8 +5,8 @@
 
 <section
 	class={cn(
-		'flex-col items-center justify-center',
-		appStore.state.imageLoaded ? 'pointer-events-none hidden' : 'pointer-events-auto flex'
+		'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+		appStore.state.imageLoaded ? 'pointer-events-none hidden' : 'pointer-events-auto'
 	)}
 	aria-hidden={appStore.state.imageLoaded ? 'true' : 'false'}
 >

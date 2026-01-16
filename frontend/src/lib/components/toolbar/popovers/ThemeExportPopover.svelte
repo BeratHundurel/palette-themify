@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
-	import { generateTheme, type ThemeType } from '$lib/api/palette';
+	import { generateTheme, type EditorThemeType } from '$lib/api/palette';
+	import type { ThemeResponse } from '$lib/types/palette';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
@@ -25,9 +26,9 @@
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 	const THEME_NAME_DEBOUNCE_MS = 300;
 
-	let editorType = $state<ThemeType>(prefs.editorType);
+	let editorType = $state<EditorThemeType>(prefs.editorType);
 	let themeName = $state('Generated Theme');
-	let generatedTheme = $state<Record<string, unknown> | null>(null);
+	let generatedTheme = $state<ThemeResponse | null>(null);
 	let themeColorsWithUsage = $state<ThemeColorWithUsage[]>([]);
 	let themeNameError = $state<string | null>(null);
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
@@ -55,6 +56,7 @@
 				clearTimeout(debounceTimer);
 				debounceTimer = null;
 			}
+
 			// Clear theme name debounce timer
 			if (themeNameDebounceTimer) {
 				clearTimeout(themeNameDebounceTimer);
@@ -78,7 +80,7 @@
 		}
 	});
 
-	function loadPreferences(): { editorType: ThemeType } {
+	function loadPreferences(): { editorType: EditorThemeType } {
 		if (typeof window === 'undefined') return { editorType: 'vscode' };
 		try {
 			const stored = localStorage.getItem(STORAGE_KEY);
@@ -92,7 +94,7 @@
 		return { editorType: 'vscode' };
 	}
 
-	function savePreferences(editorType: ThemeType) {
+	function savePreferences(editorType: EditorThemeType) {
 		if (typeof window === 'undefined') return;
 		try {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify({ editorType }));
@@ -123,12 +125,10 @@
 		themeName = newName;
 		themeNameError = validateThemeName(newName);
 
-		// Clear existing debounce timer
 		if (themeNameDebounceTimer) {
 			clearTimeout(themeNameDebounceTimer);
 		}
 
-		// Debounce theme update
 		themeNameDebounceTimer = setTimeout(() => {
 			updateThemeNameIfValid(newName);
 		}, THEME_NAME_DEBOUNCE_MS);
@@ -137,7 +137,6 @@
 	function updateThemeNameIfValid(name: string) {
 		const trimmedName = name.trim();
 
-		// Validation checks
 		if (!generatedTheme || themeNameError || trimmedName.length === 0) {
 			return;
 		}
@@ -147,13 +146,10 @@
 		}
 
 		try {
-			// Update theme name directly without API call
 			updateThemeNameInGeneratedTheme(trimmedName);
 
-			// Refresh the theme colors usage analysis for preview
 			themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme);
 		} catch {
-			// Fallback to API regeneration if direct update fails
 			toast.error('Failed to update theme name, regenerating...');
 			generateThemeFromApi();
 		}
@@ -163,20 +159,16 @@
 		if (!generatedTheme) return;
 
 		try {
-			if (editorType === 'vscode') {
-				// VS Code theme structure
-				const vscodeTheme = generatedTheme as Record<string, unknown>;
-				vscodeTheme.name = name;
-			} else {
-				// Zed theme has name in two places
-				const zedTheme = generatedTheme as Record<string, unknown>;
-				zedTheme.name = name;
+			const theme = generatedTheme;
+			if (!theme) return;
 
-				// Update individual theme name within themes array
-				if (zedTheme.themes && Array.isArray(zedTheme.themes) && zedTheme.themes[0]) {
-					const firstTheme = zedTheme.themes[0] as Record<string, unknown>;
-					firstTheme.name = name;
+			if (editorType === 'zed' && 'themes' in theme) {
+				theme.name = name;
+				if (theme.themes && Array.isArray(theme.themes) && theme.themes[0]) {
+					theme.themes[0].name = name;
 				}
+			} else if (editorType === 'vscode' && 'colors' in theme) {
+				theme.name = name;
 			}
 		} catch {
 			throw new Error('Failed to update theme name');
@@ -205,7 +197,7 @@
 		}
 	}
 
-	function extractThemeColorsWithUsage(theme: Record<string, unknown>): ThemeColorWithUsage[] {
+	function extractThemeColorsWithUsage(theme: ThemeResponse): ThemeColorWithUsage[] {
 		const colorMap = new SvelteMap<string, SvelteMap<string, SvelteSet<string>>>();
 
 		function traverse(obj: unknown, prefix: string) {
@@ -267,7 +259,7 @@
 		return result;
 	}
 
-	async function handleEditorTypeChange(type: ThemeType) {
+	async function handleEditorTypeChange(type: EditorThemeType) {
 		if (editorType === type) return;
 
 		// Clear any pending theme name updates

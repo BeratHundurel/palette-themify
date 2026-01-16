@@ -11,7 +11,7 @@
 			toast.error('Load an image first to apply a palette');
 			return;
 		}
-		
+
 		appStore.state.colors = palette;
 		appStore.applyPalette();
 		popoverStore.close('saved');
