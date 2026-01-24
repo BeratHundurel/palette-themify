@@ -1,7 +1,6 @@
 export const CANVAS = {
 	MAX_WIDTH: 800,
 	MAX_HEIGHT: 400,
-	DEFAULT_SCALE: 1
 } as const;
 
 export const SELECTION = {
@@ -19,8 +18,7 @@ export const SELECTION = {
 
 export const IMAGE = {
 	OUTPUT_FORMAT: 'image/png' as const,
-	MAX_FILE_SIZE: 50 * 1024 * 1024,
-	MAX_DIMENSION: 8192
+	MAX_FILE_SIZE: 50 * 1024 * 1024
 } as const;
 
 export const UI = {
