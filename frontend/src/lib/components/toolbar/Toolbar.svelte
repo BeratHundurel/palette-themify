@@ -5,10 +5,10 @@
 	import SelectorButton from './SelectorButton.svelte';
 	import SavedPalettes from './SavedPalettes.svelte';
 	import SavedWorkspaces from './SavedWorkspaces.svelte';
-	import ApplicationSettings from './ApplicationSettings.svelte';
+	import ApplyPaletteSettings from './ApplyPaletteSettings.svelte';
 	import WallhavenSettings from './WallhavenSettings.svelte';
 	import ThemeExport from './ThemeExport.svelte';
-	import ApplicationSettingsPopover from './popovers/ApplicationSettingsPopover.svelte';
+	import ApplyPaletteSettingsPopover from './popovers/ApplyPaletteSettingsPopover.svelte';
 	import WallhavenSettingsPopover from './popovers/WallhavenSettingsPopover.svelte';
 	import CopyOptionsPopover from './popovers/CopyOptionsPopover.svelte';
 	import SavedPalettesPopover from './popovers/SavedPalettesPopover.svelte';
@@ -121,7 +121,7 @@
 						</div>
 						<div class="flex gap-3">
 							<WallhavenSettings />
-							<ApplicationSettings />
+							<ApplyPaletteSettings />
 						</div>
 					</div>
 
@@ -154,7 +154,7 @@
 		</div>
 
 		{#if popoverStore.state.current === 'application'}
-			<ApplicationSettingsPopover />
+			<ApplyPaletteSettingsPopover />
 		{/if}
 
 		{#if popoverStore.state.current === 'wallhaven'}
