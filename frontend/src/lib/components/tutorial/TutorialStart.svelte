@@ -33,7 +33,7 @@
 {#if showPrompt}
 	<div class="fixed inset-0 z-[9998] flex items-center justify-center p-6" transition:fade={{ duration: 300 }}>
 		<div
-			class="absolute inset-0 cursor-pointer bg-black/70 backdrop-blur-sm"
+			class="absolute inset-0 cursor-pointer bg-black/70"
 			onclick={dismissPrompt}
 			onkeydown={(e) => e.key === 'Escape' && dismissPrompt()}
 			role="button"
@@ -53,7 +53,7 @@
 
 					<div class="mb-8 flex flex-col gap-4">
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-all duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
 							<div class="flex-shrink-0 text-2xl max-sm:text-xl">📸</div>
 							<div class="flex flex-col gap-0.5">
@@ -63,7 +63,7 @@
 						</div>
 
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-all duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
 							<div class="flex-shrink-0 text-2xl max-sm:text-xl">🎯</div>
 							<div class="flex flex-col gap-0.5">
@@ -73,7 +73,7 @@
 						</div>
 
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-all duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
 							<div class="flex-shrink-0 text-2xl max-sm:text-xl">🎨</div>
 							<div class="flex flex-col gap-0.5">
@@ -83,7 +83,7 @@
 						</div>
 
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-all duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
 							<div class="flex-shrink-0 text-2xl max-sm:text-xl">💾</div>
 							<div class="flex flex-col gap-0.5">
@@ -95,7 +95,7 @@
 
 					<div class="mb-6 flex flex-col gap-3">
 						<button
-							class="hover:shadow-brand-lg bg-brand hover:bg-brand-hover flex cursor-pointer items-center justify-center gap-2 rounded-md border-0 px-6 py-3.5 font-semibold text-zinc-800 transition-all duration-300 focus:outline-none"
+							class="hover:shadow-brand-lg bg-brand hover:bg-brand-hover flex cursor-pointer items-center justify-center gap-2 rounded-md border-0 px-6 py-3.5 font-semibold text-zinc-800 transition-[background-color,box-shadow] duration-300 focus:outline-none"
 							onclick={startTutorial}
 						>
 							<span>Take the Tour</span>
@@ -103,7 +103,7 @@
 						</button>
 
 						<button
-							class="hover:border-brand/50 cursor-pointer rounded-md border border-zinc-600 bg-transparent px-6 py-3.5 font-semibold text-zinc-400 outline-0 transition-all duration-300 hover:bg-white/5 hover:text-zinc-300"
+							class="hover:border-brand/50 cursor-pointer rounded-md border border-zinc-600 bg-transparent px-6 py-3.5 font-semibold text-zinc-400 outline-0 transition-[background-color,border-color,color] duration-300 hover:bg-white/5 hover:text-zinc-300"
 							onclick={dismissPrompt}
 						>
 							Skip for now
@@ -117,7 +117,7 @@
 			</div>
 
 			<button
-				class="absolute top-4 right-[46px] flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-600 text-zinc-400 outline-0 transition-all duration-300 hover:border-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+				class="absolute top-4 right-[46px] flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-600 text-zinc-400 outline-0 transition-[background-color,border-color,color] duration-300 hover:border-zinc-500 hover:bg-white/5 hover:text-zinc-300"
 				onclick={dismissPrompt}
 				aria-label="Close tutorial prompt"
 			>

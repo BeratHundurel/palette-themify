@@ -137,7 +137,7 @@
 				<select
 					id="sort-method"
 					bind:value={localSettings.sorting}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-all duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				>
 					<option value="relevance">Relevance</option>
 					<option value="date_added">Date Added</option>
@@ -155,7 +155,7 @@
 				<select
 					id="sort-order"
 					bind:value={localSettings.order}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-all duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				>
 					<option value="desc">Descending</option>
 					<option value="asc">Ascending</option>
@@ -169,7 +169,7 @@
 					<select
 						id="time-range"
 						bind:value={localSettings.topRange}
-						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-all duration-300 focus:outline-none"
+						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 					>
 						<option value="1d">1 Day</option>
 						<option value="3d">3 Days</option>
@@ -198,7 +198,7 @@
 					type="password"
 					bind:value={localSettings.apikey}
 					placeholder="Enter your Wallhaven API key"
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 placeholder-zinc-500 transition-all duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				/>
 				<p class="mt-1 text-xs text-zinc-500">Get your API key from Wallhaven account settings</p>
 			</div>
@@ -213,7 +213,7 @@
 					id="ratio-filter"
 					multiple
 					bind:value={localSettings.ratios}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-all duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 					size="4"
 				>
 					{#each AVAILABLE_RATIOS as ratio (ratio)}
@@ -229,19 +229,19 @@
 	<footer class="flex justify-center gap-2 border-t border-zinc-700 bg-zinc-800/50 px-2 py-3">
 		<button
 			onclick={resetToDefaults}
-			class="hover:border-brand/50 rounded-lg border border-zinc-600 px-2 py-3 text-xs font-medium text-zinc-300 transition-all duration-300 hover:bg-zinc-800/50"
+			class="hover:border-brand/50 rounded-lg border border-zinc-600 px-2 py-3 text-xs font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50"
 		>
 			Reset to Defaults
 		</button>
 		<button
 			onclick={() => popoverStore.close()}
-			class="hover:border-brand/50 rounded-lg border border-zinc-600 px-2 py-3 text-xs font-medium text-zinc-300 transition-all duration-300 hover:bg-zinc-800/50"
+			class="hover:border-brand/50 rounded-lg border border-zinc-600 px-2 py-3 text-xs font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50"
 		>
 			Cancel
 		</button>
 		<button
 			onclick={applySettings}
-			class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-2 py-3 text-xs font-semibold text-zinc-900 transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+			class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-2 py-3 text-xs font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 		>
 			Apply Settings
 		</button>

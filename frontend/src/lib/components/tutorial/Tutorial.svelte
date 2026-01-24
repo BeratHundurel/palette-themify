@@ -199,7 +199,7 @@
 							{#each tutorialStore.state.steps as step, index (step.id)}
 								<div
 									class={cn(
-										'h-2 w-2 rounded-full transition-all duration-300',
+										'h-2 w-2 rounded-full transition-[background-color,box-shadow,transform] duration-300',
 										tutorialStore.state.completedSteps.has(step.id)
 											? 'bg-emerald-500'
 											: index === tutorialStore.state.currentStepIndex
@@ -238,7 +238,7 @@
 							{#if !isFirstStep}
 								<button
 									class={cn(
-										'hover:border-brand/50 cursor-pointer rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 outline-0 transition-all duration-300 hover:bg-zinc-800'
+										'hover:border-brand/50 cursor-pointer rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 outline-0 transition-[background-color,border-color] duration-300 hover:bg-zinc-800'
 									)}
 									onclick={() => tutorialStore.previous()}
 								>
@@ -258,7 +258,7 @@
 							{:else if !isLastStep}
 								<button
 									class={cn(
-										'bg-brand hover:bg-brand-hover hover:shadow-brand-lg cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-medium text-zinc-900 outline-0 transition-all duration-300 '
+										'bg-brand hover:bg-brand-hover hover:shadow-brand-lg cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-medium text-zinc-900 outline-0 transition-[background-color,box-shadow] duration-300 '
 									)}
 									onclick={() => tutorialStore.next()}
 								>
@@ -267,7 +267,7 @@
 							{:else}
 								<button
 									class={cn(
-										'bg-brand hover:bg-brand-hover hover:shadow-brand-lg cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-medium text-zinc-900 outline-0 transition-all duration-300 '
+										'bg-brand hover:bg-brand-hover hover:shadow-brand-lg cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-medium text-zinc-900 outline-0 transition-[background-color,box-shadow] duration-300 '
 									)}
 									onclick={() => tutorialStore.next()}
 								>
@@ -280,7 +280,7 @@
 							{#if currentStep.skipable}
 								<button
 									class={cn(
-										'cursor-pointer rounded-md border-0 bg-transparent px-4 py-2 text-xs font-medium text-zinc-400 outline-0 transition-all duration-300 hover:text-zinc-300'
+										'cursor-pointer rounded-md border-0 bg-transparent px-4 py-2 text-xs font-medium text-zinc-400 outline-0 transition-[color] duration-300 hover:text-zinc-300'
 									)}
 									onclick={() => tutorialStore.skip()}
 								>
@@ -290,7 +290,7 @@
 
 							<button
 								class={cn(
-									'cursor-pointer rounded-md border-0 bg-transparent px-4 py-2 text-xs font-medium text-zinc-400 outline-0 transition-all duration-300 hover:text-zinc-300'
+									'cursor-pointer rounded-md border-0 bg-transparent px-4 py-2 text-xs font-medium text-zinc-400 outline-0 transition-[color] duration-300 hover:text-zinc-300'
 								)}
 								onclick={() => tutorialStore.exit()}
 							>

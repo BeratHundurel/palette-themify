@@ -53,7 +53,7 @@
 			<ul class="flex flex-col gap-3">
 				{#each appStore.state.savedPalettes as item, i (i)}
 					<li
-						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-all duration-300 hover:bg-white/5"
+						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
 					>
 						<div class="p-3">
 							<!-- Header -->
@@ -87,7 +87,7 @@
 								<!-- Actions -->
 								<div class="flex items-center gap-1.5">
 									<button
-										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-all hover:scale-105"
+										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
 										onclick={() => handlePaletteLoad(item.palette)}
 										type="button"
 										title="Apply palette"
@@ -100,7 +100,7 @@
 
 									{#if !item.isSystem}
 										<button
-											class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-all hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
+											class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
 											onclick={() => handlePaletteDelete(item.id, item.name)}
 											type="button"
 											title="Delete palette"
@@ -124,7 +124,7 @@
 										{#if index < 12}
 											<div class="group/swatch relative">
 												<span
-													class="inline-block h-8 w-8 cursor-pointer rounded-md border border-zinc-700/50 shadow-md transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-white/50"
+													class="inline-block h-8 w-8 cursor-pointer rounded-md border border-zinc-700/50 shadow-md transition-[transform,box-shadow,border-color] duration-300 hover:scale-105 hover:ring-2 hover:ring-white/50"
 													style="background-color: {color.hex}"
 													title={color.hex}
 												></span>

@@ -79,7 +79,7 @@
 				class="border-brand/50 relative flex gap-1 rounded-md border bg-zinc-900 p-1"
 			>
 				<div
-					class="absolute inset-y-1 left-1 rounded bg-zinc-700 transition-all duration-300 ease-out"
+					class="absolute inset-y-1 left-1 rounded bg-zinc-700 transition-[transform,opacity] duration-300 ease-out"
 					style="transform: translateX({hoverX}px); width: {buttonWidth}px; opacity: {showHover ? 1 : 0};"
 				></div>
 				{#each sortOptions as option (option.value)}
@@ -101,7 +101,9 @@
 		</div>
 	{/if}
 
-	<div class="grid min-h-24 grid-cols-2 items-center gap-4 transition-all duration-300 sm:grid-cols-5 md:grid-cols-10">
+	<div
+		class="grid min-h-24 grid-cols-2 items-center gap-4 transition-[opacity,transform] duration-300 sm:grid-cols-5 md:grid-cols-10"
+	>
 		{#each appStore.state.colors as color, i (`${color.hex}-${i}`)}
 			<div
 				role="button"
@@ -120,14 +122,14 @@
 	{#if appStore.state.imageLoaded}
 		<div class="mt-4 flex flex-row justify-between">
 			<button
-				class="border-brand/50 hover:shadow-brand-lg w-36 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-all duration-300"
+				class="border-brand/50 hover:shadow-brand-lg w-36 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-[background-color,border-color,box-shadow,color] duration-300"
 				onclick={returnToUpload}>Back</button
 			>
 
 			<div class="flex items-center gap-4">
 				<button
 					id="save-palette"
-					class="border-brand/50 hover:shadow-brand-lg w-36 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-all duration-300"
+					class="border-brand/50 hover:shadow-brand-lg w-36 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-[background-color,border-color,box-shadow,color] duration-300"
 					onclick={appStore.savePalette}
 				>
 					Save Palette
@@ -138,7 +140,7 @@
 				<button
 					onclick={() => appStore.saveWorkspace()}
 					disabled={!appStore.state.imageLoaded}
-					class="border-brand/50 hover:shadow-brand-lg w-40 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
+					class="border-brand/50 hover:shadow-brand-lg w-40 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-[background-color,border-color,box-shadow,color] duration-300 disabled:cursor-not-allowed disabled:opacity-50"
 					type="button"
 				>
 					Save Workspace

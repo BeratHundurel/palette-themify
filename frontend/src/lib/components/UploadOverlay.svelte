@@ -18,7 +18,7 @@
 		ondragleave={preventDefault}
 		onclick={appStore.triggerFileSelect}
 		class={cn(
-			'group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/50 bg-white/10 p-12 transition-all duration-300',
+			'group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/50 bg-white/10 p-12 transition-[background-color,border-color] duration-300',
 			'hover:border-white hover:bg-white/20'
 		)}
 		aria-label="Upload an image or drag and drop it here"

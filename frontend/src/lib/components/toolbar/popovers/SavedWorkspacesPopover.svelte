@@ -122,7 +122,7 @@
 			<ul class="flex flex-col gap-3">
 				{#each appStore.state.savedWorkspaces as item (item.id)}
 					<li
-						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-all duration-300 hover:bg-white/5"
+						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
 					>
 						<div class="flex gap-3 p-3">
 							<!-- Thumbnail -->
@@ -179,7 +179,7 @@
 								<!-- Actions -->
 								<div class="flex items-center gap-2">
 									<button
-										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md py-1.5 ps-0 pe-2.5 text-xs font-medium transition-all hover:scale-105"
+										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md py-1.5 ps-0 pe-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
 										onclick={() => handleWorkspaceLoad(item.id)}
 										type="button"
 										title="Load workspace"
@@ -197,7 +197,7 @@
 
 									<button
 										class={cn(
-											'flex items-center gap-1 rounded-md p-1.5 transition-all hover:scale-110 hover:bg-blue-500/10',
+											'flex items-center gap-1 rounded-md p-1.5 transition-[transform,background-color,color] hover:scale-110 hover:bg-blue-500/10',
 											item.shareToken ? 'text-blue-400 hover:text-blue-300' : 'text-zinc-500 hover:text-zinc-400'
 										)}
 										onclick={() =>
@@ -219,7 +219,7 @@
 									</button>
 
 									<button
-										class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-all hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
+										class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
 										onclick={() => handleWorkspaceDelete(item.id, item.name)}
 										type="button"
 										title="Delete workspace"
@@ -263,7 +263,7 @@
 </div>
 
 {#if shareModal}
-	<div class="share-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+	<div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
 		<div class="share-modal-content border-brand/50 w-full max-w-md rounded-lg border bg-zinc-900 p-6">
 			<h2 class="text-brand mb-4 text-lg font-semibold">Share Workspace</h2>
 

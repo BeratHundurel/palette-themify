@@ -40,7 +40,7 @@
 		bind:value={appStore.state.searchQuery}
 		oninput={onInlineInput}
 		placeholder="Search Wallpapers"
-		class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2 pr-10 pl-10 text-sm text-zinc-300 placeholder-zinc-400 transition-all duration-300 focus:outline-none"
+		class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2 pr-10 pl-10 text-sm text-zinc-300 placeholder-zinc-400 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 	/>
 
 	<span class="group-focus-within:text-brand absolute top-1/2 left-3 -translate-y-1/2 text-zinc-400 transition-colors">
@@ -59,7 +59,7 @@
 			<button
 				type="button"
 				onclick={clearSearch}
-				class="hover:text-brand rounded-lg p-1 text-zinc-400 transition-all duration-300 hover:bg-zinc-800/50"
+				class="hover:text-brand rounded-lg p-1 text-zinc-400 transition-[background-color,color] duration-300 hover:bg-zinc-800/50"
 			>
 				<span class="sr-only">Clear search</span>
 				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +69,7 @@
 		{/if}
 		<button
 			type="submit"
-			class="bg-brand hover:shadow-brand/20 rounded-lg px-3 py-1 text-sm font-medium text-zinc-900 transition-all duration-300"
+			class="bg-brand hover:shadow-brand/20 rounded-lg px-3 py-1 text-sm font-medium text-zinc-900 transition-[box-shadow,background-color] duration-300"
 			>Search</button
 		>
 	</div>

@@ -57,7 +57,7 @@
 		class={cn(
 			'border-brand/50 shadow-brand/20 rounded-xl border bg-zinc-900 shadow-2xl',
 			'hover:shadow-brand/40 hover:border-brand/50 hover:has-[.palette-dropdown-base]:border-brand/50 hover:has-[.palette-dropdown-base]:shadow-none',
-			'transition-all duration-300 ease-out'
+			'transition-[border-color,box-shadow] duration-300 ease-out'
 		)}
 	>
 		<div
@@ -65,19 +65,19 @@
 			class={cn(
 				'flex cursor-move items-center justify-center rounded-t-xl border-b border-zinc-700/50 bg-zinc-800/30 px-6 py-4',
 				'hover:border-brand/50 hover:bg-zinc-800/50',
-				'transition-all duration-300 ease-out'
+				'transition-[background-color,border-color] duration-300 ease-out'
 			)}
 		>
 			<div class="flex flex-col items-center gap-2">
 				<div
 					class={cn(
-						'h-0.5 w-8 rounded-full transition-all duration-300 ease-out',
+						'h-0.5 w-8 rounded-full transition-[background-color,box-shadow] duration-300 ease-out',
 						moving ? 'bg-brand shadow-brand' : 'bg-zinc-500'
 					)}
 				></div>
 				<div
 					class={cn(
-						'h-0.5 w-6 rounded-full transition-all duration-300 ease-out',
+						'h-0.5 w-6 rounded-full transition-[background-color] duration-300 ease-out',
 						moving ? 'bg-brand/60' : 'bg-zinc-500/60'
 					)}
 				></div>

@@ -37,7 +37,7 @@
 	<div class="user-profile relative">
 		<button
 			onclick={() => (showDropdown = !showDropdown)}
-			class="flex cursor-pointer items-center space-x-2 rounded-full bg-white/20 px-3 py-2 text-zinc-300 backdrop-blur-sm transition-all hover:bg-white/30"
+			class="flex cursor-pointer items-center space-x-2 rounded-full bg-white/20 px-3 py-2 text-zinc-300 transition-[background-color] hover:bg-white/30"
 		>
 			<div class="bg-brand flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-zinc-300">
 				{authStore.state.user.name.charAt(0).toUpperCase()}
@@ -60,9 +60,7 @@
 		</button>
 
 		{#if showDropdown}
-			<div
-				class="border-brand/50 absolute top-full right-0 z-50 mt-2 w-64 rounded-md border bg-zinc-900 shadow-lg backdrop-blur-sm"
-			>
+			<div class="border-brand/50 absolute top-full right-0 z-50 mt-2 w-64 rounded-md border bg-zinc-900 shadow-lg">
 				<div class="border-b border-zinc-700 p-4">
 					<div class="flex items-center space-x-3">
 						<div class="bg-brand flex h-10 w-10 items-center justify-center rounded-full text-zinc-300">

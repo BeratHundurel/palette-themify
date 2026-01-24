@@ -148,7 +148,7 @@
 			<!-- Close Button Overlay -->
 			<button
 				onclick={close}
-				class="hover:text-brand absolute top-4 right-4 z-10 rounded-lg p-2 text-zinc-400 transition-all duration-300 hover:bg-zinc-800/50"
+				class="hover:text-brand absolute top-4 right-4 z-10 rounded-lg p-2 text-zinc-400 transition-[background-color,color] duration-300 hover:bg-zinc-800/50"
 				aria-label="Close search"
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@
 							scheduleSearch(appStore.state.searchQuery);
 						}}
 						placeholder="Search wallpapers..."
-						class="text-md w-full rounded border-none bg-zinc-800/75 p-4 font-light text-zinc-100 placeholder-zinc-500 transition-all duration-300 outline-none"
+						class="text-md w-full rounded border-none bg-zinc-800/75 p-4 font-light text-zinc-100 placeholder-zinc-500 transition-[background-color,box-shadow,color] duration-300 outline-none"
 					/>
 					<div
 						class="focus-within:bg-brand absolute bottom-0 left-0 h-px w-full bg-black transition-colors duration-300"
@@ -232,7 +232,7 @@
 						<div class="masonry pe-3">
 							{#each pageResult.items as result, idx (result.id + '-' + idx)}
 								<div
-									class="masonry-item group hover:border-brand/50 hover:shadow-brand/10 relative overflow-hidden rounded-lg border border-zinc-700/50 transition-all duration-300"
+									class="masonry-item group hover:border-brand/50 hover:shadow-brand/10 relative overflow-hidden rounded-lg border border-zinc-700/50 transition-[border-color,box-shadow] duration-300"
 								>
 									{#if result.path && result.thumbs && result.thumbs.original}
 										<button
@@ -243,7 +243,7 @@
 											<img
 												src={result.thumbs.original}
 												alt="wallpaper thumb"
-												class="h-full w-full object-cover transition-all duration-300 group-hover:scale-105 group-hover:opacity-90"
+												class="h-full w-full object-cover transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-90"
 											/>
 											<div
 												class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"

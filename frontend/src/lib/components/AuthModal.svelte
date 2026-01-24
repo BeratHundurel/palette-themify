@@ -142,7 +142,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="auth-modal-title"
@@ -254,7 +254,7 @@
 					<button
 						type="submit"
 						disabled={loading}
-						class="hover:shadow-brand-lg hover:bg-brand-hover bg-brand w-full cursor-pointer rounded-md py-2 font-medium text-zinc-900 transition-all focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						class="hover:shadow-brand-lg hover:bg-brand-hover bg-brand w-full cursor-pointer rounded-md py-2 font-medium text-zinc-900 transition-[background-color,box-shadow] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if loading}
 							<div class="flex items-center justify-center">

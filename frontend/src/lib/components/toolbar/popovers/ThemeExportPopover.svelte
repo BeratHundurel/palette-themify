@@ -395,7 +395,7 @@
 
 {#if popoverStore.isOpen('themeExport')}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-		<div class="animate-fade-in absolute inset-0 bg-black/70 backdrop-blur-sm" aria-hidden="true"></div>
+		<div class="animate-fade-in absolute inset-0 bg-black/70" aria-hidden="true"></div>
 
 		<div
 			role="dialog"
@@ -413,7 +413,7 @@
 				<button
 					type="button"
 					onclick={() => popoverStore.close('themeExport')}
-					class="hover:text-brand rounded-lg p-2 text-zinc-400 transition-all duration-300 hover:bg-zinc-800/50"
+					class="hover:text-brand rounded-lg p-2 text-zinc-400 transition-[background-color,color] duration-300 hover:bg-zinc-800/50"
 					aria-label="Close"
 				>
 					<svg
@@ -450,7 +450,7 @@
 								bind:value={themeName}
 								oninput={handleThemeNameChange}
 								placeholder="Generated Theme"
-								class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 placeholder-zinc-400 transition-all duration-300 focus:outline-none"
+								class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 placeholder-zinc-400 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 								class:border-red-500={themeNameError !== null}
 							/>
 							{#if themeNameError}
@@ -472,7 +472,7 @@
 							type="button"
 							onclick={resetOverrides}
 							disabled={Object.values(themeOverrides).every((value) => value == null)}
-							class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-all duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+							class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							Return to Defaults
 						</button>
@@ -497,7 +497,7 @@
 										type="text"
 										value={themeOverrides[field.key] ?? baseOverrides[field.key] ?? ''}
 										placeholder="#000000"
-										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-all duration-300 focus:outline-none"
+										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
 									/>
 								</div>
@@ -515,14 +515,14 @@
 						<button
 							type="button"
 							onclick={() => handleEditorTypeChange('vscode')}
-							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-all duration-300 {editorType ===
+							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-[background-color,border-color,box-shadow] duration-300 {editorType ===
 							'vscode'
 								? 'border-brand bg-brand/10 shadow-brand/20 shadow-lg'
 								: 'hover:border-brand/50 border-zinc-600 hover:bg-zinc-800/50'}"
 						>
 							<div class="flex items-center gap-2">
 								<div
-									class="flex h-5 w-5 items-center justify-center rounded-full border transition-all {editorType ===
+									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {editorType ===
 									'vscode'
 										? 'border-brand bg-brand/20'
 										: 'border-zinc-500'}"
@@ -541,14 +541,14 @@
 						<button
 							type="button"
 							onclick={() => handleEditorTypeChange('zed')}
-							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-all duration-300 {editorType ===
+							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-[background-color,border-color,box-shadow] duration-300 {editorType ===
 							'zed'
 								? 'border-brand bg-brand/10 shadow-brand/20 shadow-lg'
 								: 'hover:border-brand/50 border-zinc-600 hover:bg-zinc-800/50'}"
 						>
 							<div class="flex items-center gap-2">
 								<div
-									class="flex h-5 w-5 items-center justify-center rounded-full border transition-all {editorType ===
+									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {editorType ===
 									'zed'
 										? 'border-brand bg-brand/20'
 										: 'border-zinc-500'}"
@@ -578,7 +578,7 @@
 							{@const baseLabel = getBaseColorLabel(item.baseColor)}
 							<div
 								class={cn(
-									'group hover:border-brand/50 hover:shadow-brand/10 overflow-hidden rounded-xl border-2 border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm transition-all duration-300',
+									'group hover:border-brand/50 hover:shadow-brand/10 overflow-hidden rounded-xl border-2 border-zinc-700/50 bg-zinc-800/30 transition-[background-color,box-shadow,border-color] duration-300',
 									isExpanded(index) && 'border-brand/50 shadow-brand/20 shadow-lg'
 								)}
 							>
@@ -588,7 +588,7 @@
 										expandedColorIndices.has(index)
 											? expandedColorIndices.delete(index)
 											: expandedColorIndices.add(index)}
-									class="flex w-full items-center gap-4 p-4 text-left transition-all duration-300 hover:bg-zinc-800/50"
+									class="flex w-full items-center gap-4 p-4 text-left transition-colors duration-300 hover:bg-zinc-800/50"
 								>
 									<div class="relative">
 										<div
@@ -707,7 +707,7 @@
 																		<button
 																			type="button"
 																			onclick={() => copyUsagePath(usage)}
-																			class="hover:text-brand rounded p-1 text-zinc-500 opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-zinc-800/50"
+																			class="hover:text-brand rounded p-1 text-zinc-500 opacity-0 transition-[opacity,background-color,color] duration-300 group-hover:opacity-100 hover:bg-zinc-800/50"
 																			title="Copy path"
 																		>
 																			<svg
@@ -767,7 +767,7 @@
 					<button
 						type="button"
 						onclick={() => popoverStore.close('themeExport')}
-						class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-all duration-300 hover:bg-zinc-800/50"
+						class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50"
 					>
 						Cancel
 					</button>
@@ -775,7 +775,7 @@
 						type="button"
 						onclick={exportTheme}
 						disabled={!generatedTheme || themeNameError !== null}
-						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 					>
 						Copy Theme JSON
 					</button>
