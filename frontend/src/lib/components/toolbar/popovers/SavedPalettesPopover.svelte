@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { Color } from '$lib/types/palette';
 	import { cn } from '$lib/utils';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
 	import toast from 'svelte-french-toast';
+	import type { Color } from '$lib/types/palette';
 
 	function handlePaletteLoad(palette: Color[]) {
 		if (!appStore.state.imageLoaded) {
@@ -12,8 +12,7 @@
 			return;
 		}
 
-		appStore.state.colors = palette;
-		appStore.applyPalette();
+		appStore.applyPalette(palette);
 		popoverStore.close('saved');
 		tutorialStore.setSavedPaletteApplied(true);
 	}

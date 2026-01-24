@@ -524,15 +524,17 @@ function createAppStore() {
 			}
 		},
 
-		async applyPalette() {
+		async applyPalette(palette: Color[]) {
 			// Before calling this method we are checking if there is an image loaded in the UI
 
-			if (!state.colors || state.colors.length === 0) {
+			if (!palette || palette.length === 0) {
 				toast.error('No palette to apply');
 				return;
 			}
 
-			const invalidColors = state.colors.filter((color) => !isValidHexColor(color.hex));
+			const paletteToApply = [...palette];
+
+			const invalidColors = paletteToApply.filter((color) => !isValidHexColor(color.hex));
 			if (invalidColors.length > 0) {
 				toast.error(`Invalid colors in palette: ${invalidColors.map((c) => c.hex).join(', ')}`);
 				return;
@@ -547,7 +549,7 @@ function createAppStore() {
 					state.canvas!.toBlob((b) => resolve(b!), IMAGE.OUTPUT_FORMAT)
 				);
 
-				const outBlob = await api.applyPaletteBlob(srcBlob, state.colors, {
+				const outBlob = await api.applyPaletteBlob(srcBlob, paletteToApply, {
 					luminosity: state.luminosity,
 					nearest: state.nearest,
 					power: state.power,
@@ -555,9 +557,18 @@ function createAppStore() {
 				});
 				await appStore.drawBlobToCanvas(outBlob);
 
+				const extracted = await api.extractPalette(outBlob);
+				if (extracted.palette.length > 0) {
+					state.colors = extracted.palette;
+				} else {
+					toast.error('Applied palette, but no colors were extracted', { id: toastId });
+					return;
+				}
+
 				toast.success('Applied palette', { id: toastId });
-			} catch {
-				toast.error('Error applying palette', { id: toastId });
+			} catch (error) {
+				const message = error instanceof Error ? error.message : 'Unknown error';
+				toast.error(`Error applying palette: ${message}`, { id: toastId });
 			}
 		},
 		async loadSavedPalettes() {
