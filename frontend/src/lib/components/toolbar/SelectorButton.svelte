@@ -21,11 +21,12 @@
 		appStore.state.selectors = appStore.state.selectors.map((s) =>
 			s.id === selector.id
 				? {
-					...s,
-					selection: undefined
-				}
+						...s,
+						selection: undefined
+					}
 				: s
 		);
+		appStore.redrawCanvas();
 	}
 </script>
 

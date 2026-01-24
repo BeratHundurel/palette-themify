@@ -23,7 +23,6 @@ export async function searchWallhaven(
 
 	const url = buildURL('/wallhaven/search', params);
 
-	// Add API key header if provided
 	const headers: HeadersInit = {};
 	if (settings.apikey) {
 		headers['X-API-Key'] = settings.apikey;

@@ -25,7 +25,6 @@
 	let expandedColorIndices = new SvelteSet<number>();
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
 	let editorType = $state<EditorThemeType>(prefs.editorType);
 	let themeName = $state('Generated Theme');
 	let generatedTheme = $state<ThemeResponse | null>(null);
@@ -190,7 +189,6 @@
 		const colorMap = new SvelteMap<string, SvelteMap<string, SvelteSet<string>>>();
 
 		function traverse(obj: unknown, prefix: string) {
-			console.log('traverse');
 			if (typeof obj === 'string' && COLOR_REGEX.test(obj)) {
 				const normalizedColor = obj.toUpperCase();
 				const baseColor = normalizedColor.substring(0, 7);
@@ -316,7 +314,6 @@
 	}
 
 	function extractBaseOverrides(theme: ThemeResponse | null): ThemeOverrides {
-		console.log('extractBaseOverrides');
 		if (!theme) return {};
 		if ('colors' in theme) {
 			return extractVSCodeOverrides(theme);
@@ -329,7 +326,6 @@
 
 	function extractVSCodeOverrides(theme: ThemeResponse): ThemeOverrides {
 		if (!('colors' in theme)) return {};
-		console.log('extractVSCodeOverrides');
 		const colors = theme.colors;
 		const baseForeground = normalizeHex(colors['editor.foreground']) ?? normalizeHex(colors.foreground);
 		return {
@@ -348,7 +344,6 @@
 
 	function findTokenColor(theme: ThemeResponse, scopes: string[]): string | null {
 		if (!('tokenColors' in theme)) return null;
-		console.log('findTokenColor');
 		for (const token of theme.tokenColors) {
 			const foreground = normalizeHex(token.settings?.foreground ?? null);
 			if (!foreground) continue;
@@ -379,7 +374,6 @@
 	}
 
 	function getBaseColorLabel(color: string): string | null {
-		console.log('getBaseColorLabel');
 		const match = (
 			[
 				{ key: 'background', label: 'Background' },
