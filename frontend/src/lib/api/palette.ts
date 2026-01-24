@@ -21,9 +21,23 @@ export type GenerateThemeRequest = {
 	colors: Color[];
 	type: EditorThemeType;
 	name?: string;
+	overrides?: ThemeOverrides | null;
 };
 
 export type EditorThemeType = 'vscode' | 'zed';
+
+export type ThemeOverrides = {
+	background?: string | null;
+	foreground?: string | null;
+	c1?: string | null;
+	c2?: string | null;
+	c3?: string | null;
+	c4?: string | null;
+	c5?: string | null;
+	c6?: string | null;
+	c7?: string | null;
+	c8?: string | null;
+};
 
 export async function extractPalette(file: Blob | File): Promise<ZigPaletteResponse> {
 	if (!file) throw new Error('No files provided');
@@ -54,8 +68,13 @@ export async function extractPalette(file: Blob | File): Promise<ZigPaletteRespo
 	}
 }
 
-export async function generateTheme(colors: Color[], type: EditorThemeType, name?: string): Promise<ThemeResponse> {
-	const payload: GenerateThemeRequest = { colors, type, name };
+export async function generateTheme(
+	colors: Color[],
+	type: EditorThemeType,
+	name?: string,
+	overrides?: ThemeOverrides | null
+): Promise<ThemeResponse> {
+	const payload: GenerateThemeRequest = { colors, type, name, overrides };
 
 	const res = await fetch(buildZigURL('/generate-theme'), {
 		method: 'POST',

@@ -3,6 +3,7 @@ const zigimg = @import("zigimg");
 const color_utils = @import("color_utils.zig");
 const vscode = @import("vscode.zig");
 const zed = @import("zed.zig");
+const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 
 pub const ColorAndCount = struct {
     color: zigimg.color.Colorf32,
@@ -119,14 +120,15 @@ pub fn generateThemeJson(
     colors: []const []const u8,
     theme_type: ThemeType,
     theme_name: []const u8,
+    overrides: ThemeOverrides,
 ) ![]const u8 {
     return switch (theme_type) {
         .vscode => {
-            const theme = try vscode.generateVSCodeTheme(allocator, colors, theme_name);
+            const theme = try vscode.generateVSCodeTheme(allocator, colors, theme_name, overrides);
             return try std.json.Stringify.valueAlloc(allocator, theme, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
         .zed => {
-            const theme = try zed.generateZedTheme(allocator, colors, theme_name);
+            const theme = try zed.generateZedTheme(allocator, colors, theme_name, overrides);
             return try std.json.Stringify.valueAlloc(allocator, theme, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
     };
@@ -157,6 +159,7 @@ const ThemeRequest = struct {
     colors: []const ColorInput,
     type: []const u8,
     name: ?[]const u8 = null,
+    overrides: ?ThemeOverrides = null,
 };
 
 const ColorInput = struct {
@@ -185,6 +188,7 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
 
     const theme_type: ThemeType = if (std.mem.eql(u8, req.type, "zed")) .zed else .vscode;
     const theme_name = req.name orelse "Generated Theme";
+    const overrides = req.overrides orelse ThemeOverrides{};
 
-    return try generateThemeJson(allocator, colors, theme_type, theme_name);
+    return try generateThemeJson(allocator, colors, theme_type, theme_name, overrides);
 }

@@ -168,10 +168,10 @@
 							scheduleSearch(appStore.state.searchQuery);
 						}}
 						placeholder="Search wallpapers..."
-						class="w-full border-none bg-transparent px-0 py-4 text-lg font-light text-zinc-100 placeholder-zinc-500 transition-all duration-300 outline-none"
+						class="text-md w-full rounded border-none bg-zinc-800/75 p-4 font-light text-zinc-100 placeholder-zinc-500 transition-all duration-300 outline-none"
 					/>
 					<div
-						class="focus-within:bg-brand absolute bottom-0 left-0 h-px w-full bg-zinc-800 transition-colors duration-300"
+						class="focus-within:bg-brand absolute bottom-0 left-0 h-px w-full bg-black transition-colors duration-300"
 					></div>
 				</div>
 			</div>

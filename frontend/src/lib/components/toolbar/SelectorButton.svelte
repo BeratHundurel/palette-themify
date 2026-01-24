@@ -15,6 +15,18 @@
 			selected: s.id === selector.id
 		}));
 	}
+
+	function handleRightClick(event: MouseEvent) {
+		event.preventDefault();
+		appStore.state.selectors = appStore.state.selectors.map((s) =>
+			s.id === selector.id
+				? {
+					...s,
+					selection: undefined
+				}
+				: s
+		);
+	}
 </script>
 
 <button
@@ -26,6 +38,7 @@
 			: 'border border-zinc-700/50  hover:border-zinc-600 hover:shadow-md active:scale-95'
 	)}
 	onclick={handleClick}
+	oncontextmenu={handleRightClick}
 	aria-label="Selector {index + 1}"
 	type="button"
 >

@@ -2,6 +2,7 @@ const std = @import("std");
 
 const color_utils = @import("color_utils.zig");
 const types = @import("vscode_types.zig");
+const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 pub const VSCodeTheme = types.VSCodeTheme;
 pub const VSCodeThemeColors = types.VSCodeThemeColors;
 pub const VSCodeTokenColor = types.VSCodeTokenColor;
@@ -13,6 +14,7 @@ pub fn generateVSCodeTheme(
     allocator: std.mem.Allocator,
     colors: []const []const u8,
     theme_name: []const u8,
+    overrides: ThemeOverrides,
 ) !VSCodeTheme {
     const semantic = color_utils.findSemanticColors(colors);
     const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 10);
@@ -28,23 +30,23 @@ pub fn generateVSCodeTheme(
     const selection = try color_utils.selectBackgroundAndForeground(allocator, improved_colors, dark_base);
     defer allocator.free(selection.remaining_indices);
 
-    const c0 = improved_colors[selection.background_index];
+    const c0 = overrides.background orelse improved_colors[selection.background_index];
     const remaining = selection.remaining_indices;
-    const c1_raw = improved_colors[remaining[0]];
-    const c2_raw = improved_colors[remaining[1]];
-    const c3_raw = improved_colors[remaining[2]];
-    const c4_raw = improved_colors[remaining[3]];
-    const c5_raw = improved_colors[remaining[4]];
-    const c6_raw = improved_colors[remaining[5]];
-    const c7_raw = improved_colors[remaining[6]];
-    const c8_raw = improved_colors[remaining[7]];
+    const c1_raw = overrides.c1 orelse improved_colors[remaining[0]];
+    const c2_raw = overrides.c2 orelse improved_colors[remaining[1]];
+    const c3_raw = overrides.c3 orelse improved_colors[remaining[2]];
+    const c4_raw = overrides.c4 orelse improved_colors[remaining[3]];
+    const c5_raw = overrides.c5 orelse improved_colors[remaining[4]];
+    const c6_raw = overrides.c6 orelse improved_colors[remaining[5]];
+    const c7_raw = overrides.c7 orelse improved_colors[remaining[6]];
+    const c8_raw = overrides.c8 orelse improved_colors[remaining[7]];
 
     const base_luminance = color_utils.getLuminance(c0);
     const darken_amount = if (dark_base) 0.75 + (base_luminance) * 0.20 else 0.0;
     const lighten_amount = if (dark_base) 0.0 else 0.75 + (1.0 - base_luminance) * 0.20;
     const background = if (dark_base) color_utils.darkenColor(c0, darken_amount) else color_utils.lightenColor(c0, lighten_amount);
 
-    const proposed_foreground = improved_colors[selection.foreground_index];
+    const proposed_foreground = overrides.foreground orelse improved_colors[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
     const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);

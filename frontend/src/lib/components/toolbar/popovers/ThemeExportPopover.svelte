@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
-	import { generateTheme, type EditorThemeType } from '$lib/api/palette';
+	import { generateTheme, type EditorThemeType, type ThemeOverrides } from '$lib/api/palette';
 	import type { ThemeResponse } from '$lib/types/palette';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
@@ -9,6 +9,7 @@
 
 	const STORAGE_KEY = 'themeExportPreferences';
 	const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
+	const THEME_NAME_DEBOUNCE_MS = 300;
 
 	interface ThemeColorWithUsage {
 		baseColor: string;
@@ -24,7 +25,6 @@
 	let expandedColorIndices = new SvelteSet<number>();
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-	const THEME_NAME_DEBOUNCE_MS = 300;
 
 	let editorType = $state<EditorThemeType>(prefs.editorType);
 	let themeName = $state('Generated Theme');
@@ -32,6 +32,8 @@
 	let themeColorsWithUsage = $state<ThemeColorWithUsage[]>([]);
 	let themeNameError = $state<string | null>(null);
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
+	let themeOverrides = $state<ThemeOverrides>({});
+	const baseOverrides = $derived(extractBaseOverrides(generatedTheme));
 
 	const sortedThemeColors = $derived(
 		themeColorsWithUsage.length > 0
@@ -42,41 +44,6 @@
 	$effect(() => {
 		if (isOpen && generatedTheme === null) {
 			generateThemeFromApi();
-		}
-	});
-
-	$effect(() => {
-		if (!isOpen) {
-			expandedColorIndices.clear();
-			generatedTheme = null;
-			themeColorsWithUsage.length = 0;
-			themeName = 'Generated Theme';
-			themeNameError = null;
-			if (debounceTimer) {
-				clearTimeout(debounceTimer);
-				debounceTimer = null;
-			}
-
-			// Clear theme name debounce timer
-			if (themeNameDebounceTimer) {
-				clearTimeout(themeNameDebounceTimer);
-				themeNameDebounceTimer = null;
-			}
-		}
-	});
-
-	$effect(() => {
-		if (isOpen) {
-			const handleEscapeKey = (event: KeyboardEvent) => {
-				if (event.key === 'Escape') {
-					popoverStore.close('themeExport');
-				}
-			};
-
-			document.addEventListener('keydown', handleEscapeKey);
-			return () => {
-				document.removeEventListener('keydown', handleEscapeKey);
-			};
 		}
 	});
 
@@ -187,7 +154,7 @@
 		}
 
 		try {
-			const theme = await generateTheme(appStore.state.colors, editorType, themeName.trim());
+			const theme = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
 			generatedTheme = theme;
 			themeColorsWithUsage = extractThemeColorsWithUsage(theme);
 		} catch (err) {
@@ -197,10 +164,33 @@
 		}
 	}
 
+	function resetOverrides() {
+		themeOverrides = {};
+		generateThemeFromApi();
+	}
+
+	function updateThemeOverride(key: keyof ThemeOverrides, value: string) {
+		const normalized = normalizeHex(value);
+		if (!normalized) {
+			themeOverrides[key] = null;
+		} else {
+			themeOverrides[key] = normalized;
+		}
+
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+		}
+
+		debounceTimer = setTimeout(() => {
+			generateThemeFromApi();
+		}, 300);
+	}
+
 	function extractThemeColorsWithUsage(theme: ThemeResponse): ThemeColorWithUsage[] {
 		const colorMap = new SvelteMap<string, SvelteMap<string, SvelteSet<string>>>();
 
 		function traverse(obj: unknown, prefix: string) {
+			console.log('traverse');
 			if (typeof obj === 'string' && COLOR_REGEX.test(obj)) {
 				const normalizedColor = obj.toUpperCase();
 				const baseColor = normalizedColor.substring(0, 7);
@@ -305,6 +295,108 @@
 			toast.error('Failed to copy usage path');
 		}
 	}
+
+	const overrideFields: Array<{ key: keyof ThemeOverrides; label: string; hint: string }> = [
+		{ key: 'background', label: 'Background', hint: 'Base background (c0)' },
+		{ key: 'foreground', label: 'Foreground', hint: 'Primary text color' },
+		{ key: 'c1', label: 'C1', hint: 'Properties/fields' },
+		{ key: 'c2', label: 'C2', hint: 'Functions/accent' },
+		{ key: 'c3', label: 'C3', hint: 'Strings' },
+		{ key: 'c4', label: 'C4', hint: 'Errors/punctuation' },
+		{ key: 'c5', label: 'C5', hint: 'Types/constants' },
+		{ key: 'c6', label: 'C6', hint: 'Keywords/preproc' },
+		{ key: 'c7', label: 'C7', hint: 'Parameters' },
+		{ key: 'c8', label: 'C8', hint: 'Operators/constructors' }
+	];
+
+	function normalizeHex(value: string | null | undefined): string | null {
+		if (!value) return null;
+		if (!COLOR_REGEX.test(value)) return null;
+		return value.slice(0, 7).toUpperCase();
+	}
+
+	function extractBaseOverrides(theme: ThemeResponse | null): ThemeOverrides {
+		console.log('extractBaseOverrides');
+		if (!theme) return {};
+		if ('colors' in theme) {
+			return extractVSCodeOverrides(theme);
+		}
+		if ('themes' in theme) {
+			return extractZedOverrides(theme);
+		}
+		return {};
+	}
+
+	function extractVSCodeOverrides(theme: ThemeResponse): ThemeOverrides {
+		if (!('colors' in theme)) return {};
+		console.log('extractVSCodeOverrides');
+		const colors = theme.colors;
+		const baseForeground = normalizeHex(colors['editor.foreground']) ?? normalizeHex(colors.foreground);
+		return {
+			background: normalizeHex(colors['editor.background']),
+			foreground: baseForeground,
+			c1: findTokenColor(theme, ['variable.other.property', 'support.variable']),
+			c2: findTokenColor(theme, ['entity.name.function', 'support.function']),
+			c3: findTokenColor(theme, ['string']),
+			c4: findTokenColor(theme, ['invalid', 'invalid.illegal']),
+			c5: findTokenColor(theme, ['constant.language', 'entity.name.type']),
+			c6: findTokenColor(theme, ['keyword', 'keyword.control']),
+			c7: findTokenColor(theme, ['variable.parameter']),
+			c8: findTokenColor(theme, ['keyword.operator'])
+		};
+	}
+
+	function findTokenColor(theme: ThemeResponse, scopes: string[]): string | null {
+		if (!('tokenColors' in theme)) return null;
+		console.log('findTokenColor');
+		for (const token of theme.tokenColors) {
+			const foreground = normalizeHex(token.settings?.foreground ?? null);
+			if (!foreground) continue;
+			for (const scope of scopes) {
+				if (token.scope.includes(scope)) return foreground;
+			}
+		}
+		return null;
+	}
+
+	function extractZedOverrides(theme: ThemeResponse): ThemeOverrides {
+		if (!('themes' in theme)) return {};
+		console.log('extractZedOverrides');
+		const style = theme.themes?.[0]?.style;
+		if (!style) return {};
+		return {
+			background: normalizeHex(style.background),
+			foreground: normalizeHex(style.text),
+			c1: normalizeHex(style.syntax?.field?.color ?? style.syntax?.property?.color),
+			c2: normalizeHex(style['text.accent'] ?? style.syntax?.function?.color),
+			c3: normalizeHex(style.syntax?.string?.color),
+			c4: normalizeHex(style.syntax?.['punctuation.special']?.color),
+			c5: normalizeHex(style.syntax?.constant?.color),
+			c6: normalizeHex(style.syntax?.keyword?.color),
+			c7: normalizeHex(style.syntax?.parameter?.color),
+			c8: normalizeHex(style.syntax?.constructor?.color)
+		};
+	}
+
+	function getBaseColorLabel(color: string): string | null {
+		console.log('getBaseColorLabel');
+		const match = (
+			[
+				{ key: 'background', label: 'Background' },
+				{ key: 'foreground', label: 'Foreground' },
+				{ key: 'c1', label: 'C1' },
+				{ key: 'c2', label: 'C2' },
+				{ key: 'c3', label: 'C3' },
+				{ key: 'c4', label: 'C4' },
+				{ key: 'c5', label: 'C5' },
+				{ key: 'c6', label: 'C6' },
+				{ key: 'c7', label: 'C7' },
+				{ key: 'c8', label: 'C8' }
+			] as const
+		).find((entry) => baseOverrides[entry.key] === color);
+
+		return match?.label ?? null;
+	}
 </script>
 
 {#if popoverStore.isOpen('themeExport')}
@@ -371,6 +463,52 @@
 								<p class="mt-1.5 text-xs text-red-400">{themeNameError}</p>
 							{/if}
 						</div>
+					</div>
+				</div>
+
+				<div class="mb-8">
+					<div class="mb-4 flex items-center gap-2">
+						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
+						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						<span class="text-xs text-zinc-400">Overrides regenerate derived variants</span>
+					</div>
+					<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+						<p class="text-xs text-zinc-500">Defaults come from the generated theme. Clearing restores them.</p>
+						<button
+							type="button"
+							onclick={resetOverrides}
+							disabled={Object.values(themeOverrides).every((value) => value == null)}
+							class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-all duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							Return to Defaults
+						</button>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2">
+						{#each overrideFields as field (field.key)}
+							<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/50 px-3 py-2">
+								<div class="mb-1">
+									<div>
+										<div class="mb-0.5 text-sm font-medium text-zinc-200">{field.label}</div>
+										<div class="text-xs text-zinc-500">{field.hint}</div>
+									</div>
+								</div>
+								<div class="flex items-center gap-2">
+									<input
+										type="color"
+										value={themeOverrides[field.key] ?? baseOverrides[field.key] ?? '#000000'}
+										class="h-10 w-12 cursor-pointer"
+										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
+									/>
+									<input
+										type="text"
+										value={themeOverrides[field.key] ?? baseOverrides[field.key] ?? ''}
+										placeholder="#000000"
+										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-all duration-300 focus:outline-none"
+										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
+									/>
+								</div>
+							</div>
+						{/each}
 					</div>
 				</div>
 
@@ -443,6 +581,7 @@
 					</div>
 					<div class="space-y-3">
 						{#each sortedThemeColors as item, index (item.baseColor)}
+							{@const baseLabel = getBaseColorLabel(item.baseColor)}
 							<div
 								class={cn(
 									'group hover:border-brand/50 hover:shadow-brand/10 overflow-hidden rounded-xl border-2 border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm transition-all duration-300',
@@ -485,6 +624,9 @@
 										<div class="mt-1 text-xs text-zinc-400">
 											Click to {isExpanded(index) ? 'hide' : 'show'} color variants and usage details
 										</div>
+										{#if baseLabel}
+											<div class="mt-0.5 text-xs text-zinc-500">Affected by {baseLabel} base color</div>
+										{/if}
 									</div>
 									<div class="flex items-center gap-2">
 										<div class="text-right">
@@ -602,18 +744,6 @@
 								{/if}
 							</div>
 						{/each}
-					</div>
-				</div>
-
-				<div>
-					<div class="mb-6 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme JSON Preview</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
-					</div>
-					<div class="rounded-lg border border-zinc-700/50 bg-zinc-950/50">
-						<pre class="custom-scrollbar max-h-72 overflow-auto p-4 font-mono text-xs text-zinc-300">
-								<code>{generatedTheme ? JSON.stringify(generatedTheme, null, 2) : ''}</code>
-							</pre>
 					</div>
 				</div>
 			</div>
