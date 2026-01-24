@@ -21,26 +21,56 @@ pub fn generateZedTheme(
     const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 10);
     defer allocator.free(improved_colors);
 
+    var palette = std.ArrayList([]const u8){};
+    defer palette.deinit(allocator);
+    try palette.ensureTotalCapacity(allocator, 10);
+    try palette.appendSlice(allocator, improved_colors);
+
+    if (palette.items.len == 0) {
+        return error.NotEnoughColors;
+    }
+
+    if (palette.items.len < 10) {
+        const harmony_schemes = [_]color_utils.HarmonyScheme{
+            .complementary,
+            .triadic,
+            .analogous,
+            .@"split-complementary",
+        };
+        const base_count = palette.items.len;
+        var scheme_index: usize = 0;
+        var base_index: usize = 0;
+
+        while (palette.items.len < 10) {
+            const base_color = palette.items[base_index % base_count];
+            const scheme = harmony_schemes[scheme_index % harmony_schemes.len];
+            const harmonic = color_utils.getHarmonicColor(base_color, scheme);
+            try palette.append(allocator, harmonic);
+            scheme_index += 1;
+            base_index += 1;
+        }
+    }
+
     var sum_luminance: f32 = 0.0;
-    for (improved_colors) |color| {
+    for (palette.items) |color| {
         sum_luminance += color_utils.getLuminance(color);
     }
-    const average_luminance = sum_luminance / @as(f32, @floatFromInt(improved_colors.len));
+    const average_luminance = sum_luminance / @as(f32, @floatFromInt(palette.items.len));
     const dark_base = average_luminance < 128.0;
 
-    const selection = try color_utils.selectBackgroundAndForeground(allocator, improved_colors, dark_base);
+    const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
-    const c0 = overrides.background orelse improved_colors[selection.background_index];
+    const c0 = overrides.background orelse palette.items[selection.background_index];
     const remaining = selection.remaining_indices;
-    const c1_raw = overrides.c1 orelse improved_colors[remaining[0]];
-    const c2_raw = overrides.c2 orelse improved_colors[remaining[1]];
-    const c3_raw = overrides.c3 orelse improved_colors[remaining[2]];
-    const c4_raw = overrides.c4 orelse improved_colors[remaining[3]];
-    const c5_raw = overrides.c5 orelse improved_colors[remaining[4]];
-    const c6_raw = overrides.c6 orelse improved_colors[remaining[5]];
-    const c7_raw = overrides.c7 orelse improved_colors[remaining[6]];
-    const c8_raw = overrides.c8 orelse improved_colors[remaining[7]];
+    const c1_raw = overrides.c1 orelse palette.items[remaining[0]];
+    const c2_raw = overrides.c2 orelse palette.items[remaining[1]];
+    const c3_raw = overrides.c3 orelse palette.items[remaining[2]];
+    const c4_raw = overrides.c4 orelse palette.items[remaining[3]];
+    const c5_raw = overrides.c5 orelse palette.items[remaining[4]];
+    const c6_raw = overrides.c6 orelse palette.items[remaining[5]];
+    const c7_raw = overrides.c7 orelse palette.items[remaining[6]];
+    const c8_raw = overrides.c8 orelse palette.items[remaining[7]];
 
     const base_luminance = color_utils.getLuminance(c0);
     const darken_amount = if (dark_base) 0.75 + (base_luminance) * 0.20 else 0.0;
@@ -52,7 +82,7 @@ pub fn generateZedTheme(
     const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.05);
     const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.20) else color_utils.darkenColor(background, 0.10);
 
-    const proposed_foreground = overrides.foreground orelse improved_colors[selection.foreground_index];
+    const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
     const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.50) else color_utils.lightenColor(foreground, 0.50);
