@@ -48,6 +48,7 @@ interface AppState {
 	sortMethod: SortMethod;
 	applyPaletteSettings: ApplyPaletteSettings;
 	themeExport: ThemeExportState;
+	paletteVersion: number;
 }
 
 const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';
@@ -129,8 +130,21 @@ function createAppStore() {
 			themeName: 'Generated Theme',
 			generatedTheme: null,
 			themeOverrides: {},
-			themeColorsWithUsage: []
-		}
+			themeColorsWithUsage: [],
+			lastGeneratedPaletteVersion: 0
+		},
+		paletteVersion: 0
+	});
+
+	let lastPaletteSignature = '';
+
+	$effect.root(() => {
+		$effect(() => {
+			const signature = state.colors.map((color) => color.hex.toUpperCase()).join('|');
+			if (signature === lastPaletteSignature) return;
+			lastPaletteSignature = signature;
+			state.paletteVersion += 1;
+		});
 	});
 
 	function calculateImageDimensions(
@@ -377,10 +391,10 @@ function createAppStore() {
 
 		async loadWallhavenImage(imageUrl: string, existingToastId?: string) {
 			try {
+				this.clearAllSelections();
 				const blob = await downloadImage(imageUrl);
 				await this.drawBlobToCanvas(blob);
 				await this.extractPalette(blob, existingToastId);
-				this.clearAllSelections();
 			} catch (err) {
 				console.error('Failed to load wallhaven image', err);
 			}
@@ -409,6 +423,8 @@ function createAppStore() {
 				selector.selection = undefined;
 				selector.selected = selector.id === UI.DEFAULT_SELECTOR_ID;
 			});
+
+			this.redrawCanvas();
 		},
 
 		async extractPaletteFromSelection() {

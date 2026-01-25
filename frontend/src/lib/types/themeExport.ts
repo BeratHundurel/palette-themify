@@ -17,4 +17,5 @@ export interface ThemeExportState {
 	generatedTheme: ThemeResponse | null;
 	themeOverrides: ThemeOverrides;
 	themeColorsWithUsage: ThemeColorWithUsage[];
+	lastGeneratedPaletteVersion: number;
 }

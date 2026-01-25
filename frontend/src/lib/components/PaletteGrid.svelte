@@ -67,9 +67,9 @@
 	}
 </script>
 
-<section class={cn('w-full max-w-5xl', appStore.state.imageLoaded ? 'min-h-[200px]' : 'h-0 w-0')}>
-	{#if appStore.state.colors.length > 0}
-		<div class="mb-4 flex items-center gap-2">
+<section class={cn('flex w-full max-w-5xl flex-col gap-3', appStore.state.imageLoaded ? 'min-h-[200px]' : 'h-0 w-0')}>
+	{#if appStore.state.imageLoaded}
+		<div class="flex min-h-9 items-center gap-2">
 			<span class="text-sm font-medium text-zinc-300">Sort:</span>
 			<div
 				bind:this={sortButtonGroup}
@@ -120,7 +120,7 @@
 	</div>
 
 	{#if appStore.state.imageLoaded}
-		<div class="mt-4 flex flex-row justify-between">
+		<div class="flex flex-row justify-between">
 			<button
 				class="border-brand/50 hover:shadow-brand-lg w-36 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-[background-color,border-color,box-shadow,color] duration-300"
 				onclick={returnToUpload}>Back</button

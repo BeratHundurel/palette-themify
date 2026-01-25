@@ -12,8 +12,6 @@
 	const THEME_NAME_DEBOUNCE_MS = 300;
 
 	let expandedColorIndices = new SvelteSet<number>();
-
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	let editorType = $derived(appStore.state.themeExport.editorType);
@@ -21,10 +19,11 @@
 	let generatedTheme = $derived(appStore.state.themeExport.generatedTheme);
 	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
 	let themeOverrides = $derived(appStore.state.themeExport.themeOverrides);
+	let paletteVersion = $derived(appStore.state.paletteVersion);
 	const baseOverrides = $derived(extractBaseOverrides(generatedTheme));
-
-	let themeNameError = $state<string | null>(null);
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
+	let themeNameError = $state<string | null>(null);
+	let isGenerating = $state(false);
 
 	const sortedThemeColors = $derived(
 		themeColorsWithUsage.length > 0
@@ -36,6 +35,12 @@
 		if (isOpen && generatedTheme === null) {
 			generateThemeFromApi();
 		}
+	});
+
+	$effect(() => {
+		if (!isOpen || isGenerating || appStore.state.themeExport.lastGeneratedPaletteVersion == paletteVersion) return;
+		appStore.state.themeExport.themeName = 'Generated Theme';
+		generateThemeFromApi();
 	});
 
 	function validateThemeName(name: string): string | null {
@@ -110,6 +115,7 @@
 	}
 
 	async function generateThemeFromApi() {
+		if (isGenerating) return;
 		if (!appStore.state.colors || appStore.state.colors.length === 0) {
 			return;
 		}
@@ -121,13 +127,17 @@
 		}
 
 		try {
+			isGenerating = true;
 			const theme = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
 			appStore.state.themeExport.generatedTheme = theme;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(theme);
+			appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
 		} catch (err) {
 			toast.error('Failed to generate theme: ' + (err instanceof Error ? err.message : 'Unknown error'));
 			appStore.state.themeExport.generatedTheme = null;
 			appStore.state.themeExport.themeColorsWithUsage = [];
+		} finally {
+			isGenerating = false;
 		}
 	}
 
@@ -143,14 +153,7 @@
 		} else {
 			appStore.state.themeExport.themeOverrides[key] = normalized;
 		}
-
-		if (debounceTimer) {
-			clearTimeout(debounceTimer);
-		}
-
-		debounceTimer = setTimeout(() => {
-			generateThemeFromApi();
-		}, 300);
+		generateThemeFromApi();
 	}
 
 	function extractThemeColorsWithUsage(theme: ThemeResponse): ThemeColorWithUsage[] {
@@ -225,14 +228,7 @@
 		}
 
 		appStore.setThemeExportEditorType(type);
-
-		if (debounceTimer) {
-			clearTimeout(debounceTimer);
-		}
-
-		debounceTimer = setTimeout(() => {
-			generateThemeFromApi();
-		}, 300);
+		generateThemeFromApi();
 	}
 
 	async function exportTheme() {
@@ -323,7 +319,6 @@
 
 	function extractZedOverrides(theme: ThemeResponse): ThemeOverrides {
 		if (!('themes' in theme)) return {};
-		console.log('extractZedOverrides');
 		const style = theme.themes?.[0]?.style;
 		if (!style) return {};
 		return {
