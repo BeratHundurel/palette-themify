@@ -1,5 +1,7 @@
 import { browser } from '$app/environment';
 import type { Color, Selector, PaletteData, WorkspaceData } from '$lib/types/palette';
+import type { EditorThemeType } from '$lib/api/palette';
+import type { ThemeExportState } from '$lib/types/themeExport';
 import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 import * as api from '$lib/api/palette';
 import * as workspaceApi from '$lib/api/workspace';
@@ -10,6 +12,7 @@ import { tick } from 'svelte';
 import { CANVAS, SELECTION, IMAGE, UI } from '$lib/constants';
 import type { SortMethod } from '$lib/colorUtils';
 import { downloadImage } from '$lib/api/wallhaven';
+import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
 
 export type SavedPaletteItem = PaletteData;
 
@@ -43,11 +46,33 @@ interface AppState {
 	savedPalettes: PaletteData[];
 	savedWorkspaces: WorkspaceData[];
 	sortMethod: SortMethod;
+	applyPaletteSettings: ApplyPaletteSettings;
+	themeExport: ThemeExportState;
+}
 
-	luminosity: number;
-	nearest: number;
-	power: number;
-	maxDistance: number;
+const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';
+
+function loadThemeExportPreferences(): EditorThemeType {
+	if (!browser) return 'vscode';
+	try {
+		const stored = localStorage.getItem(THEME_EXPORT_STORAGE_KEY);
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			return parsed.editorType || 'vscode';
+		}
+	} catch {
+		// Ignore parse errors
+	}
+	return 'vscode';
+}
+
+function saveThemeExportPreferences(editorType: EditorThemeType) {
+	if (!browser) return;
+	try {
+		localStorage.setItem(THEME_EXPORT_STORAGE_KEY, JSON.stringify({ editorType }));
+	} catch {
+		// Ignore storage errors
+	}
 }
 
 function createAppStore() {
@@ -93,11 +118,19 @@ function createAppStore() {
 		savedPalettes: [],
 		savedWorkspaces: [],
 		sortMethod: 'none',
-
-		luminosity: 1,
-		nearest: 30,
-		power: 4,
-		maxDistance: 0
+		applyPaletteSettings: {
+			luminosity: 1,
+			nearest: 30,
+			power: 4,
+			maxDistance: 0
+		},
+		themeExport: {
+			editorType: loadThemeExportPreferences(),
+			themeName: 'Generated Theme',
+			generatedTheme: null,
+			themeOverrides: {},
+			themeColorsWithUsage: []
+		}
 	});
 
 	function calculateImageDimensions(
@@ -206,6 +239,11 @@ function createAppStore() {
 	return {
 		get state() {
 			return state;
+		},
+
+		setThemeExportEditorType(editorType: EditorThemeType) {
+			state.themeExport.editorType = editorType;
+			saveThemeExportPreferences(editorType);
 		},
 
 		async drawToCanvas(file: File) {
@@ -550,10 +588,10 @@ function createAppStore() {
 				);
 
 				const outBlob = await api.applyPaletteBlob(srcBlob, paletteToApply, {
-					luminosity: state.luminosity,
-					nearest: state.nearest,
-					power: state.power,
-					maxDistance: state.maxDistance
+					luminosity: state.applyPaletteSettings.luminosity,
+					nearest: state.applyPaletteSettings.nearest,
+					power: state.applyPaletteSettings.power,
+					maxDistance: state.applyPaletteSettings.maxDistance
 				});
 				await appStore.drawBlobToCanvas(outBlob);
 
@@ -730,10 +768,10 @@ function createAppStore() {
 						colors: state.colors,
 						selectors: state.selectors,
 						activeSelectorId: state.activeSelectorId,
-						luminosity: state.luminosity,
-						nearest: state.nearest,
-						power: state.power,
-						maxDistance: state.maxDistance,
+						luminosity: state.applyPaletteSettings.luminosity,
+						nearest: state.applyPaletteSettings.nearest,
+						power: state.applyPaletteSettings.power,
+						maxDistance: state.applyPaletteSettings.maxDistance,
 						wallhavenSettings: state.wallhavenSettings
 					});
 					toast.success('Workspace saved: ' + workspaceName, { id: toastId });
@@ -747,10 +785,10 @@ function createAppStore() {
 							colors: state.colors,
 							selectors: state.selectors,
 							activeSelectorId: state.activeSelectorId,
-							luminosity: state.luminosity,
-							nearest: state.nearest,
-							power: state.power,
-							maxDistance: state.maxDistance,
+							luminosity: state.applyPaletteSettings.luminosity,
+							nearest: state.applyPaletteSettings.nearest,
+							power: state.applyPaletteSettings.power,
+							maxDistance: state.applyPaletteSettings.maxDistance,
 							wallhavenSettings: state.wallhavenSettings,
 							createdAt: new Date().toISOString()
 						};
@@ -800,10 +838,12 @@ function createAppStore() {
 					state.colors = workspace.colors || [];
 					state.selectors = workspace.selectors || [];
 					state.activeSelectorId = workspace.activeSelectorId || UI.DEFAULT_SELECTOR_ID;
-					state.luminosity = workspace.luminosity || 1;
-					state.nearest = workspace.nearest || 30;
-					state.power = workspace.power || 4;
-					state.maxDistance = workspace.maxDistance || 0;
+					state.applyPaletteSettings = {
+						luminosity: workspace.luminosity || 1,
+						nearest: workspace.nearest || 30,
+						power: workspace.power || 4,
+						maxDistance: workspace.maxDistance || 0
+					};
 					state.wallhavenSettings = workspace.wallhavenSettings || {
 						categories: '111',
 						purity: '100',

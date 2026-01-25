@@ -3,10 +3,10 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 
-	let luminosity = $derived(appStore.state.luminosity);
-	let nearest = $derived(appStore.state.nearest);
-	let power = $derived(appStore.state.power);
-	let maxDistance = $derived(appStore.state.maxDistance);
+	let luminosity = $derived(appStore.state.applyPaletteSettings.luminosity);
+	let nearest = $derived(appStore.state.applyPaletteSettings.nearest);
+	let power = $derived(appStore.state.applyPaletteSettings.power);
+	let maxDistance = $derived(appStore.state.applyPaletteSettings.maxDistance);
 
 	let showTooltip = $state('');
 
@@ -19,7 +19,7 @@
 			max: 3.0,
 			step: 0.1,
 			tooltip: 'Brightness adjustment factor. 1.0 = no change, >1.0 = brighter, <1.0 = darker',
-			action: (val: number) => (appStore.state.luminosity = val)
+			action: (val: number) => (appStore.state.applyPaletteSettings.luminosity = val)
 		},
 		{
 			id: 'nearest',
@@ -29,7 +29,7 @@
 			max: 20,
 			step: 1,
 			tooltip: 'Number of palette colors to use for interpolation. Higher = smoother blending',
-			action: (val: number) => (appStore.state.nearest = val)
+			action: (val: number) => (appStore.state.applyPaletteSettings.nearest = val)
 		},
 		{
 			id: 'power',
@@ -39,7 +39,7 @@
 			max: 10.0,
 			step: 0.5,
 			tooltip: 'Distance weighting power. Lower = soft blending, higher = sharp transitions',
-			action: (val: number) => (appStore.state.power = val)
+			action: (val: number) => (appStore.state.applyPaletteSettings.power = val)
 		},
 		{
 			id: 'maxDistance',
@@ -49,7 +49,7 @@
 			max: 200,
 			step: 5,
 			tooltip: 'Maximum distance threshold. Only pixels within this range get recolored (0 = all pixels)',
-			action: (val: number) => (appStore.state.maxDistance = val)
+			action: (val: number) => (appStore.state.applyPaletteSettings.maxDistance = val)
 		}
 	]);
 

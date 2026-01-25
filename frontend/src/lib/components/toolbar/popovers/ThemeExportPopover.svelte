@@ -1,38 +1,30 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
+	import type { ThemeColorWithUsage } from '$lib/types/themeExport';
 	import { generateTheme, type EditorThemeType, type ThemeOverrides } from '$lib/api/palette';
 	import type { ThemeResponse } from '$lib/types/palette';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
-	const STORAGE_KEY = 'themeExportPreferences';
 	const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 	const THEME_NAME_DEBOUNCE_MS = 300;
 
-	interface ThemeColorWithUsage {
-		baseColor: string;
-		label: string;
-		variants: Array<{
-			color: string;
-			usages: string[];
-		}>;
-		totalUsages: number;
-	}
-
-	const prefs = loadPreferences();
 	let expandedColorIndices = new SvelteSet<number>();
+
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-	let editorType = $state<EditorThemeType>(prefs.editorType);
-	let themeName = $state('Generated Theme');
-	let generatedTheme = $state<ThemeResponse | null>(null);
-	let themeColorsWithUsage = $state<ThemeColorWithUsage[]>([]);
+
+	let editorType = $derived(appStore.state.themeExport.editorType);
+	let themeName = $derived(appStore.state.themeExport.themeName);
+	let generatedTheme = $derived(appStore.state.themeExport.generatedTheme);
+	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
+	let themeOverrides = $derived(appStore.state.themeExport.themeOverrides);
+	const baseOverrides = $derived(extractBaseOverrides(generatedTheme));
+
 	let themeNameError = $state<string | null>(null);
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
-	let themeOverrides = $state<ThemeOverrides>({});
-	const baseOverrides = $derived(extractBaseOverrides(generatedTheme));
 
 	const sortedThemeColors = $derived(
 		themeColorsWithUsage.length > 0
@@ -45,29 +37,6 @@
 			generateThemeFromApi();
 		}
 	});
-
-	function loadPreferences(): { editorType: EditorThemeType } {
-		if (typeof window === 'undefined') return { editorType: 'vscode' };
-		try {
-			const stored = localStorage.getItem(STORAGE_KEY);
-			if (stored) {
-				const parsed = JSON.parse(stored);
-				return { editorType: parsed.editorType || 'vscode' };
-			}
-		} catch {
-			// Ignore parse errors
-		}
-		return { editorType: 'vscode' };
-	}
-
-	function savePreferences(editorType: EditorThemeType) {
-		if (typeof window === 'undefined') return;
-		try {
-			localStorage.setItem(STORAGE_KEY, JSON.stringify({ editorType }));
-		} catch {
-			// Ignore storage errors
-		}
-	}
 
 	function validateThemeName(name: string): string | null {
 		const trimmedName = name.trim();
@@ -88,7 +57,7 @@
 	function handleThemeNameChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const newName = target.value;
-		themeName = newName;
+		appStore.state.themeExport.themeName = newName;
 		themeNameError = validateThemeName(newName);
 
 		if (themeNameDebounceTimer) {
@@ -113,8 +82,7 @@
 
 		try {
 			updateThemeNameInGeneratedTheme(trimmedName);
-
-			themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme);
+			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme);
 		} catch {
 			toast.error('Failed to update theme name, regenerating...');
 			generateThemeFromApi();
@@ -154,26 +122,26 @@
 
 		try {
 			const theme = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
-			generatedTheme = theme;
-			themeColorsWithUsage = extractThemeColorsWithUsage(theme);
+			appStore.state.themeExport.generatedTheme = theme;
+			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(theme);
 		} catch (err) {
 			toast.error('Failed to generate theme: ' + (err instanceof Error ? err.message : 'Unknown error'));
-			generatedTheme = null;
-			themeColorsWithUsage = [];
+			appStore.state.themeExport.generatedTheme = null;
+			appStore.state.themeExport.themeColorsWithUsage = [];
 		}
 	}
 
 	function resetOverrides() {
-		themeOverrides = {};
+		appStore.state.themeExport.themeOverrides = {};
 		generateThemeFromApi();
 	}
 
 	function updateThemeOverride(key: keyof ThemeOverrides, value: string) {
 		const normalized = normalizeHex(value);
 		if (!normalized) {
-			themeOverrides[key] = null;
+			appStore.state.themeExport.themeOverrides[key] = null;
 		} else {
-			themeOverrides[key] = normalized;
+			appStore.state.themeExport.themeOverrides[key] = normalized;
 		}
 
 		if (debounceTimer) {
@@ -256,8 +224,7 @@
 			themeNameDebounceTimer = null;
 		}
 
-		editorType = type;
-		savePreferences(editorType);
+		appStore.setThemeExportEditorType(type);
 
 		if (debounceTimer) {
 			clearTimeout(debounceTimer);
@@ -447,7 +414,7 @@
 							<input
 								id="theme-name"
 								type="text"
-								bind:value={themeName}
+								value={themeName}
 								oninput={handleThemeNameChange}
 								placeholder="Generated Theme"
 								class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 placeholder-zinc-400 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"

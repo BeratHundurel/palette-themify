@@ -4,37 +4,28 @@
 	import { cn } from '$lib/utils';
 	import { AVAILABLE_RATIOS } from '$lib/types/wallhaven';
 
-	let localSettings = $state(JSON.parse(JSON.stringify(appStore.state.wallhavenSettings)));
-
-	function applySettings() {
-		appStore.state.wallhavenSettings = { ...localSettings };
-		popoverStore.close();
-	}
-
 	function resetToDefaults() {
-		localSettings = {
+		appStore.state.wallhavenSettings = {
 			categories: '111',
 			purity: '100',
 			sorting: 'relevance',
 			order: 'desc',
 			topRange: '1M',
-			resolutions: [],
 			ratios: [],
-			colors: [],
 			apikey: ''
 		};
 	}
 
 	function toggleCategory(index: number) {
-		const chars = localSettings.categories.split('');
+		const chars = appStore.state.wallhavenSettings.categories.split('');
 		chars[index] = chars[index] === '1' ? '0' : '1';
-		localSettings.categories = chars.join('');
+		appStore.state.wallhavenSettings.categories = chars.join('');
 	}
 
 	function togglePurity(index: number) {
-		const chars = localSettings.purity.split('');
+		const chars = appStore.state.wallhavenSettings.purity.split('');
 		chars[index] = chars[index] === '1' ? '0' : '1';
-		localSettings.purity = chars.join('');
+		appStore.state.wallhavenSettings.purity = chars.join('');
 	}
 </script>
 
@@ -46,9 +37,11 @@
 	style={popoverStore.state.direction === 'right' ? 'left: calc(100% + 0.5rem);' : 'right: calc(100% + 0.5rem);'}
 >
 	<!-- Header -->
-	<header class="border-b border-zinc-700 bg-zinc-800/50 px-6 py-5">
-		<h2 class="text-brand text-xl font-semibold">Wallhaven Settings</h2>
-		<p class="mt-1 text-xs text-zinc-400">Configure search parameters for Wallhaven API</p>
+	<header class="flex items-start justify-between gap-4 border-b border-zinc-700 bg-zinc-800/50 px-6 py-5">
+		<div>
+			<h2 class="text-brand text-xl font-semibold">Wallhaven Settings</h2>
+			<p class="mt-1 text-xs text-zinc-400">Configure search parameters for Wallhaven API</p>
+		</div>
 	</header>
 
 	<!-- Content -->
@@ -65,7 +58,7 @@
 						<input
 							id="cat-general"
 							type="checkbox"
-							checked={localSettings.categories[0] === '1'}
+							checked={appStore.state.wallhavenSettings.categories[0] === '1'}
 							onchange={() => toggleCategory(0)}
 							class="text-brand focus:ring-brand h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
 						/>
@@ -75,7 +68,7 @@
 						<input
 							id="cat-anime"
 							type="checkbox"
-							checked={localSettings.categories[1] === '1'}
+							checked={appStore.state.wallhavenSettings.categories[1] === '1'}
 							onchange={() => toggleCategory(1)}
 							class="text-brand focus:ring-brand h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
 						/>
@@ -85,7 +78,7 @@
 						<input
 							id="cat-people"
 							type="checkbox"
-							checked={localSettings.categories[2] === '1'}
+							checked={appStore.state.wallhavenSettings.categories[2] === '1'}
 							onchange={() => toggleCategory(2)}
 							class="text-brand focus:ring-brand h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
 						/>
@@ -102,7 +95,7 @@
 						<input
 							id="pur-sfw"
 							type="checkbox"
-							checked={localSettings.purity[0] === '1'}
+							checked={appStore.state.wallhavenSettings.purity[0] === '1'}
 							onchange={() => togglePurity(0)}
 							class="text-brand focus:ring-brand h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
 						/>
@@ -112,7 +105,7 @@
 						<input
 							id="pur-sketchy"
 							type="checkbox"
-							checked={localSettings.purity[1] === '1'}
+							checked={appStore.state.wallhavenSettings.purity[1] === '1'}
 							onchange={() => togglePurity(1)}
 							class="text-brand focus:ring-brand h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
 						/>
@@ -122,7 +115,7 @@
 						<input
 							id="pur-nsfw"
 							type="checkbox"
-							checked={localSettings.purity[2] === '1'}
+							checked={appStore.state.wallhavenSettings.purity[2] === '1'}
 							onchange={() => togglePurity(2)}
 							class="text-brand focus:ring-brand h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
 						/>
@@ -136,8 +129,8 @@
 				<label for="sort-method" class="mb-2 block text-xs font-medium text-zinc-300">Sort By</label>
 				<select
 					id="sort-method"
-					bind:value={localSettings.sorting}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+					bind:value={appStore.state.wallhavenSettings.sorting}
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				>
 					<option value="relevance">Relevance</option>
 					<option value="date_added">Date Added</option>
@@ -154,8 +147,8 @@
 				<label for="sort-order" class="mb-2 block text-xs font-medium text-zinc-300">Sort Order</label>
 				<select
 					id="sort-order"
-					bind:value={localSettings.order}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+					bind:value={appStore.state.wallhavenSettings.order}
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				>
 					<option value="desc">Descending</option>
 					<option value="asc">Ascending</option>
@@ -163,13 +156,13 @@
 			</div>
 
 			<!-- Top Range (only for toplist sorting) -->
-			{#if localSettings.sorting === 'toplist'}
+			{#if appStore.state.wallhavenSettings.sorting === 'toplist'}
 				<div class="mb-5">
 					<label for="time-range" class="mb-2 block text-xs font-medium text-zinc-300">Time Range</label>
 					<select
 						id="time-range"
-						bind:value={localSettings.topRange}
-						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+						bind:value={appStore.state.wallhavenSettings.topRange}
+						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 					>
 						<option value="1d">1 Day</option>
 						<option value="3d">3 Days</option>
@@ -196,11 +189,10 @@
 				<input
 					id="api-key"
 					type="password"
-					bind:value={localSettings.apikey}
+					bind:value={appStore.state.wallhavenSettings.apikey}
 					placeholder="Enter your Wallhaven API key"
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				/>
-				<p class="mt-1 text-xs text-zinc-500">Get your API key from Wallhaven account settings</p>
 			</div>
 
 			<!-- Aspect Ratios -->
@@ -212,7 +204,7 @@
 				<select
 					id="ratio-filter"
 					multiple
-					bind:value={localSettings.ratios}
+					bind:value={appStore.state.wallhavenSettings.ratios}
 					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 					size="4"
 				>
@@ -223,27 +215,8 @@
 				<p class="mt-1 text-xs text-zinc-500">Hold Ctrl/Cmd to select multiple ratios</p>
 			</div>
 		</section>
-	</main>
-
-	<!-- Actions -->
-	<footer class="flex justify-center gap-2 border-t border-zinc-700 bg-zinc-800/50 px-2 py-3">
-		<button
-			onclick={resetToDefaults}
-			class="hover:border-brand/50 rounded-lg border border-zinc-600 px-2 py-3 text-xs font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50"
-		>
+		<button onclick={resetToDefaults} class="cursor-pointer text-[11px] font-medium text-zinc-300">
 			Reset to Defaults
 		</button>
-		<button
-			onclick={() => popoverStore.close()}
-			class="hover:border-brand/50 rounded-lg border border-zinc-600 px-2 py-3 text-xs font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50"
-		>
-			Cancel
-		</button>
-		<button
-			onclick={applySettings}
-			class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-2 py-3 text-xs font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-		>
-			Apply Settings
-		</button>
-	</footer>
+	</main>
 </div>
