@@ -1,18 +1,20 @@
 import { browser } from '$app/environment';
-import type { Color, Selector, PaletteData, WorkspaceData } from '$lib/types/palette';
-import type { EditorThemeType } from '$lib/api/palette';
-import type { ThemeExportState } from '$lib/types/themeExport';
-import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
+import { tick } from 'svelte';
+import toast from 'svelte-french-toast';
+
 import * as api from '$lib/api/palette';
 import * as workspaceApi from '$lib/api/workspace';
+import { downloadImage } from '$lib/api/wallhaven';
+import { CANVAS, SELECTION, IMAGE, UI } from '$lib/constants';
+import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
+import type { Color, Selector, PaletteData, WorkspaceData } from '$lib/types/palette';
+import type { ThemeExportState } from '$lib/types/themeExport';
+import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
+import type { EditorThemeType } from '$lib/api/palette';
+import type { SortMethod } from '$lib/colorUtils';
+
 import { authStore } from './auth.svelte';
 import { tutorialStore } from './tutorial.svelte';
-import toast from 'svelte-french-toast';
-import { tick } from 'svelte';
-import { CANVAS, SELECTION, IMAGE, UI } from '$lib/constants';
-import type { SortMethod } from '$lib/colorUtils';
-import { downloadImage } from '$lib/api/wallhaven';
-import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
 
 export type SavedPaletteItem = PaletteData;
 
@@ -337,6 +339,21 @@ function createAppStore() {
 			});
 		},
 
+		clearAllSelections() {
+			this.state.activeSelectorId = UI.DEFAULT_SELECTOR_ID;
+
+			this.state.selectors.forEach((selector) => {
+				selector.selection = undefined;
+				selector.selected = selector.id === UI.DEFAULT_SELECTOR_ID;
+			});
+
+			this.redrawCanvas();
+		},
+
+		redrawCanvas() {
+			drawImageAndBoxes();
+		},
+
 		handleMouseDown(e: MouseEvent) {
 			if (!state.canvas || state.isExtracting || !state.activeSelectorId) return;
 			state.isDragging = true;
@@ -389,17 +406,6 @@ function createAppStore() {
 			await appStore.extractPalette(file);
 		},
 
-		async loadWallhavenImage(imageUrl: string, existingToastId?: string) {
-			try {
-				this.clearAllSelections();
-				const blob = await downloadImage(imageUrl);
-				await this.drawBlobToCanvas(blob);
-				await this.extractPalette(blob, existingToastId);
-			} catch (err) {
-				console.error('Failed to load wallhaven image', err);
-			}
-		},
-
 		triggerFileSelect() {
 			if (state.fileInput) {
 				state.fileInput.value = '';
@@ -416,15 +422,15 @@ function createAppStore() {
 			}
 		},
 
-		clearAllSelections() {
-			this.state.activeSelectorId = UI.DEFAULT_SELECTOR_ID;
-
-			this.state.selectors.forEach((selector) => {
-				selector.selection = undefined;
-				selector.selected = selector.id === UI.DEFAULT_SELECTOR_ID;
-			});
-
-			this.redrawCanvas();
+		async loadWallhavenImage(imageUrl: string, existingToastId?: string) {
+			try {
+				this.clearAllSelections();
+				const blob = await downloadImage(imageUrl);
+				await this.drawBlobToCanvas(blob);
+				await this.extractPalette(blob, existingToastId);
+			} catch (err) {
+				console.error('Failed to load wallhaven image', err);
+			}
 		},
 
 		async extractPaletteFromSelection() {
@@ -754,10 +760,6 @@ function createAppStore() {
 			} catch {
 				toast.error('Download failed. Please try again.', { id: toastId });
 			}
-		},
-
-		redrawCanvas() {
-			drawImageAndBoxes();
 		},
 
 		async saveWorkspace() {

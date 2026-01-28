@@ -3,8 +3,9 @@ import type {
 	SavePaletteRequest,
 	GetPalettesResponse,
 	SavePaletteResult,
+	ThemeOverrides,
 	ThemeResponse,
-	ZigPaletteResponse
+	ExtractPaletteResponse
 } from '$lib/types/palette';
 
 import { getAuthHeaders } from './auth';
@@ -26,20 +27,7 @@ export type GenerateThemeRequest = {
 
 export type EditorThemeType = 'vscode' | 'zed';
 
-export type ThemeOverrides = {
-	background?: string | null;
-	foreground?: string | null;
-	c1?: string | null;
-	c2?: string | null;
-	c3?: string | null;
-	c4?: string | null;
-	c5?: string | null;
-	c6?: string | null;
-	c7?: string | null;
-	c8?: string | null;
-};
-
-export async function extractPalette(file: Blob | File): Promise<ZigPaletteResponse> {
+export async function extractPalette(file: Blob | File): Promise<ExtractPaletteResponse> {
 	if (!file) throw new Error('No files provided');
 
 	let res: Response;
@@ -90,8 +78,8 @@ export async function downloadTheme(
 	type: EditorThemeType,
 	name: string = 'Generated Theme'
 ): Promise<void> {
-	const theme = await generateTheme(colors, type, name);
-	const json = JSON.stringify(theme, null, 2);
+	const response = await generateTheme(colors, type, name);
+	const json = JSON.stringify(response.theme, null, 2);
 	const blob = new Blob([json], { type: 'application/json' });
 	const url = URL.createObjectURL(blob);
 

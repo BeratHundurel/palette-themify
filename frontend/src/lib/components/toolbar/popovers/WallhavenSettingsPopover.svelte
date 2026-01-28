@@ -4,16 +4,18 @@
 	import { cn } from '$lib/utils';
 	import { AVAILABLE_RATIOS } from '$lib/types/wallhaven';
 
+	const DEFAULT_SETTINGS = {
+		categories: '111',
+		purity: '100',
+		sorting: 'relevance',
+		order: 'desc',
+		topRange: '1M',
+		ratios: [],
+		apikey: ''
+	};
+
 	function resetToDefaults() {
-		appStore.state.wallhavenSettings = {
-			categories: '111',
-			purity: '100',
-			sorting: 'relevance',
-			order: 'desc',
-			topRange: '1M',
-			ratios: [],
-			apikey: ''
-		};
+		appStore.state.wallhavenSettings = { ...DEFAULT_SETTINGS };
 	}
 
 	function toggleCategory(index: number) {

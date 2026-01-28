@@ -2,14 +2,17 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import type { ThemeColorWithUsage } from '$lib/types/themeExport';
-	import { generateTheme, type EditorThemeType, type ThemeOverrides } from '$lib/api/palette';
-	import type { ThemeResponse } from '$lib/types/palette';
+	import { generateTheme, type EditorThemeType } from '$lib/api/palette';
+	import type { Theme, ThemeResponse } from '$lib/types/palette';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 	const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 	const THEME_NAME_DEBOUNCE_MS = 300;
+
+	type BaseOverrides = ThemeResponse['baseOverrides'];
+	type BaseOverrideKey = keyof BaseOverrides;
 
 	let expandedColorIndices = new SvelteSet<number>();
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -20,7 +23,9 @@
 	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
 	let themeOverrides = $derived(appStore.state.themeExport.themeOverrides);
 	let paletteVersion = $derived(appStore.state.paletteVersion);
-	const baseOverrides = $derived(extractBaseOverrides(generatedTheme));
+
+	const baseOverrides = $derived(generatedTheme?.baseOverrides ?? {});
+
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
 	let themeNameError = $state<string | null>(null);
 	let isGenerating = $state(false);
@@ -87,7 +92,9 @@
 
 		try {
 			updateThemeNameInGeneratedTheme(trimmedName);
-			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme);
+			if (generatedTheme) {
+				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme.theme);
+			}
 		} catch {
 			toast.error('Could not update the theme name. Regenerating the theme...');
 			generateThemeFromApi();
@@ -98,7 +105,7 @@
 		if (!generatedTheme) return;
 
 		try {
-			const theme = generatedTheme;
+			const theme = generatedTheme.theme;
 			if (!theme) return;
 
 			if (editorType === 'zed' && 'themes' in theme) {
@@ -128,9 +135,9 @@
 
 		try {
 			isGenerating = true;
-			const theme = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
-			appStore.state.themeExport.generatedTheme = theme;
-			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(theme);
+			const response = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
+			appStore.state.themeExport.generatedTheme = response;
+			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
 			appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
 		} catch {
 			toast.error('Could not generate the theme. Please try again.');
@@ -146,17 +153,18 @@
 		generateThemeFromApi();
 	}
 
-	function updateThemeOverride(key: keyof ThemeOverrides, value: string) {
+	function updateThemeOverride(key: BaseOverrideKey, value: string) {
 		const normalized = normalizeHex(value);
+		const overrides = appStore.state.themeExport.themeOverrides as BaseOverrides;
 		if (!normalized) {
-			appStore.state.themeExport.themeOverrides[key] = null;
+			overrides[key] = null;
 		} else {
-			appStore.state.themeExport.themeOverrides[key] = normalized;
+			overrides[key] = normalized;
 		}
 		generateThemeFromApi();
 	}
 
-	function extractThemeColorsWithUsage(theme: ThemeResponse): ThemeColorWithUsage[] {
+	function extractThemeColorsWithUsage(theme: Theme): ThemeColorWithUsage[] {
 		const colorMap = new SvelteMap<string, SvelteMap<string, SvelteSet<string>>>();
 
 		function traverse(obj: unknown, prefix: string) {
@@ -235,7 +243,7 @@
 		if (!generatedTheme) return;
 
 		try {
-			const themeJson = JSON.stringify(generatedTheme, null, 2);
+			const themeJson = JSON.stringify(generatedTheme.theme, null, 2);
 			await navigator.clipboard.writeText(themeJson);
 			toast.success('Theme JSON copied to clipboard!');
 			popoverStore.close('themeExport');
@@ -257,7 +265,7 @@
 		}
 	}
 
-	const overrideFields: Array<{ key: keyof ThemeOverrides; label: string; hint: string }> = [
+	const overrideFields: Array<{ key: BaseOverrideKey; label: string; hint: string }> = [
 		{ key: 'background', label: 'Background', hint: 'Base background (c0)' },
 		{ key: 'foreground', label: 'Foreground', hint: 'Primary text color' },
 		{ key: 'c1', label: 'C1', hint: 'Properties/fields' },
@@ -274,65 +282,6 @@
 		if (!value) return null;
 		if (!COLOR_REGEX.test(value)) return null;
 		return value.slice(0, 7).toUpperCase();
-	}
-
-	function extractBaseOverrides(theme: ThemeResponse | null): ThemeOverrides {
-		if (!theme) return {};
-		if ('colors' in theme) {
-			return extractVSCodeOverrides(theme);
-		}
-		if ('themes' in theme) {
-			return extractZedOverrides(theme);
-		}
-		return {};
-	}
-
-	function extractVSCodeOverrides(theme: ThemeResponse): ThemeOverrides {
-		if (!('colors' in theme)) return {};
-		const colors = theme.colors;
-		const baseForeground = normalizeHex(colors['editor.foreground']) ?? normalizeHex(colors.foreground);
-		return {
-			background: normalizeHex(colors['editor.background']),
-			foreground: baseForeground,
-			c1: findTokenColor(theme, ['variable.other.property', 'support.variable']),
-			c2: findTokenColor(theme, ['entity.name.function', 'support.function']),
-			c3: findTokenColor(theme, ['string']),
-			c4: findTokenColor(theme, ['invalid', 'invalid.illegal']),
-			c5: findTokenColor(theme, ['constant.language', 'entity.name.type']),
-			c6: findTokenColor(theme, ['keyword', 'keyword.control']),
-			c7: findTokenColor(theme, ['variable.parameter']),
-			c8: findTokenColor(theme, ['keyword.operator'])
-		};
-	}
-
-	function findTokenColor(theme: ThemeResponse, scopes: string[]): string | null {
-		if (!('tokenColors' in theme)) return null;
-		for (const token of theme.tokenColors) {
-			const foreground = normalizeHex(token.settings?.foreground ?? null);
-			if (!foreground) continue;
-			for (const scope of scopes) {
-				if (token.scope.includes(scope)) return foreground;
-			}
-		}
-		return null;
-	}
-
-	function extractZedOverrides(theme: ThemeResponse): ThemeOverrides {
-		if (!('themes' in theme)) return {};
-		const style = theme.themes?.[0]?.style;
-		if (!style) return {};
-		return {
-			background: normalizeHex(style.background),
-			foreground: normalizeHex(style.text),
-			c1: normalizeHex(style.syntax?.field?.color ?? style.syntax?.property?.color),
-			c2: normalizeHex(style['text.accent'] ?? style.syntax?.function?.color),
-			c3: normalizeHex(style.syntax?.string?.color),
-			c4: normalizeHex(style.syntax?.['punctuation.special']?.color),
-			c5: normalizeHex(style.syntax?.constant?.color),
-			c6: normalizeHex(style.syntax?.keyword?.color),
-			c7: normalizeHex(style.syntax?.parameter?.color),
-			c8: normalizeHex(style.syntax?.constructor?.color)
-		};
 	}
 
 	function getBaseColorLabel(color: string): string | null {
@@ -451,13 +400,13 @@
 								<div class="flex items-center gap-2">
 									<input
 										type="color"
-										value={themeOverrides[field.key] ?? baseOverrides[field.key] ?? '#000000'}
+										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
 										class="h-10 w-12 cursor-pointer"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
 									/>
 									<input
 										type="text"
-										value={themeOverrides[field.key] ?? baseOverrides[field.key] ?? ''}
+										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
 										placeholder="#000000"
 										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}

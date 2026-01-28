@@ -1,5 +1,5 @@
-import type { EditorThemeType, ThemeOverrides } from '$lib/api/palette';
-import type { ThemeResponse } from '$lib/types/palette';
+import type { EditorThemeType } from '$lib/api/palette';
+import type { ThemeResponse, ThemeOverrides } from '$lib/types/palette';
 
 export interface ThemeColorWithUsage {
 	baseColor: string;
