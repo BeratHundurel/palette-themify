@@ -89,7 +89,7 @@
 			updateThemeNameInGeneratedTheme(trimmedName);
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme);
 		} catch {
-			toast.error('Failed to update theme name, regenerating...');
+			toast.error('Could not update the theme name. Regenerating the theme...');
 			generateThemeFromApi();
 		}
 	}
@@ -132,8 +132,8 @@
 			appStore.state.themeExport.generatedTheme = theme;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(theme);
 			appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
-		} catch (err) {
-			toast.error('Failed to generate theme: ' + (err instanceof Error ? err.message : 'Unknown error'));
+		} catch {
+			toast.error('Could not generate the theme. Please try again.');
 			appStore.state.themeExport.generatedTheme = null;
 			appStore.state.themeExport.themeColorsWithUsage = [];
 		} finally {
@@ -240,7 +240,7 @@
 			toast.success('Theme JSON copied to clipboard!');
 			popoverStore.close('themeExport');
 		} catch {
-			toast.error('Failed to copy theme to clipboard');
+			toast.error('Could not copy the theme. Please try again.');
 		}
 	}
 
@@ -253,7 +253,7 @@
 			await navigator.clipboard.writeText(path);
 			toast.success('Usage path copied to clipboard!');
 		} catch {
-			toast.error('Failed to copy usage path');
+			toast.error('Could not copy the usage path. Please try again.');
 		}
 	}
 

@@ -9,14 +9,14 @@
 
 	function handleOpenInCoolors() {
 		if (appStore.state.colors.length === 0) {
-			toast.error('No palette to share');
+			toast.error('Extract a palette before sharing.');
 			return;
 		}
 
 		const colorsToUse = appStore.state.colors.length > 10 ? appStore.state.colors.slice(0, 10) : appStore.state.colors;
 
 		if (appStore.state.colors.length > 10) {
-			toast.error('Coolors supports up to 10 colors. Using first 10 colors.');
+			toast.error('Coolors supports up to 10 colors. Using the first 10.');
 		}
 
 		const url = generateCoolorsUrl(colorsToUse);

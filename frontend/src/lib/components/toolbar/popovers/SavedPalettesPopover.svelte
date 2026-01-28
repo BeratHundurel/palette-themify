@@ -8,7 +8,7 @@
 
 	function handlePaletteLoad(palette: Color[]) {
 		if (!appStore.state.imageLoaded) {
-			toast.error('Load an image first to apply a palette');
+			toast.error('Load an image before applying a palette.');
 			return;
 		}
 

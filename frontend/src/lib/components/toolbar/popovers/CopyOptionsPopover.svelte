@@ -19,7 +19,7 @@
 			copyPaletteAs(format, appStore.state.colors);
 			popoverStore.close('copy');
 		} else {
-			toast.error('No palette to copy');
+			toast.error('Extract a palette before copying.');
 		}
 	}
 

@@ -40,8 +40,8 @@
 				toast.success(`Loaded: ${workspace.name}`, { id: toastId });
 
 				await goto(resolve('/'), { replaceState: true });
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : 'Failed to load shared workspace', {
+			} catch {
+				toast.error('Could not load the shared workspace. Please check the link and try again.', {
 					id: toastId
 				});
 			}

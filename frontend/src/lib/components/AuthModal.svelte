@@ -77,9 +77,8 @@
 
 			resetForm();
 			isOpen = false;
-		} catch (error) {
-			const message = error instanceof Error ? error.message : 'An error occurred';
-			toast.error(message);
+		} catch {
+			toast.error('Could not sign in. Check your details and try again.');
 		} finally {
 			loading = false;
 		}
@@ -97,9 +96,8 @@
 
 			resetForm();
 			isOpen = false;
-		} catch (error) {
-			const message = error instanceof Error ? error.message : 'An error occurred';
-			toast.error(message);
+		} catch {
+			toast.error('Could not start the demo. Please try again.');
 		} finally {
 			loading = false;
 		}

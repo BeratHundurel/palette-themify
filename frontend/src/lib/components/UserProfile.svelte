@@ -15,7 +15,7 @@
 			showDropdown = false;
 			toast.success('Logged out successfully');
 		} catch {
-			toast.error('Failed to logout');
+			toast.error('Could not sign out. Please try again.');
 		}
 	}
 

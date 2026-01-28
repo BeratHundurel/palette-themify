@@ -437,7 +437,7 @@ function createAppStore() {
 			await tick();
 
 			if (!state.canvasContext || !state.canvas || !state.image) {
-				toast.error('Canvas not ready', { id: toastId });
+				toast.error('Canvas is not ready yet. Try again in a moment.', { id: toastId });
 				state.isExtracting = false;
 				return;
 			}
@@ -445,7 +445,7 @@ function createAppStore() {
 			const validSelections = state.selectors.filter((s) => s.selection && isValidSelection(s.selection));
 
 			if (validSelections.length === 0) {
-				toast.error('No valid selections to extract colors from', { id: toastId });
+				toast.error('Select an area on the image to extract colors.', { id: toastId });
 				state.isExtracting = false;
 				return;
 			}
@@ -511,12 +511,12 @@ function createAppStore() {
 
 		async extractPalette(file: Blob | File, existingToastId?: string) {
 			if (!file) {
-				toast.error('No files provided');
+				toast.error('Choose an image to extract colors.');
 				return;
 			}
 
 			if (file.size > IMAGE.MAX_FILE_SIZE) {
-				toast.error(`File too large. Maximum size is ${IMAGE.MAX_FILE_SIZE / 1024 / 1024}MB`);
+				toast.error(`File is too large. Choose a file under ${IMAGE.MAX_FILE_SIZE / 1024 / 1024}MB.`);
 				return;
 			}
 
@@ -529,10 +529,10 @@ function createAppStore() {
 					state.colors = result.palette;
 					toast.success('Palette extracted', { id: toastId });
 				} else {
-					toast.error('No colors found in selected regions', { id: toastId });
+					toast.error('No colors found in the selected area. Try a larger selection.', { id: toastId });
 				}
-			} catch (error) {
-				toast.error('Error extracting palette: ' + (error instanceof Error ? error.message : 'Unknown error'), {
+			} catch {
+				toast.error('Could not extract a palette. Please try again.', {
 					id: toastId
 				});
 			} finally {
@@ -542,7 +542,7 @@ function createAppStore() {
 
 		async savePalette() {
 			if (!state.colors || state.colors.length === 0) {
-				toast.error('No palette to save!');
+				toast.error('Extract a palette before saving.');
 				return;
 			}
 			const paletteName = prompt('Enter a name for your palette:');
@@ -573,8 +573,8 @@ function createAppStore() {
 				}
 
 				tutorialStore.setCurrentPaletteSaved(true);
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : 'Failed to save palette.');
+			} catch {
+				toast.error('Could not save the palette. Please try again.');
 			}
 		},
 
@@ -582,7 +582,7 @@ function createAppStore() {
 			// Before calling this method we are checking if there is an image loaded in the UI
 
 			if (!palette || palette.length === 0) {
-				toast.error('No palette to apply');
+				toast.error('Select a palette to apply.');
 				return;
 			}
 
@@ -590,7 +590,7 @@ function createAppStore() {
 
 			const invalidColors = paletteToApply.filter((color) => !isValidHexColor(color.hex));
 			if (invalidColors.length > 0) {
-				toast.error(`Invalid colors in palette: ${invalidColors.map((c) => c.hex).join(', ')}`);
+				toast.error('This palette has invalid colors. Please reselect or recreate it.');
 				return;
 			}
 
@@ -615,14 +615,13 @@ function createAppStore() {
 				if (extracted.palette.length > 0) {
 					state.colors = extracted.palette;
 				} else {
-					toast.error('Applied palette, but no colors were extracted', { id: toastId });
+					toast.error('Palette applied, but no colors were detected. Try another image.', { id: toastId });
 					return;
 				}
 
 				toast.success('Applied palette', { id: toastId });
-			} catch (error) {
-				const message = error instanceof Error ? error.message : 'Unknown error';
-				toast.error(`Error applying palette: ${message}`, { id: toastId });
+			} catch {
+				toast.error('Could not apply the palette. Please try again.', { id: toastId });
 			}
 		},
 		async loadSavedPalettes() {
@@ -681,8 +680,8 @@ function createAppStore() {
 					await appStore.loadSavedPalettes();
 					toast.success('Palette deleted');
 				}
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : 'Failed to delete palette.');
+			} catch {
+				toast.error('Could not delete the palette. Please try again.');
 			}
 		},
 
@@ -708,7 +707,7 @@ function createAppStore() {
 							localStorage.removeItem('savedPalettes');
 							toast.success('Palettes synced successfully', { id: toastId });
 						} catch {
-							toast.error('Failed to sync some palettes', { id: toastId });
+							toast.error('Some palettes could not be synced. Try again later.', { id: toastId });
 						}
 					} catch {
 						console.error('Failed to parse local palettes');
@@ -726,7 +725,7 @@ function createAppStore() {
 
 		async downloadImage() {
 			if (!state.canvas || !state.imageLoaded || !state.image) {
-				toast.error('No image to download');
+				toast.error('Load an image before downloading.');
 				return;
 			}
 
@@ -735,7 +734,7 @@ function createAppStore() {
 			try {
 				const imageDataUrl = getCleanImageDataUrl();
 				if (!imageDataUrl) {
-					toast.error('Failed to prepare download', { id: toastId });
+					toast.error('Could not prepare the download. Please try again.', { id: toastId });
 					return;
 				}
 
@@ -753,7 +752,7 @@ function createAppStore() {
 				URL.revokeObjectURL(url);
 				toast.success('Image downloaded', { id: toastId });
 			} catch {
-				toast.error('Failed to download image', { id: toastId });
+				toast.error('Download failed. Please try again.', { id: toastId });
 			}
 		},
 
@@ -763,7 +762,7 @@ function createAppStore() {
 
 		async saveWorkspace() {
 			if (!state.canvas || !state.imageLoaded || !state.image) {
-				toast.error('No image to save in workspace');
+				toast.error('Load an image before saving a workspace.');
 				return;
 			}
 
@@ -775,7 +774,7 @@ function createAppStore() {
 			try {
 				const imageDataUrl = getCleanImageDataUrl();
 				if (!imageDataUrl) {
-					toast.error('Failed to prepare workspace image', { id: toastId });
+					toast.error('Could not prepare the workspace image. Please try again.', { id: toastId });
 					return;
 				}
 
@@ -818,8 +817,8 @@ function createAppStore() {
 						toast.success('Workspace saved: ' + workspaceName, { id: toastId });
 					}
 				}
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : 'Failed to save workspace.', { id: toastId });
+			} catch {
+				toast.error('Could not save the workspace. Please try again.', { id: toastId });
 			}
 		},
 
@@ -831,7 +830,7 @@ function createAppStore() {
 				img.onload = async () => {
 					state.image = img;
 					if (!state.canvas) {
-						toast.error('Canvas not available', { id: toastId });
+						toast.error('Canvas is not available yet. Try again in a moment.', { id: toastId });
 						return;
 					}
 
@@ -875,12 +874,12 @@ function createAppStore() {
 				};
 
 				img.onerror = () => {
-					toast.error('Failed to load workspace image', { id: toastId });
+					toast.error('Could not load the workspace image.', { id: toastId });
 				};
 
 				img.src = workspace.imageData;
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : 'Failed to load workspace.', { id: toastId });
+			} catch {
+				toast.error('Could not load the workspace. Please try again.', { id: toastId });
 			}
 		},
 
@@ -976,8 +975,8 @@ function createAppStore() {
 					await appStore.loadSavedWorkspaces();
 					toast.success('Workspace deleted');
 				}
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : 'Failed to delete workspace.');
+			} catch {
+				toast.error('Could not delete the workspace. Please try again.');
 			}
 		},
 
@@ -1020,7 +1019,7 @@ function createAppStore() {
 							localStorage.removeItem('savedWorkspaces');
 							toast.success('Workspaces synced successfully', { id: toastId });
 						} catch {
-							toast.error('Failed to sync some workspaces', { id: toastId });
+							toast.error('Some workspaces could not be synced. Try again later.', { id: toastId });
 						}
 					} catch {
 						console.error('Failed to parse local workspaces');

@@ -41,8 +41,8 @@
 			};
 
 			toast.success('Share link created!', { id: toastId });
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : 'Failed to create share link', {
+		} catch {
+			toast.error('Could not create a share link. Please try again.', {
 				id: toastId
 			});
 		} finally {
@@ -57,7 +57,7 @@
 			await navigator.clipboard.writeText(shareModal.shareUrl);
 			toast.success('Link copied to clipboard!');
 		} catch {
-			toast.error('Failed to copy link');
+			toast.error('Could not copy the link. Please try again.');
 		}
 	}
 
@@ -77,8 +77,8 @@
 
 			toast.success('Share link removed', { id: toastId });
 			shareModal = null;
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : 'Failed to remove share link', {
+		} catch {
+			toast.error('Could not remove the share link. Please try again.', {
 				id: toastId
 			});
 		}

@@ -3,13 +3,13 @@ import type { Color } from './types/palette';
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 	if (!hex || typeof hex !== 'string') {
-		toast.error(`Invalid hex color: ${hex}`);
+		toast.error('Invalid color value.');
 		return { r: 0, g: 0, b: 0 };
 	}
 	const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
 
 	if (cleanHex.length !== 6 || !/^[a-f\d]{6}$/i.test(cleanHex)) {
-		toast.error(`Invalid hex color format: ${hex}`);
+		toast.error('Invalid color format. Use a hex value like #AABBCC.');
 		return { r: 0, g: 0, b: 0 };
 	}
 
