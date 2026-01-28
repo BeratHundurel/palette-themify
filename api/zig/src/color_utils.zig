@@ -1,38 +1,6 @@
 const std = @import("std");
 const types = @import("vscode_types.zig");
 
-const HexBuffer = struct {
-    data: [10]u8 = undefined,
-    len: u8 = 0,
-
-    pub fn slice(self: *const HexBuffer) []const u8 {
-        return self.data[0..self.len];
-    }
-};
-
-var hex_buffer_pool: [512]HexBuffer = undefined;
-var hex_buffer_index: usize = 0;
-
-fn allocHexBuffer() *HexBuffer {
-    const buf = &hex_buffer_pool[hex_buffer_index];
-    hex_buffer_index = (hex_buffer_index + 1) % hex_buffer_pool.len;
-    return buf;
-}
-
-fn formatHex(r: u8, g: u8, b: u8) []const u8 {
-    const buf = allocHexBuffer();
-    const result = std.fmt.bufPrint(&buf.data, "#{X:0>2}{X:0>2}{X:0>2}", .{ r, g, b }) catch return "#000000";
-    buf.len = @intCast(result.len);
-    return result;
-}
-
-fn formatHexWithAlpha(hex: []const u8, alpha: []const u8) []const u8 {
-    const buf = allocHexBuffer();
-    const result = std.fmt.bufPrint(&buf.data, "{s}{s}", .{ hex, alpha }) catch return "#00000000";
-    buf.len = @intCast(result.len);
-    return result;
-}
-
 pub const HSL = struct {
     h: f32,
     s: f32,
@@ -72,6 +40,38 @@ pub const SemanticColors = struct {
     success_color: []const u8,
     info_color: []const u8,
 };
+
+const HexBuffer = struct {
+    data: [10]u8 = undefined,
+    len: u8 = 0,
+
+    pub fn slice(self: *const HexBuffer) []const u8 {
+        return self.data[0..self.len];
+    }
+};
+
+var hex_buffer_pool: [512]HexBuffer = undefined;
+var hex_buffer_index: usize = 0;
+
+fn allocHexBuffer() *HexBuffer {
+    const buf = &hex_buffer_pool[hex_buffer_index];
+    hex_buffer_index = (hex_buffer_index + 1) % hex_buffer_pool.len;
+    return buf;
+}
+
+fn formatHex(r: u8, g: u8, b: u8) []const u8 {
+    const buf = allocHexBuffer();
+    const result = std.fmt.bufPrint(&buf.data, "#{X:0>2}{X:0>2}{X:0>2}", .{ r, g, b }) catch return "#000000";
+    buf.len = @intCast(result.len);
+    return result;
+}
+
+fn formatHexWithAlpha(hex: []const u8, alpha: []const u8) []const u8 {
+    const buf = allocHexBuffer();
+    const result = std.fmt.bufPrint(&buf.data, "{s}{s}", .{ hex, alpha }) catch return "#00000000";
+    buf.len = @intCast(result.len);
+    return result;
+}
 
 pub fn findSemanticColors(colors: []const []const u8) SemanticColors {
     const target_red = RGB{ .r = 220, .g = 60, .b = 60 };
@@ -144,64 +144,6 @@ pub fn rgbDistance(hex_1: []const u8, hex_2: []const u8) f32 {
     const rgb1 = parseHexToRgb(hex_1);
     const rgb2 = parseHexToRgb(hex_2);
     return rgbDistanceFromRgb(rgb1, rgb2);
-}
-
-/// Converts RGB to CIE LAB color space for perceptually uniform color comparisons.
-/// Uses sRGB with D65 illuminant as the reference white point.
-fn rgbToLab(rgb: RGB) LAB {
-    var r = @as(f32, @floatFromInt(rgb.r)) / 255.0;
-    var g = @as(f32, @floatFromInt(rgb.g)) / 255.0;
-    var b = @as(f32, @floatFromInt(rgb.b)) / 255.0;
-
-    r = if (r > 0.04045) std.math.pow(f32, (r + 0.055) / 1.055, 2.4) else r / 12.92;
-    g = if (g > 0.04045) std.math.pow(f32, (g + 0.055) / 1.055, 2.4) else g / 12.92;
-    b = if (b > 0.04045) std.math.pow(f32, (b + 0.055) / 1.055, 2.4) else b / 12.92;
-
-    const x = (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) / 0.95047;
-    const y = (r * 0.2126729 + g * 0.7151522 + b * 0.0721750) / 1.00000;
-    const z = (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) / 1.08883;
-
-    const epsilon: f32 = 0.008856;
-    const kappa: f32 = 903.3;
-
-    const fx = if (x > epsilon) std.math.pow(f32, x, 1.0 / 3.0) else (kappa * x + 16.0) / 116.0;
-    const fy = if (y > epsilon) std.math.pow(f32, y, 1.0 / 3.0) else (kappa * y + 16.0) / 116.0;
-    const fz = if (z > epsilon) std.math.pow(f32, z, 1.0 / 3.0) else (kappa * z + 16.0) / 116.0;
-
-    return LAB{
-        .l = 116.0 * fy - 16.0,
-        .a = 500.0 * (fx - fy),
-        .b = 200.0 * (fy - fz),
-    };
-}
-
-/// CIE94 color difference formula - measures perceptual distance between two LAB colors.
-/// Simpler than CIEDE2000 but still provides good perceptual uniformity for theme generation.
-fn deltaE94(lab1: LAB, lab2: LAB) f32 {
-    const dl = lab1.l - lab2.l;
-    const da = lab1.a - lab2.a;
-    const db = lab1.b - lab2.b;
-
-    const c1 = @sqrt(lab1.a * lab1.a + lab1.b * lab1.b);
-    const c2 = @sqrt(lab2.a * lab2.a + lab2.b * lab2.b);
-    const dc = c1 - c2;
-
-    const dh_sq = da * da + db * db - dc * dc;
-    const dh = if (dh_sq > 0) @sqrt(dh_sq) else 0.0;
-
-    const kl: f32 = 1.0;
-    const kc: f32 = 1.0;
-    const kh: f32 = 1.0;
-
-    const sl: f32 = 1.0;
-    const sc = 1.0 + 0.045 * c1;
-    const sh = 1.0 + 0.015 * c1;
-
-    const dl_term = dl / (kl * sl);
-    const dc_term = dc / (kc * sc);
-    const dh_term = dh / (kh * sh);
-
-    return @sqrt(dl_term * dl_term + dc_term * dc_term + dh_term * dh_term);
 }
 
 pub fn perceptualDistance(hex1: []const u8, hex2: []const u8) f32 {
@@ -471,6 +413,64 @@ pub fn colorf32ToRgb(r: f32, g: f32, b: f32) RGB {
 pub fn colorf32ToHex(allocator: std.mem.Allocator, r: f32, g: f32, b: f32) ![]const u8 {
     const rgb = colorf32ToRgb(r, g, b);
     return try rgbToHexAlloc(allocator, rgb.r, rgb.g, rgb.b);
+}
+
+/// Converts RGB to CIE LAB color space for perceptually uniform color comparisons.
+/// Uses sRGB with D65 illuminant as the reference white point.
+fn rgbToLab(rgb: RGB) LAB {
+    var r = @as(f32, @floatFromInt(rgb.r)) / 255.0;
+    var g = @as(f32, @floatFromInt(rgb.g)) / 255.0;
+    var b = @as(f32, @floatFromInt(rgb.b)) / 255.0;
+
+    r = if (r > 0.04045) std.math.pow(f32, (r + 0.055) / 1.055, 2.4) else r / 12.92;
+    g = if (g > 0.04045) std.math.pow(f32, (g + 0.055) / 1.055, 2.4) else g / 12.92;
+    b = if (b > 0.04045) std.math.pow(f32, (b + 0.055) / 1.055, 2.4) else b / 12.92;
+
+    const x = (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) / 0.95047;
+    const y = (r * 0.2126729 + g * 0.7151522 + b * 0.0721750) / 1.00000;
+    const z = (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) / 1.08883;
+
+    const epsilon: f32 = 0.008856;
+    const kappa: f32 = 903.3;
+
+    const fx = if (x > epsilon) std.math.pow(f32, x, 1.0 / 3.0) else (kappa * x + 16.0) / 116.0;
+    const fy = if (y > epsilon) std.math.pow(f32, y, 1.0 / 3.0) else (kappa * y + 16.0) / 116.0;
+    const fz = if (z > epsilon) std.math.pow(f32, z, 1.0 / 3.0) else (kappa * z + 16.0) / 116.0;
+
+    return LAB{
+        .l = 116.0 * fy - 16.0,
+        .a = 500.0 * (fx - fy),
+        .b = 200.0 * (fy - fz),
+    };
+}
+
+/// CIE94 color difference formula - measures perceptual distance between two LAB colors.
+/// Simpler than CIEDE2000 but still provides good perceptual uniformity for theme generation.
+fn deltaE94(lab1: LAB, lab2: LAB) f32 {
+    const dl = lab1.l - lab2.l;
+    const da = lab1.a - lab2.a;
+    const db = lab1.b - lab2.b;
+
+    const c1 = @sqrt(lab1.a * lab1.a + lab1.b * lab1.b);
+    const c2 = @sqrt(lab2.a * lab2.a + lab2.b * lab2.b);
+    const dc = c1 - c2;
+
+    const dh_sq = da * da + db * db - dc * dc;
+    const dh = if (dh_sq > 0) @sqrt(dh_sq) else 0.0;
+
+    const kl: f32 = 1.0;
+    const kc: f32 = 1.0;
+    const kh: f32 = 1.0;
+
+    const sl: f32 = 1.0;
+    const sc = 1.0 + 0.045 * c1;
+    const sh = 1.0 + 0.015 * c1;
+
+    const dl_term = dl / (kl * sl);
+    const dc_term = dc / (kc * sc);
+    const dh_term = dh / (kh * sh);
+
+    return @sqrt(dl_term * dl_term + dc_term * dc_term + dh_term * dh_term);
 }
 
 fn deltaE94FromLab(lab1: LAB, lab2: LAB) f32 {
