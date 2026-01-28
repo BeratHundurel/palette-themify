@@ -263,7 +263,7 @@
 </div>
 
 {#if shareModal}
-	<div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+	<div class="fixed inset-0 z-100 flex items-center justify-center bg-black/50">
 		<div class="share-modal-content border-brand/50 w-full max-w-md rounded-lg border bg-zinc-900 p-6">
 			<h2 class="text-brand mb-4 text-lg font-semibold">Share Workspace</h2>
 

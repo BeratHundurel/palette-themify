@@ -399,7 +399,7 @@
 				<div class="mb-8">
 					<div class="mb-6 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Name</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 					</div>
 					<div class="space-y-3">
 						<div>
@@ -425,7 +425,7 @@
 				<div class="mb-8">
 					<div class="mb-4 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						<span class="text-xs text-zinc-400">Overrides regenerate derived variants</span>
 					</div>
 					<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -471,7 +471,7 @@
 				<div class="mb-8">
 					<div class="mb-6 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Editor Type</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 					</div>
 					<div class="grid grid-cols-2 gap-6">
 						<button
@@ -531,7 +531,7 @@
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">
 							Theme Colors ({sortedThemeColors.length})
 						</h3>
-						<div class="from-brand/50 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						<span class="text-xs text-zinc-400">Colors used in {editorType === 'vscode' ? 'VS Code' : 'Zed'} theme</span
 						>
 					</div>
@@ -599,7 +599,7 @@
 											stroke-width="2"
 											stroke-linecap="round"
 											stroke-linejoin="round"
-											class="flex-shrink-0 text-zinc-400 transition-transform duration-200 {isExpanded(index)
+											class="shrink-0 text-zinc-400 transition-transform duration-200 {isExpanded(index)
 												? 'rotate-180'
 												: ''}"
 										>

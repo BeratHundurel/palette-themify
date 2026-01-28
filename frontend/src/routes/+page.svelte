@@ -55,7 +55,7 @@
 
 <Toaster />
 
-<div class="relative flex h-[100svh] flex-col bg-black text-zinc-300">
+<div class="relative flex h-svh flex-col bg-black text-zinc-300">
 	<enhanced:img
 		src="../lib/assets/palette.jpg"
 		alt="Palette"
