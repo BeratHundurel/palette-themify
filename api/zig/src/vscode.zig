@@ -3,9 +3,10 @@ const std = @import("std");
 const color_utils = @import("color_utils.zig");
 const types = @import("vscode_types.zig");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
-pub const VSCodeTheme = types.VSCodeTheme;
-pub const VSCodeThemeColors = types.VSCodeThemeColors;
-pub const VSCodeTokenColor = types.VSCodeTokenColor;
+const VSCodeTheme = types.VSCodeTheme;
+const VSCodeThemeColors = types.VSCodeThemeColors;
+const VSCodeTokenColor = types.VSCodeTokenColor;
+const VSCodeThemeResponse = types.VSCodeThemeResponse;
 
 /// Generates a complete VS Code theme from a palette of colors.
 /// Strategy: Select 10 most diverse colors, pick bg/fg with good contrast,
@@ -15,7 +16,7 @@ pub fn generateVSCodeTheme(
     colors: []const []const u8,
     theme_name: []const u8,
     overrides: ThemeOverrides,
-) !VSCodeTheme {
+) !VSCodeThemeResponse {
     const semantic = color_utils.findSemanticColors(colors);
     const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 10);
     defer allocator.free(improved_colors);
@@ -426,11 +427,29 @@ pub fn generateVSCodeTheme(
 
     const token_colors_slice = try allocator.dupe(VSCodeTokenColor, &token_colors);
 
-    return VSCodeTheme{
+    const theme = VSCodeTheme{
         .@"$schema" = "vscode://schemas/color-theme",
         .name = theme_name,
         .type = if (dark_base) .dark else .light,
         .colors = theme_colors,
         .tokenColors = token_colors_slice,
+    };
+
+    const base_overrides = ThemeOverrides{
+        .background = background,
+        .foreground = foreground,
+        .c1 = c1,
+        .c2 = c2,
+        .c3 = c3,
+        .c4 = c4,
+        .c5 = c5,
+        .c6 = c6,
+        .c7 = c7,
+        .c8 = c8,
+    };
+
+    return VSCodeThemeResponse{
+        .theme = theme,
+        .baseOverrides = base_overrides,
     };
 }

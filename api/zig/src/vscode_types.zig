@@ -1,4 +1,10 @@
 const std = @import("std");
+const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
+
+pub const VSCodeThemeResponse = struct {
+    baseOverrides: ThemeOverrides,
+    theme: VSCodeTheme,
+};
 
 pub const VSCodeTokenSettings = struct {
     foreground: ?[]const u8 = null,

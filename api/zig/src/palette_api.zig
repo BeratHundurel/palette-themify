@@ -3,7 +3,18 @@ const zigimg = @import("zigimg");
 const color_utils = @import("color_utils.zig");
 const vscode = @import("vscode.zig");
 const zed = @import("zed.zig");
+const VSCodeThemeResponse = @import("vscode_types.zig").VSCodeThemeResponse;
+const ZedThemeResponse = @import("zed_types.zig").ZedThemeResponse;
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
+
+pub const ExtractError = error{
+    NotAnImage,
+    NoColors,
+    OutOfMemory,
+    InvalidImageData,
+    InvalidContentType,
+    NoImageProvided,
+};
 
 pub const ColorAndCount = struct {
     color: zigimg.color.Colorf32,
@@ -32,15 +43,6 @@ pub const PaletteResult = struct {
         }
         self.allocator.free(self.colors);
     }
-};
-
-pub const ExtractError = error{
-    NotAnImage,
-    NoColors,
-    OutOfMemory,
-    InvalidImageData,
-    InvalidContentType,
-    NoImageProvided,
 };
 
 pub fn extractPaletteFromBytes(
@@ -122,17 +124,28 @@ pub fn generateThemeJson(
     theme_name: []const u8,
     overrides: ThemeOverrides,
 ) ![]const u8 {
-    return switch (theme_type) {
+    switch (theme_type) {
         .vscode => {
-            const theme = try vscode.generateVSCodeTheme(allocator, colors, theme_name, overrides);
-            return try std.json.Stringify.valueAlloc(allocator, theme, .{ .whitespace = .minified, .emit_null_optional_fields = false });
+            const response = try vscode.generateVSCodeTheme(allocator, colors, theme_name, overrides);
+            return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
         .zed => {
-            const theme = try zed.generateZedTheme(allocator, colors, theme_name, overrides);
-            return try std.json.Stringify.valueAlloc(allocator, theme, .{ .whitespace = .minified, .emit_null_optional_fields = false });
+            const response = try zed.generateZedTheme(allocator, colors, theme_name, overrides);
+            return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
-    };
+    }
 }
+
+const ThemeRequest = struct {
+    colors: []const ColorInput,
+    type: []const u8,
+    name: ?[]const u8 = null,
+    overrides: ?ThemeOverrides = null,
+};
+
+const ColorInput = struct {
+    hex: []const u8,
+};
 
 pub fn handleExtractPalette(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
     if (request_body.len == 0) return error.NoImageProvided;
@@ -154,17 +167,6 @@ pub fn handleExtractPalette(allocator: std.mem.Allocator, request_body: []const 
 
     return try json_array.toOwnedSlice(allocator);
 }
-
-const ThemeRequest = struct {
-    colors: []const ColorInput,
-    type: []const u8,
-    name: ?[]const u8 = null,
-    overrides: ?ThemeOverrides = null,
-};
-
-const ColorInput = struct {
-    hex: []const u8,
-};
 
 pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
     const parsed = try std.json.parseFromSlice(ThemeRequest, allocator, request_body, .{

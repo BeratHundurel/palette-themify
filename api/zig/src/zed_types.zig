@@ -1,3 +1,10 @@
+const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
+
+pub const ZedThemeResponse = struct {
+    baseOverrides: ThemeOverrides,
+    theme: ZedTheme,
+};
+
 pub const FontStyle = enum {
     normal,
     italic,
@@ -263,7 +270,6 @@ pub const ZedSyntax = struct {
     @"comment.warning": SyntaxStyle,
     concept: SyntaxStyle,
     constant: SyntaxStyle,
-    @"constant.builtin": SyntaxStyle,
     @"constant.macro": SyntaxStyle,
     constructor: SyntaxStyle,
     @"diff.minus": SyntaxStyle,
@@ -279,7 +285,6 @@ pub const ZedSyntax = struct {
     hint: SyntaxStyle,
     keyword: SyntaxStyle,
     @"keyword.directive": SyntaxStyle,
-    @"keyword.directive.define": SyntaxStyle,
     @"keyword.export": SyntaxStyle,
     label: SyntaxStyle,
     link_text: SyntaxStyle,

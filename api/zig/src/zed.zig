@@ -4,9 +4,10 @@ const types = @import("zed_types.zig");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 const color_utils = @import("color_utils.zig");
 
-pub const ZedTheme = types.ZedTheme;
+const ZedTheme = types.ZedTheme;
 const ZedThemeStyle = types.ZedThemeStyle;
 const ZedThemeEntry = types.ZedThemeEntry;
+const ZedThemeResponse = types.ZedThemeResponse;
 const ZedSyntax = types.ZedSyntax;
 const SyntaxStyle = types.SyntaxStyle;
 const Player = types.Player;
@@ -16,7 +17,7 @@ pub fn generateZedTheme(
     colors: []const []const u8,
     theme_name: []const u8,
     overrides: ThemeOverrides,
-) !ZedTheme {
+) !ZedThemeResponse {
     const semantic = color_utils.findSemanticColors(colors);
     const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 10);
     defer allocator.free(improved_colors);
@@ -95,23 +96,23 @@ pub fn generateZedTheme(
     const fg_66 = color_utils.addAlpha(foreground, "66");
     const fg_80 = color_utils.addAlpha(foreground, "80");
 
-    const c1 = color_utils.adjustForContrast(c1_raw, background, 3.5);
-    const c2 = color_utils.adjustForContrast(c2_raw, background, 3.5);
+    const c1 = color_utils.adjustForContrast(c1_raw, background, 3);
+    const c2 = color_utils.adjustForContrast(c2_raw, background, 3);
 
-    const numbers_raw = color_utils.getHarmonicColor(c2, .complementary);
-    const numbers = color_utils.adjustForContrast(numbers_raw, background, 3.5);
+    const constants_raw = color_utils.getHarmonicColor(c2, .@"split-complementary");
+    const constants = color_utils.adjustForContrast(constants_raw, background, 3);
 
-    const c3 = color_utils.adjustForContrast(c3_raw, background, 3.5);
-    const c4 = color_utils.adjustForContrast(c4_raw, background, 3.5);
-    const c5 = color_utils.adjustForContrast(c5_raw, background, 3.5);
-    const c6 = color_utils.adjustForContrast(c6_raw, background, 3.5);
-    const c7 = color_utils.adjustForContrast(c7_raw, background, 3.5);
-    const c8 = color_utils.adjustForContrast(c8_raw, background, 3.5);
+    const c3 = color_utils.adjustForContrast(c3_raw, background, 3);
+    const c4 = color_utils.adjustForContrast(c4_raw, background, 3);
+    const c5 = color_utils.adjustForContrast(c5_raw, background, 3);
+    const c6 = color_utils.adjustForContrast(c6_raw, background, 3);
+    const c7 = color_utils.adjustForContrast(c7_raw, background, 3);
+    const c8 = color_utils.adjustForContrast(c8_raw, background, 3);
 
-    const semantic_error = color_utils.adjustForContrast(semantic.error_color, background, 3.5);
-    const semantic_warning = color_utils.adjustForContrast(semantic.warning_color, background, 3.5);
-    const semantic_success = color_utils.adjustForContrast(semantic.success_color, background, 3.5);
-    const semantic_info = color_utils.adjustForContrast(semantic.info_color, background, 3.5);
+    const semantic_error = color_utils.adjustForContrast(semantic.error_color, background, 3);
+    const semantic_warning = color_utils.adjustForContrast(semantic.warning_color, background, 3);
+    const semantic_success = color_utils.adjustForContrast(semantic.success_color, background, 3);
+    const semantic_info = color_utils.adjustForContrast(semantic.info_color, background, 3);
 
     const c2_33 = color_utils.addAlpha(c2, "33");
     const c2_40 = color_utils.addAlpha(c2, "40");
@@ -131,14 +132,14 @@ pub fn generateZedTheme(
     const accent_bright = if (dark_base) color_utils.lightenColor(c2, 0.33) else color_utils.darkenColor(c2, 0.33);
 
     const accents = try allocator.alloc([]const u8, 8);
-    accents[0] = c2;
-    accents[1] = c3;
-    accents[2] = c4;
-    accents[3] = c5;
-    accents[4] = c6;
-    accents[5] = c7;
-    accents[6] = c8;
-    accents[7] = c1;
+    accents[0] = c1;
+    accents[1] = c2;
+    accents[2] = c3;
+    accents[3] = c4;
+    accents[4] = c5;
+    accents[5] = c6;
+    accents[6] = c7;
+    accents[7] = c8;
 
     const players = try allocator.alloc(Player, 8);
     players[0] = .{ .cursor = foreground, .selection = fg_40, .background = foreground };
@@ -341,8 +342,8 @@ pub fn generateZedTheme(
         .@"editor.debugger_active_line.background" = color_utils.addAlpha(semantic_warning, "12"),
 
         .syntax = ZedSyntax{
-            .attribute = .{ .color = numbers, .font_style = null, .font_weight = null },
-            .boolean = .{ .color = numbers, .font_style = null, .font_weight = null },
+            .attribute = .{ .color = constants, .font_style = null, .font_weight = null },
+            .boolean = .{ .color = constants, .font_style = null, .font_weight = null },
             .character = .{ .color = c7, .font_style = null, .font_weight = null },
             .@"character.special" = .{ .color = c4, .font_style = null, .font_weight = null },
             .comment = .{ .color = fg_muted, .font_style = .italic, .font_weight = null },
@@ -354,8 +355,7 @@ pub fn generateZedTheme(
             .@"comment.todo" = .{ .color = c8, .font_style = .italic, .font_weight = null },
             .@"comment.warning" = .{ .color = semantic_warning, .font_style = .italic, .font_weight = null },
             .concept = .{ .color = semantic_info, .font_style = null, .font_weight = null },
-            .constant = .{ .color = c5, .font_style = null, .font_weight = null },
-            .@"constant.builtin" = .{ .color = c5, .font_style = null, .font_weight = null },
+            .constant = .{ .color = constants, .font_style = null, .font_weight = null },
             .@"constant.macro" = .{ .color = c6, .font_style = null, .font_weight = null },
             .constructor = .{ .color = c8, .font_style = null, .font_weight = null },
             .@"diff.minus" = .{ .color = semantic_error, .font_style = null, .font_weight = null },
@@ -365,24 +365,23 @@ pub fn generateZedTheme(
             .@"emphasis.strong" = .{ .color = c7, .font_style = null, .font_weight = 700 },
             .@"enum" = .{ .color = c7, .font_style = null, .font_weight = 700 },
             .field = .{ .color = c1, .font_style = null, .font_weight = null },
-            .float = .{ .color = numbers, .font_style = null, .font_weight = null },
+            .float = .{ .color = constants, .font_style = null, .font_weight = null },
             .function = .{ .color = c2, .font_style = null, .font_weight = null },
-            .@"function.decorator" = .{ .color = numbers, .font_style = null, .font_weight = null },
+            .@"function.decorator" = .{ .color = constants, .font_style = null, .font_weight = null },
             .hint = .{ .color = fg_muted, .font_style = .italic, .font_weight = null },
             .keyword = .{ .color = c6, .font_style = null, .font_weight = null },
             .@"keyword.directive" = .{ .color = c4, .font_style = null, .font_weight = null },
-            .@"keyword.directive.define" = .{ .color = c4, .font_style = null, .font_weight = null },
             .@"keyword.export" = .{ .color = accent_bright, .font_style = null, .font_weight = null },
             .label = .{ .color = semantic_info, .font_style = null, .font_weight = null },
             .link_text = .{ .color = c1, .font_style = null, .font_weight = null },
             .link_uri = .{ .color = c2, .font_style = .italic, .font_weight = null },
             .module = .{ .color = c5, .font_style = .italic, .font_weight = null },
             .namespace = .{ .color = c5, .font_style = .italic, .font_weight = null },
-            .number = .{ .color = numbers, .font_style = null, .font_weight = null },
-            .@"number.float" = .{ .color = numbers, .font_style = null, .font_weight = null },
+            .number = .{ .color = constants, .font_style = null, .font_weight = null },
+            .@"number.float" = .{ .color = constants, .font_style = null, .font_weight = null },
             .operator = .{ .color = accent_bright, .font_style = null, .font_weight = null },
             .parameter = .{ .color = c7, .font_style = null, .font_weight = null },
-            .parent = .{ .color = numbers, .font_style = null, .font_weight = null },
+            .parent = .{ .color = constants, .font_style = null, .font_weight = null },
             .predictive = .{ .color = fg_disabled, .font_style = null, .font_weight = null },
             .predoc = .{ .color = semantic_error, .font_style = null, .font_weight = null },
             .preproc = .{ .color = c6, .font_style = null, .font_weight = null },
@@ -401,8 +400,8 @@ pub fn generateZedTheme(
             .@"string.doc" = .{ .color = c7, .font_style = .italic, .font_weight = null },
             .@"string.documentation" = .{ .color = c7, .font_style = null, .font_weight = null },
             .@"string.escape" = .{ .color = c4, .font_style = null, .font_weight = null },
-            .@"string.regex" = .{ .color = numbers, .font_style = null, .font_weight = null },
-            .@"string.regexp" = .{ .color = numbers, .font_style = null, .font_weight = null },
+            .@"string.regex" = .{ .color = constants, .font_style = null, .font_weight = null },
+            .@"string.regexp" = .{ .color = constants, .font_style = null, .font_weight = null },
             .@"string.special" = .{ .color = c4, .font_style = null, .font_weight = null },
             .@"string.special.path" = .{ .color = c4, .font_style = null, .font_weight = null },
             .@"string.special.symbol" = .{ .color = c8, .font_style = null, .font_weight = null },
@@ -433,10 +432,28 @@ pub fn generateZedTheme(
         .style = style,
     };
 
-    return ZedTheme{
+    const theme = ZedTheme{
         .@"$schema" = "https://zed.dev/schema/themes/v0.2.0.json",
         .name = theme_name,
         .author = "Palette Themify",
         .themes = themes,
+    };
+
+    const base_overrides = ThemeOverrides{
+        .background = background,
+        .foreground = foreground,
+        .c1 = c1,
+        .c2 = c2,
+        .c3 = c3,
+        .c4 = c4,
+        .c5 = c5,
+        .c6 = c6,
+        .c7 = c7,
+        .c8 = c8,
+    };
+
+    return ZedThemeResponse{
+        .theme = theme,
+        .baseOverrides = base_overrides,
     };
 }
