@@ -1,7 +1,7 @@
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 
 pub const ZedThemeResponse = struct {
-    baseOverrides: ThemeOverrides,
+    themeOverrides: ThemeOverrides,
     theme: ZedTheme,
 };
 

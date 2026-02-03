@@ -454,6 +454,6 @@ pub fn generateZedTheme(
 
     return ZedThemeResponse{
         .theme = theme,
-        .baseOverrides = base_overrides,
+        .themeOverrides = base_overrides,
     };
 }

@@ -2,7 +2,7 @@ const std = @import("std");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 
 pub const VSCodeThemeResponse = struct {
-    baseOverrides: ThemeOverrides,
+    themeOverrides: ThemeOverrides,
     theme: VSCodeTheme,
 };
 

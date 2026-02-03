@@ -450,6 +450,6 @@ pub fn generateVSCodeTheme(
 
     return VSCodeThemeResponse{
         .theme = theme,
-        .baseOverrides = base_overrides,
+        .themeOverrides = base_overrides,
     };
 }
