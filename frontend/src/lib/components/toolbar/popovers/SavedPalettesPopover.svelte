@@ -4,7 +4,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
 	import toast from 'svelte-french-toast';
-	import type { Color } from '$lib/types/palette';
+	import type { Color } from '$lib/types/color';
 
 	function handlePaletteLoad(palette: Color[]) {
 		if (!appStore.state.imageLoaded) {

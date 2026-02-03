@@ -1,5 +1,5 @@
 import toast from 'svelte-french-toast';
-import type { Color } from './types/palette';
+import type { Color } from './types/color';
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 	if (!hex || typeof hex !== 'string') {

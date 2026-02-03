@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Color, NamedColor } from '$lib/types/palette';
+	import type { Color, NamedColor } from '$lib/types/color';
 	import { cn } from '$lib/utils';
 	import toast from 'svelte-french-toast';
 	import { appStore } from '$lib/stores/app.svelte';

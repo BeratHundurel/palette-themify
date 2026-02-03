@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { appStore } from '$lib/stores/app.svelte';
-	import { type Selector } from '$lib/types/palette';
+	import type { Selector } from '$lib/types/selector';
 	import { cn } from '$lib/utils';
 
 	let { selector, index = 0 } = $props<{
