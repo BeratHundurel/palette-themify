@@ -2,15 +2,19 @@ import { browser } from '$app/environment';
 import { tick } from 'svelte';
 import toast from 'svelte-french-toast';
 
-import * as api from '$lib/api/palette';
+import * as paletteApi from '$lib/api/palette';
+import * as themeApi from '$lib/api/theme';
 import * as workspaceApi from '$lib/api/workspace';
 import { downloadImage } from '$lib/api/wallhaven';
 import { CANVAS, SELECTION, IMAGE, UI } from '$lib/constants';
 import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
-import type { Color, Selector, PaletteData, WorkspaceData } from '$lib/types/palette';
-import type { ThemeExportState } from '$lib/types/themeExport';
+import type { Color } from '$lib/types/color';
+import type { Selector } from '$lib/types/selector';
+import type { PaletteData } from '$lib/types/palette';
+import type { WorkspaceData } from '$lib/types/workspace';
+import type { ThemeExportState } from '$lib/types/theme';
 import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
-import type { EditorThemeType } from '$lib/api/palette';
+import type { EditorThemeType } from '$lib/api/theme';
 import type { SortMethod } from '$lib/colorUtils';
 
 import { authStore } from './auth.svelte';
@@ -54,6 +58,25 @@ interface AppState {
 }
 
 const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';
+const WALLHAVEN_SETTINGS_KEY = 'wallhavenSettings';
+const APPLY_PALETTE_SETTINGS_KEY = 'applyPaletteSettings';
+
+const DEFAULT_WALLHAVEN_SETTINGS: WallhavenSettings = {
+	categories: '111',
+	purity: '100',
+	sorting: 'relevance',
+	order: 'desc',
+	topRange: '1M',
+	ratios: [],
+	apikey: ''
+};
+
+const DEFAULT_APPLY_PALETTE_SETTINGS: ApplyPaletteSettings = {
+	luminosity: 1,
+	nearest: 30,
+	power: 4,
+	maxDistance: 0
+};
 
 function loadThemeExportPreferences(): EditorThemeType {
 	if (!browser) return 'vscode';
@@ -73,6 +96,65 @@ function saveThemeExportPreferences(editorType: EditorThemeType) {
 	if (!browser) return;
 	try {
 		localStorage.setItem(THEME_EXPORT_STORAGE_KEY, JSON.stringify({ editorType }));
+	} catch {
+		// Ignore storage errors
+	}
+}
+
+function loadWallhavenSettings(): WallhavenSettings {
+	if (!browser) return DEFAULT_WALLHAVEN_SETTINGS;
+	try {
+		const stored = localStorage.getItem(WALLHAVEN_SETTINGS_KEY);
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			return {
+				categories: parsed.categories ?? DEFAULT_WALLHAVEN_SETTINGS.categories,
+				purity: parsed.purity ?? DEFAULT_WALLHAVEN_SETTINGS.purity,
+				sorting: parsed.sorting ?? DEFAULT_WALLHAVEN_SETTINGS.sorting,
+				order: parsed.order ?? DEFAULT_WALLHAVEN_SETTINGS.order,
+				topRange: parsed.topRange ?? DEFAULT_WALLHAVEN_SETTINGS.topRange,
+				ratios: parsed.ratios ?? DEFAULT_WALLHAVEN_SETTINGS.ratios,
+				apikey: parsed.apikey ?? DEFAULT_WALLHAVEN_SETTINGS.apikey
+			};
+		}
+	} catch {
+		// Ignore parse errors
+	}
+	return DEFAULT_WALLHAVEN_SETTINGS;
+}
+
+function saveWallhavenSettings(settings: WallhavenSettings) {
+	if (!browser) return;
+	try {
+		localStorage.setItem(WALLHAVEN_SETTINGS_KEY, JSON.stringify(settings));
+	} catch {
+		// Ignore storage errors
+	}
+}
+
+function loadApplyPaletteSettings(): ApplyPaletteSettings {
+	if (!browser) return DEFAULT_APPLY_PALETTE_SETTINGS;
+	try {
+		const stored = localStorage.getItem(APPLY_PALETTE_SETTINGS_KEY);
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			return {
+				luminosity: parsed.luminosity ?? DEFAULT_APPLY_PALETTE_SETTINGS.luminosity,
+				nearest: parsed.nearest ?? DEFAULT_APPLY_PALETTE_SETTINGS.nearest,
+				power: parsed.power ?? DEFAULT_APPLY_PALETTE_SETTINGS.power,
+				maxDistance: parsed.maxDistance ?? DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance
+			};
+		}
+	} catch {
+		// Ignore parse errors
+	}
+	return DEFAULT_APPLY_PALETTE_SETTINGS;
+}
+
+function saveApplyPaletteSettings(settings: ApplyPaletteSettings) {
+	if (!browser) return;
+	try {
+		localStorage.setItem(APPLY_PALETTE_SETTINGS_KEY, JSON.stringify(settings));
 	} catch {
 		// Ignore storage errors
 	}
@@ -102,15 +184,7 @@ function createAppStore() {
 
 		colors: [],
 		wallhavenResults: [],
-		wallhavenSettings: {
-			categories: '111',
-			purity: '100',
-			sorting: 'relevance',
-			order: 'desc',
-			topRange: '1M',
-			ratios: [],
-			apikey: ''
-		},
+		wallhavenSettings: loadWallhavenSettings(),
 		selectors: [
 			{ id: UI.DEFAULT_SELECTOR_ID, color: 'oklch(79.2% 0.209 151.711)', selected: true },
 			{ id: 'red', color: 'oklch(64.5% 0.246 16.439)', selected: false },
@@ -121,19 +195,13 @@ function createAppStore() {
 		savedPalettes: [],
 		savedWorkspaces: [],
 		sortMethod: 'none',
-		applyPaletteSettings: {
-			luminosity: 1,
-			nearest: 30,
-			power: 4,
-			maxDistance: 0
-		},
+		applyPaletteSettings: loadApplyPaletteSettings(),
 		themeExport: {
-			editorType: loadThemeExportPreferences(),
-			themeName: 'Generated Theme',
-			generatedTheme: null,
-			themeOverrides: {},
+			themeResult: null,
 			themeColorsWithUsage: [],
-			lastGeneratedPaletteVersion: 0
+			themeName: 'Generated Theme',
+			lastGeneratedPaletteVersion: 0,
+			editorType: loadThemeExportPreferences()
 		},
 		paletteVersion: 0
 	});
@@ -142,10 +210,27 @@ function createAppStore() {
 
 	$effect.root(() => {
 		$effect(() => {
-			const signature = state.colors.map((color) => color.hex.toUpperCase()).join('|');
+			const signature = state.colors
+				.map((color) => color.hex.toUpperCase())
+				.sort()
+				.join('|');
 			if (signature === lastPaletteSignature) return;
 			lastPaletteSignature = signature;
 			state.paletteVersion += 1;
+		});
+
+		$effect(() => {
+			const settings = state.wallhavenSettings;
+			if (settings) {
+				saveWallhavenSettings(settings);
+			}
+		});
+
+		$effect(() => {
+			const settings = state.applyPaletteSettings;
+			if (settings) {
+				saveApplyPaletteSettings(settings);
+			}
 		});
 	});
 
@@ -530,7 +615,7 @@ function createAppStore() {
 			const toastId = existingToastId ?? toast.loading('Extracting palette...');
 
 			try {
-				const result = await api.extractPalette(file);
+				const result = await paletteApi.extractPalette(file);
 				if (result.palette.length > 0) {
 					state.colors = result.palette;
 					toast.success('Palette extracted', { id: toastId });
@@ -556,7 +641,7 @@ function createAppStore() {
 
 			try {
 				if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
-					const data = await api.savePalette(paletteName, state.colors);
+					const data = await paletteApi.savePalette(paletteName, state.colors);
 					toast.success('Palette saved: ' + data.name);
 					await appStore.loadSavedPalettes();
 				} else {
@@ -609,7 +694,7 @@ function createAppStore() {
 					state.canvas!.toBlob((b) => resolve(b!), IMAGE.OUTPUT_FORMAT)
 				);
 
-				const outBlob = await api.applyPaletteBlob(srcBlob, paletteToApply, {
+				const outBlob = await themeApi.applyPaletteBlob(srcBlob, paletteToApply, {
 					luminosity: state.applyPaletteSettings.luminosity,
 					nearest: state.applyPaletteSettings.nearest,
 					power: state.applyPaletteSettings.power,
@@ -617,7 +702,7 @@ function createAppStore() {
 				});
 				await appStore.drawBlobToCanvas(outBlob);
 
-				const extracted = await api.extractPalette(outBlob);
+				const extracted = await paletteApi.extractPalette(outBlob);
 				if (extracted.palette.length > 0) {
 					state.colors = extracted.palette;
 				} else {
@@ -635,10 +720,10 @@ function createAppStore() {
 
 			try {
 				if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
-					const response = await api.getPalettes();
+					const response = await paletteApi.getPalettes();
 					state.savedPalettes = response.palettes;
 				} else if (authStore.state.isAuthenticated && authStore.isDemoUser()) {
-					const response = await api.getPalettes();
+					const response = await paletteApi.getPalettes();
 					const serverPalettes = response.palettes;
 
 					const stored = localStorage.getItem('savedPalettes');
@@ -669,11 +754,11 @@ function createAppStore() {
 				const isLocalPalette = paletteId.startsWith('local_');
 
 				if (authStore.state.isAuthenticated && !authStore.isDemoUser() && !isLocalPalette) {
-					await api.deletePalette(paletteId);
+					await paletteApi.deletePalette(paletteId);
 					toast.success('Palette deleted');
 					await appStore.loadSavedPalettes();
 				} else if (authStore.isDemoUser() && !isLocalPalette) {
-					await api.deletePalette(paletteId);
+					await paletteApi.deletePalette(paletteId);
 					toast.success('Palette deleted');
 					await appStore.loadSavedPalettes();
 				} else {
@@ -704,7 +789,7 @@ function createAppStore() {
 							await Promise.all(
 								localPalettes.map(async (palette) => {
 									try {
-										await api.savePalette(palette.name, palette.palette);
+										await paletteApi.savePalette(palette.name, palette.palette);
 									} catch (err) {
 										console.error('Failed to sync palette:', palette.name, err);
 									}

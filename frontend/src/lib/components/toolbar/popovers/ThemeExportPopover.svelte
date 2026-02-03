@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
-	import type { ThemeColorWithUsage } from '$lib/types/themeExport';
-	import { generateTheme, type EditorThemeType } from '$lib/api/palette';
-	import type { Theme, ThemeResponse } from '$lib/types/palette';
+	import { generateTheme, type EditorThemeType } from '$lib/api/theme';
+	import type { Theme, ThemeOverrides, ThemeColorWithUsage } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
@@ -11,20 +10,17 @@
 	const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 	const THEME_NAME_DEBOUNCE_MS = 300;
 
-	type BaseOverrides = ThemeResponse['baseOverrides'];
-	type BaseOverrideKey = keyof BaseOverrides;
-
 	let expandedColorIndices = new SvelteSet<number>();
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-	let editorType = $derived(appStore.state.themeExport.editorType);
-	let themeName = $derived(appStore.state.themeExport.themeName);
-	let generatedTheme = $derived(appStore.state.themeExport.generatedTheme);
-	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
-	let themeOverrides = $derived(appStore.state.themeExport.themeOverrides);
 	let paletteVersion = $derived(appStore.state.paletteVersion);
+	let themeName = $derived(appStore.state.themeExport.themeName);
+	let editorType = $derived(appStore.state.themeExport.editorType);
+	let themeResult = $derived(appStore.state.themeExport.themeResult);
+	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
+	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
 
-	const baseOverrides = $derived(generatedTheme?.baseOverrides ?? {});
+	const baseOverrides = $derived(themeResult?.themeOverrides ?? {});
 
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
 	let themeNameError = $state<string | null>(null);
@@ -37,14 +33,22 @@
 	);
 
 	$effect(() => {
-		if (isOpen && generatedTheme === null) {
+		if (isOpen && themeResult === null && !isGenerating) {
 			generateThemeFromApi();
 		}
 	});
 
 	$effect(() => {
-		if (!isOpen || isGenerating || appStore.state.themeExport.lastGeneratedPaletteVersion == paletteVersion) return;
-		appStore.state.themeExport.themeName = 'Generated Theme';
+		if (
+			!isOpen ||
+			isGenerating ||
+			appStore.state.themeExport.lastGeneratedPaletteVersion == 0 ||
+			appStore.state.themeExport.lastGeneratedPaletteVersion == paletteVersion
+		)
+			return;
+
+		themeOverrides = {};
+		themeName = 'Generated Theme';
 		generateThemeFromApi();
 	});
 
@@ -82,7 +86,7 @@
 	function updateThemeNameIfValid(name: string) {
 		const trimmedName = name.trim();
 
-		if (!generatedTheme || themeNameError || trimmedName.length === 0) {
+		if (!themeResult || themeNameError || trimmedName.length === 0) {
 			return;
 		}
 
@@ -91,9 +95,9 @@
 		}
 
 		try {
-			updateThemeNameInGeneratedTheme(trimmedName);
-			if (generatedTheme) {
-				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(generatedTheme.theme);
+			updateThemeNameInThemeResult(trimmedName);
+			if (themeResult) {
+				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(themeResult.theme);
 			}
 		} catch {
 			toast.error('Could not update the theme name. Regenerating the theme...');
@@ -101,11 +105,11 @@
 		}
 	}
 
-	function updateThemeNameInGeneratedTheme(name: string) {
-		if (!generatedTheme) return;
+	function updateThemeNameInThemeResult(name: string) {
+		if (!themeResult) return;
 
 		try {
-			const theme = generatedTheme.theme;
+			const theme = themeResult.theme;
 			if (!theme) return;
 
 			if (editorType === 'zed' && 'themes' in theme) {
@@ -136,12 +140,12 @@
 		try {
 			isGenerating = true;
 			const response = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
-			appStore.state.themeExport.generatedTheme = response;
-			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
+			appStore.state.themeExport.themeResult = response;
 			appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
+			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
 		} catch {
 			toast.error('Could not generate the theme. Please try again.');
-			appStore.state.themeExport.generatedTheme = null;
+			appStore.state.themeExport.themeResult = null;
 			appStore.state.themeExport.themeColorsWithUsage = [];
 		} finally {
 			isGenerating = false;
@@ -149,18 +153,18 @@
 	}
 
 	function resetOverrides() {
-		appStore.state.themeExport.themeOverrides = {};
+		themeOverrides = {};
 		generateThemeFromApi();
 	}
 
-	function updateThemeOverride(key: BaseOverrideKey, value: string) {
+	function updateThemeOverride(key: keyof ThemeOverrides, value: string) {
 		const normalized = normalizeHex(value);
-		const overrides = appStore.state.themeExport.themeOverrides as BaseOverrides;
-		if (!normalized) {
-			overrides[key] = null;
-		} else {
-			overrides[key] = normalized;
-		}
+		if (!normalized) return;
+
+		const overrides = appStore.state.themeExport.themeResult?.themeOverrides;
+		if (!overrides) return;
+
+		overrides[key] = normalized;
 		generateThemeFromApi();
 	}
 
@@ -240,10 +244,10 @@
 	}
 
 	async function exportTheme() {
-		if (!generatedTheme) return;
+		if (!themeResult) return;
 
 		try {
-			const themeJson = JSON.stringify(generatedTheme.theme, null, 2);
+			const themeJson = JSON.stringify(themeResult.theme, null, 2);
 			await navigator.clipboard.writeText(themeJson);
 			toast.success('Theme JSON copied to clipboard!');
 			popoverStore.close('themeExport');
@@ -265,7 +269,7 @@
 		}
 	}
 
-	const overrideFields: Array<{ key: BaseOverrideKey; label: string; hint: string }> = [
+	const overrideFields: Array<{ key: keyof ThemeOverrides; label: string; hint: string }> = [
 		{ key: 'background', label: 'Background', hint: 'Base background (c0)' },
 		{ key: 'foreground', label: 'Foreground', hint: 'Primary text color' },
 		{ key: 'c1', label: 'C1', hint: 'Properties/fields' },
@@ -685,7 +689,7 @@
 					<button
 						type="button"
 						onclick={exportTheme}
-						disabled={!generatedTheme || themeNameError !== null}
+						disabled={!themeResult || themeNameError !== null}
 						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 					>
 						Copy Theme JSON
