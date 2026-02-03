@@ -5,7 +5,7 @@ import type {
 	SaveWorkspaceResult,
 	ShareWorkspaceResult,
 	WorkspaceData
-} from '$lib/types/palette';
+} from '$lib/types/workspace';
 
 import { buildURL, ensureOk } from './base';
 
