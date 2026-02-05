@@ -170,7 +170,7 @@
 		{#if highlightElement && currentStep?.element}
 			{@const rect = highlightElement.getBoundingClientRect()}
 			<div
-				class="tutorial-highlight border-brand pointer-events-none absolute z-[10001] rounded-md border-[3px]"
+				class="tutorial-highlight border-brand pointer-events-none absolute z-10001 rounded-md border-[3px]"
 				style={`
 					top: ${rect.top - 8}px;
 					left: ${rect.left - 8}px;
@@ -185,8 +185,8 @@
 			<div
 				bind:this={tooltipElement}
 				class={cn(
-					'pointer-events-auto absolute z-[10002] max-w-[360px] min-w-[300px]',
-					'max-md:!right-[5vw] max-md:!left-[5vw] max-md:max-w-[90vw] max-md:min-w-[280px]'
+					'pointer-events-auto absolute z-10002 max-w-90 min-w-75',
+					'max-md:right-[5vw]! max-md:left-[5vw]! max-md:max-w-[90vw] max-md:min-w-70'
 				)}
 				style={Object.entries(tooltipStyles)
 					.map(([key, value]) => `${key}: ${value}`)
@@ -302,7 +302,7 @@
 
 				{#if currentStep.element && actualPosition !== 'center'}
 					<div
-						class="tutorial-arrow absolute h-0 w-0 border-[8px] border-transparent tutorial-arrow-{actualPosition}"
+						class="tutorial-arrow absolute h-0 w-0 border-8 border-transparent tutorial-arrow-{actualPosition}"
 					></div>
 				{/if}
 			</div>

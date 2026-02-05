@@ -31,7 +31,7 @@
 </script>
 
 {#if showPrompt}
-	<div class="fixed inset-0 z-[9998] flex items-center justify-center p-6" transition:fade={{ duration: 300 }}>
+	<div class="fixed inset-0 z-9998 flex items-center justify-center p-6" transition:fade={{ duration: 300 }}>
 		<div
 			class="absolute inset-0 cursor-pointer bg-black/70"
 			onclick={dismissPrompt}
@@ -40,7 +40,7 @@
 			tabindex="0"
 			aria-label="Close tutorial prompt"
 		></div>
-		<div class="relative w-full max-w-[480px]" transition:fly={{ y: 30, duration: 400 }}>
+		<div class="relative w-full max-w-120" transition:fly={{ y: 30, duration: 400 }}>
 			<div class="border-brand/50 rounded-xl border bg-zinc-900 p-6">
 				<div class="max-h-[90vh] px-4">
 					<div class="mb-8 text-center">
@@ -55,7 +55,7 @@
 						<div
 							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
-							<div class="flex-shrink-0 text-2xl max-sm:text-xl">📸</div>
+							<div class="shrink-0 text-2xl max-sm:text-xl">📸</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Upload Images</strong>
 								<span class="text-xs leading-tight text-zinc-400">Drag & drop or click to upload</span>
@@ -65,7 +65,7 @@
 						<div
 							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
-							<div class="flex-shrink-0 text-2xl max-sm:text-xl">🎯</div>
+							<div class="shrink-0 text-2xl max-sm:text-xl">🎯</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Select Areas</strong>
 								<span class="text-xs leading-tight text-zinc-400">Choose specific regions for color extraction</span>
@@ -75,7 +75,7 @@
 						<div
 							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
-							<div class="flex-shrink-0 text-2xl max-sm:text-xl">🎨</div>
+							<div class="shrink-0 text-2xl max-sm:text-xl">🎨</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Extract Colors</strong>
 								<span class="text-xs leading-tight text-zinc-400">Get perfect palettes instantly</span>
@@ -85,7 +85,7 @@
 						<div
 							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
 						>
-							<div class="flex-shrink-0 text-2xl max-sm:text-xl">💾</div>
+							<div class="shrink-0 text-2xl max-sm:text-xl">💾</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Save & Apply</strong>
 								<span class="text-xs leading-tight text-zinc-400">Save palettes and apply to new images</span>
@@ -117,7 +117,7 @@
 			</div>
 
 			<button
-				class="absolute top-4 right-[46px] flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-600 text-zinc-400 outline-0 transition-[background-color,border-color,color] duration-300 hover:border-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+				class="absolute top-4 right-11.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-600 text-zinc-400 outline-0 transition-[background-color,border-color,color] duration-300 hover:border-zinc-500 hover:bg-white/5 hover:text-zinc-300"
 				onclick={dismissPrompt}
 				aria-label="Close tutorial prompt"
 			>

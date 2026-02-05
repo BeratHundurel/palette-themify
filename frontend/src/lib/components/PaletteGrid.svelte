@@ -67,7 +67,7 @@
 	}
 </script>
 
-<section class={cn('flex w-full max-w-5xl flex-col gap-3', appStore.state.imageLoaded ? 'min-h-[200px]' : 'h-0 w-0')}>
+<section class={cn('flex w-full max-w-5xl flex-col gap-3', appStore.state.imageLoaded ? 'min-h-50' : 'h-0 w-0')}>
 	{#if appStore.state.imageLoaded}
 		<div class="flex min-h-9 items-center gap-2">
 			<span class="text-sm font-medium text-zinc-300">Sort:</span>
