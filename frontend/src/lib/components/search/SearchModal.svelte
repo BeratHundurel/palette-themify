@@ -92,7 +92,7 @@
 		_timer = window.setTimeout(() => {
 			page = 1;
 			hasMore = true;
-			performSearch(String(q).trim(), 1, false);
+			performSearch(q.trim(), 1, false);
 			_timer = null;
 		}, 750);
 	}
@@ -164,6 +164,12 @@
 						type="text"
 						bind:this={inputEl}
 						bind:value={appStore.state.searchQuery}
+						onchange={() => {
+							scheduleSearch(appStore.state.searchQuery);
+						}}
+						onfocus={() => {
+							scheduleSearch(appStore.state.searchQuery);
+						}}
 						oninput={() => {
 							scheduleSearch(appStore.state.searchQuery);
 						}}
@@ -246,7 +252,7 @@
 												class="h-full w-full object-cover transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-90"
 											/>
 											<div
-												class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+												class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
 											>
 												<div class="absolute right-2 bottom-2 left-2">
 													<p class="text-xs font-medium text-white">Click to extract palette</p>
@@ -255,7 +261,7 @@
 										</button>
 									{:else}
 										<div
-											class="flex aspect-[16/9] w-full items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900"
+											class="flex aspect-video w-full items-center justify-center bg-linear-to-br from-zinc-700 to-zinc-900"
 										>
 											<svg class="h-8 w-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
