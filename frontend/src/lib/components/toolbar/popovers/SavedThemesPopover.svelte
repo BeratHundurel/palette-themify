@@ -73,54 +73,48 @@
 						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
 					>
 						<div class="p-3">
-							<div class="mb-3 flex items-start justify-between">
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-2">
-										<h4 class="text-brand truncate font-mono text-sm font-semibold" title={item.name}>
-											{item.name}
-										</h4>
-									</div>
-								</div>
-								<div class="flex items-center gap-1.5">
-									<button
-										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-										onclick={() => handleThemeLoad(item)}
-										type="button"
-										title="Load into inspector"
-									>
-										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-										</svg>
-										Load
-									</button>
-									<button
-										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-										onclick={() => handleThemeCopy(item)}
-										type="button"
-										title="Copy theme"
-									>
-										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-											<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-										</svg>
-										Copy
-									</button>
-									<button
-										class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
-										onclick={() => handleThemeDelete(item.id, item.name)}
-										type="button"
-										title="Delete theme"
-									>
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-											/>
-										</svg>
-									</button>
-								</div>
+							<h4 class="text-brand truncate font-mono text-sm font-semibold" title={item.name}>
+								{item.name}
+							</h4>
+							<div class="mb-2 flex items-center justify-end gap-1">
+								<button
+									class="text-brand hover:bg-brand/10 flex items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
+									onclick={() => handleThemeLoad(item)}
+									type="button"
+									title="Load into inspector"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+									Load
+								</button>
+								<button
+									class="text-brand hover:bg-brand/10 flex items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
+									onclick={() => handleThemeCopy(item)}
+									type="button"
+									title="Copy theme"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+									</svg>
+									Copy
+								</button>
+								<button
+									class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
+									onclick={() => handleThemeDelete(item.id, item.name)}
+									type="button"
+									title="Delete theme"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										/>
+									</svg>
+								</button>
 							</div>
 							<div class="group-hover:border-brand/50 group border-t border-zinc-600 bg-zinc-900/50 px-3 py-2">
 								<div class="mb-2 flex flex-wrap gap-1.5">
