@@ -2,7 +2,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateTheme, type EditorThemeType } from '$lib/api/theme';
-	import type { Theme, ThemeOverrides, ThemeColorWithUsage } from '$lib/types/theme';
+	import type { SavedThemeItem, Theme, ThemeOverrides, ThemeColorWithUsage } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
@@ -19,6 +19,7 @@
 	let themeResult = $derived(appStore.state.themeExport.themeResult);
 	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
 	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
+	let saveOnCopy = $derived(appStore.state.themeExport.saveOnCopy);
 
 	const baseOverrides = $derived(themeResult?.themeOverrides ?? {});
 
@@ -249,11 +250,27 @@
 		try {
 			const themeJson = JSON.stringify(themeResult.theme, null, 2);
 			await navigator.clipboard.writeText(themeJson);
+			if (saveOnCopy) {
+				saveTheme(themeName.trim());
+			}
 			toast.success('Theme JSON copied to clipboard!');
 			popoverStore.close('themeExport');
 		} catch {
 			toast.error('Could not copy the theme. Please try again.');
 		}
+	}
+
+	function saveTheme(name: string) {
+		if (!themeResult || !name) return;
+		const saved: SavedThemeItem = {
+			id: `local_${Date.now()}`,
+			name,
+			editorType,
+			themeResult,
+			themeColorsWithUsage,
+			createdAt: new Date().toISOString()
+		};
+		appStore.saveThemeToLocal(saved);
 	}
 
 	function isExpanded(index: number): boolean {
@@ -376,52 +393,6 @@
 				</div>
 
 				<div class="mb-8">
-					<div class="mb-4 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
-						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
-						<span class="text-xs text-zinc-400">Overrides regenerate derived variants</span>
-					</div>
-					<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<p class="text-xs text-zinc-500">Defaults come from the generated theme. Clearing restores them.</p>
-						<button
-							type="button"
-							onclick={resetOverrides}
-							disabled={Object.values(themeOverrides).every((value) => value == null)}
-							class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							Return to Defaults
-						</button>
-					</div>
-					<div class="grid gap-4 md:grid-cols-2">
-						{#each overrideFields as field (field.key)}
-							<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/50 px-3 py-2">
-								<div class="mb-1">
-									<div>
-										<div class="mb-0.5 text-sm font-medium text-zinc-200">{field.label}</div>
-										<div class="text-xs text-zinc-500">{field.hint}</div>
-									</div>
-								</div>
-								<div class="flex items-center gap-2">
-									<input
-										type="color"
-										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
-										class="h-10 w-12 cursor-pointer"
-										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
-									/>
-									<input
-										type="text"
-										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
-										placeholder="#000000"
-										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
-										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
-									/>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
-
-				<div class="mb-8">
 					<div class="mb-6 flex items-center gap-2">
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Editor Type</h3>
 						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
@@ -476,6 +447,74 @@
 							</div>
 							<p class="mt-1.5 ml-7 text-xs text-zinc-400">Generate theme for Zed editor</p>
 						</button>
+					</div>
+				</div>
+
+				<div class="mb-8">
+					<div class="mb-4 flex items-center gap-2">
+						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Save Behavior</h3>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
+					</div>
+					<label
+						class="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3"
+					>
+						<div>
+							<div class="text-sm font-medium text-zinc-200">Save on copy</div>
+							<p class="mt-1 text-xs text-zinc-500">Store the generated theme locally when copying JSON</p>
+						</div>
+						<input
+							id="save-on-copy"
+							type="checkbox"
+							checked={saveOnCopy}
+							onchange={(e) => appStore.setThemeExportSaveOnCopy((e.target as HTMLInputElement).checked)}
+							class="text-brand focus:ring-brand h-4 w-4 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
+						/>
+					</label>
+				</div>
+
+				<div class="mb-8">
+					<div class="mb-4 flex items-center gap-2">
+						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
+						<span class="text-xs text-zinc-400">Overrides regenerate derived variants</span>
+					</div>
+					<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+						<p class="text-xs text-zinc-500">Defaults come from the generated theme. Clearing restores them.</p>
+						<button
+							type="button"
+							onclick={resetOverrides}
+							disabled={Object.values(themeOverrides).every((value) => value == null)}
+							class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							Return to Defaults
+						</button>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2">
+						{#each overrideFields as field (field.key)}
+							<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/50 px-3 py-2">
+								<div class="mb-1">
+									<div>
+										<div class="mb-0.5 text-sm font-medium text-zinc-200">{field.label}</div>
+										<div class="text-xs text-zinc-500">{field.hint}</div>
+									</div>
+								</div>
+								<div class="flex items-center gap-2">
+									<input
+										type="color"
+										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
+										class="h-10 w-12 cursor-pointer"
+										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
+									/>
+									<input
+										type="text"
+										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
+										placeholder="#000000"
+										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
+									/>
+								</div>
+							</div>
+						{/each}
 					</div>
 				</div>
 

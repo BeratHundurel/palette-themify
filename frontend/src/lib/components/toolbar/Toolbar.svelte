@@ -1,18 +1,19 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
 	import CopyOptions from './CopyOptions.svelte';
-	import OpenInCoolors from './OpenInCoolors.svelte';
 	import SelectorButton from './SelectorButton.svelte';
 	import SavedPalettes from './SavedPalettes.svelte';
 	import SavedWorkspaces from './SavedWorkspaces.svelte';
 	import ApplyPaletteSettings from './ApplyPaletteSettings.svelte';
 	import WallhavenSettings from './WallhavenSettings.svelte';
 	import ThemeExport from './ThemeExport.svelte';
+	import SavedThemes from './SavedThemes.svelte';
 	import ApplyPaletteSettingsPopover from './popovers/ApplyPaletteSettingsPopover.svelte';
 	import WallhavenSettingsPopover from './popovers/WallhavenSettingsPopover.svelte';
 	import CopyOptionsPopover from './popovers/CopyOptionsPopover.svelte';
 	import SavedPalettesPopover from './popovers/SavedPalettesPopover.svelte';
 	import SavedWorkspacesPopover from './popovers/SavedWorkspacesPopover.svelte';
+	import SavedThemesPopover from './popovers/SavedThemesPopover.svelte';
 	import Download from './Download.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
@@ -51,7 +52,7 @@
 	tabindex="0"
 	onmousedown={handleMouseDown}
 	style="right: {right}px; top: {top}px;"
-	class={cn('fixed select-none', moving ? 'cursor-move [&_*]:pointer-events-none' : '')}
+	class={cn('fixed select-none', moving ? 'cursor-move **:pointer-events-none' : '')}
 >
 	<div
 		class={cn(
@@ -90,7 +91,7 @@
 					<div class="space-y-3">
 						<div class="flex items-center gap-3">
 							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Selection Tools</h3>
-							<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
 						<div class="flex flex-wrap justify-start gap-3">
 							{#each appStore.state.selectors as selector, i (selector.id)}
@@ -105,7 +106,7 @@
 					<div class="space-y-3">
 						<div class="flex items-center gap-3">
 							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Image & Processing</h3>
-							<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
 						<div class="flex gap-3">
 							<SavedWorkspaces />
@@ -117,7 +118,7 @@
 					<div class="space-y-3">
 						<div class="flex items-center gap-3">
 							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Settings</h3>
-							<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
 						<div class="flex gap-3">
 							<WallhavenSettings />
@@ -130,7 +131,7 @@
 						<div class="space-y-3">
 							<div class="flex items-center gap-3">
 								<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Copy & Export</h3>
-								<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+								<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 							</div>
 							<div class="flex gap-3">
 								<CopyOptions />
@@ -141,11 +142,11 @@
 						<div class="space-y-3">
 							<div class="flex items-center gap-3">
 								<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Generation</h3>
-								<div class="from-brand/30 h-px flex-1 bg-gradient-to-r to-transparent"></div>
+								<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 							</div>
 							<div class="flex gap-3">
 								<ThemeExport />
-								<OpenInCoolors />
+								<SavedThemes />
 							</div>
 						</div>
 					</div>
@@ -171,6 +172,10 @@
 
 		{#if popoverStore.state.current === 'workspaces'}
 			<SavedWorkspacesPopover />
+		{/if}
+
+		{#if popoverStore.state.current === 'themes'}
+			<SavedThemesPopover />
 		{/if}
 	</div>
 </section>

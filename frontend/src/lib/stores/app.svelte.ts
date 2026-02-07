@@ -12,7 +12,7 @@ import type { Color } from '$lib/types/color';
 import type { Selector } from '$lib/types/selector';
 import type { PaletteData } from '$lib/types/palette';
 import type { WorkspaceData } from '$lib/types/workspace';
-import type { ThemeExportState } from '$lib/types/theme';
+import type { SavedThemeItem, ThemeExportState } from '$lib/types/theme';
 import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 import type { EditorThemeType } from '$lib/api/theme';
 import type { SortMethod } from '$lib/colorUtils';
@@ -54,10 +54,12 @@ interface AppState {
 	sortMethod: SortMethod;
 	applyPaletteSettings: ApplyPaletteSettings;
 	themeExport: ThemeExportState;
+	savedThemes: SavedThemeItem[];
 	paletteVersion: number;
 }
 
 const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';
+const SAVED_THEMES_STORAGE_KEY = 'savedThemes';
 const WALLHAVEN_SETTINGS_KEY = 'wallhavenSettings';
 const APPLY_PALETTE_SETTINGS_KEY = 'applyPaletteSettings';
 
@@ -80,84 +82,88 @@ const DEFAULT_APPLY_PALETTE_SETTINGS: ApplyPaletteSettings = {
 
 function loadThemeExportPreferences(): EditorThemeType {
 	if (!browser) return 'vscode';
-	try {
-		const stored = localStorage.getItem(THEME_EXPORT_STORAGE_KEY);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			return parsed.editorType || 'vscode';
-		}
-	} catch {
-		// Ignore parse errors
+	const stored = localStorage.getItem(THEME_EXPORT_STORAGE_KEY);
+	if (stored) {
+		const parsed = JSON.parse(stored);
+		return parsed.editorType || 'vscode';
 	}
 	return 'vscode';
 }
 
-function saveThemeExportPreferences(editorType: EditorThemeType) {
-	if (!browser) return;
-	try {
-		localStorage.setItem(THEME_EXPORT_STORAGE_KEY, JSON.stringify({ editorType }));
-	} catch {
-		// Ignore storage errors
+function loadThemeExportSaveOnCopy(): boolean {
+	if (!browser) return true;
+	const stored = localStorage.getItem(THEME_EXPORT_STORAGE_KEY);
+	if (stored) {
+		const parsed = JSON.parse(stored);
+		return parsed.saveOnCopy ?? true;
 	}
+	return true;
+}
+
+function saveThemeExportPreferences(editorType: EditorThemeType, saveOnCopy: boolean) {
+	if (!browser) return;
+	localStorage.setItem(THEME_EXPORT_STORAGE_KEY, JSON.stringify({ editorType, saveOnCopy }));
+}
+
+function loadSavedThemes(): SavedThemeItem[] {
+	if (!browser) return [];
+	try {
+		const stored = localStorage.getItem(SAVED_THEMES_STORAGE_KEY);
+		if (!stored) return [];
+		const parsed = JSON.parse(stored) as SavedThemeItem[];
+		if (!Array.isArray(parsed)) return [];
+		return parsed;
+	} catch {
+		return [];
+	}
+}
+
+function saveSavedThemes(themes: SavedThemeItem[]) {
+	if (!browser) return;
+	localStorage.setItem(SAVED_THEMES_STORAGE_KEY, JSON.stringify(themes));
 }
 
 function loadWallhavenSettings(): WallhavenSettings {
 	if (!browser) return DEFAULT_WALLHAVEN_SETTINGS;
-	try {
-		const stored = localStorage.getItem(WALLHAVEN_SETTINGS_KEY);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			return {
-				categories: parsed.categories ?? DEFAULT_WALLHAVEN_SETTINGS.categories,
-				purity: parsed.purity ?? DEFAULT_WALLHAVEN_SETTINGS.purity,
-				sorting: parsed.sorting ?? DEFAULT_WALLHAVEN_SETTINGS.sorting,
-				order: parsed.order ?? DEFAULT_WALLHAVEN_SETTINGS.order,
-				topRange: parsed.topRange ?? DEFAULT_WALLHAVEN_SETTINGS.topRange,
-				ratios: parsed.ratios ?? DEFAULT_WALLHAVEN_SETTINGS.ratios,
-				apikey: parsed.apikey ?? DEFAULT_WALLHAVEN_SETTINGS.apikey
-			};
-		}
-	} catch {
-		// Ignore parse errors
+	const stored = localStorage.getItem(WALLHAVEN_SETTINGS_KEY);
+	if (stored) {
+		const parsed = JSON.parse(stored);
+		return {
+			categories: parsed.categories ?? DEFAULT_WALLHAVEN_SETTINGS.categories,
+			purity: parsed.purity ?? DEFAULT_WALLHAVEN_SETTINGS.purity,
+			sorting: parsed.sorting ?? DEFAULT_WALLHAVEN_SETTINGS.sorting,
+			order: parsed.order ?? DEFAULT_WALLHAVEN_SETTINGS.order,
+			topRange: parsed.topRange ?? DEFAULT_WALLHAVEN_SETTINGS.topRange,
+			ratios: parsed.ratios ?? DEFAULT_WALLHAVEN_SETTINGS.ratios,
+			apikey: parsed.apikey ?? DEFAULT_WALLHAVEN_SETTINGS.apikey
+		};
 	}
 	return DEFAULT_WALLHAVEN_SETTINGS;
 }
 
 function saveWallhavenSettings(settings: WallhavenSettings) {
 	if (!browser) return;
-	try {
-		localStorage.setItem(WALLHAVEN_SETTINGS_KEY, JSON.stringify(settings));
-	} catch {
-		// Ignore storage errors
-	}
+	localStorage.setItem(WALLHAVEN_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function loadApplyPaletteSettings(): ApplyPaletteSettings {
 	if (!browser) return DEFAULT_APPLY_PALETTE_SETTINGS;
-	try {
-		const stored = localStorage.getItem(APPLY_PALETTE_SETTINGS_KEY);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			return {
-				luminosity: parsed.luminosity ?? DEFAULT_APPLY_PALETTE_SETTINGS.luminosity,
-				nearest: parsed.nearest ?? DEFAULT_APPLY_PALETTE_SETTINGS.nearest,
-				power: parsed.power ?? DEFAULT_APPLY_PALETTE_SETTINGS.power,
-				maxDistance: parsed.maxDistance ?? DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance
-			};
-		}
-	} catch {
-		// Ignore parse errors
+	const stored = localStorage.getItem(APPLY_PALETTE_SETTINGS_KEY);
+	if (stored) {
+		const parsed = JSON.parse(stored);
+		return {
+			luminosity: parsed.luminosity ?? DEFAULT_APPLY_PALETTE_SETTINGS.luminosity,
+			nearest: parsed.nearest ?? DEFAULT_APPLY_PALETTE_SETTINGS.nearest,
+			power: parsed.power ?? DEFAULT_APPLY_PALETTE_SETTINGS.power,
+			maxDistance: parsed.maxDistance ?? DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance
+		};
 	}
 	return DEFAULT_APPLY_PALETTE_SETTINGS;
 }
 
 function saveApplyPaletteSettings(settings: ApplyPaletteSettings) {
 	if (!browser) return;
-	try {
-		localStorage.setItem(APPLY_PALETTE_SETTINGS_KEY, JSON.stringify(settings));
-	} catch {
-		// Ignore storage errors
-	}
+	localStorage.setItem(APPLY_PALETTE_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function createAppStore() {
@@ -201,8 +207,10 @@ function createAppStore() {
 			themeColorsWithUsage: [],
 			themeName: 'Generated Theme',
 			lastGeneratedPaletteVersion: 0,
-			editorType: loadThemeExportPreferences()
+			editorType: loadThemeExportPreferences(),
+			saveOnCopy: loadThemeExportSaveOnCopy()
 		},
+		savedThemes: loadSavedThemes(),
 		paletteVersion: 0
 	});
 
@@ -344,7 +352,12 @@ function createAppStore() {
 
 		setThemeExportEditorType(editorType: EditorThemeType) {
 			state.themeExport.editorType = editorType;
-			saveThemeExportPreferences(editorType);
+			saveThemeExportPreferences(editorType, state.themeExport.saveOnCopy);
+		},
+
+		setThemeExportSaveOnCopy(saveOnCopy: boolean) {
+			state.themeExport.saveOnCopy = saveOnCopy;
+			saveThemeExportPreferences(state.themeExport.editorType, saveOnCopy);
 		},
 
 		async drawToCanvas(file: File) {
@@ -1120,6 +1133,16 @@ function createAppStore() {
 					localStorage.setItem('savedWorkspaces', JSON.stringify(state.savedWorkspaces));
 				}
 			}
+		},
+
+		saveThemeToLocal(theme: SavedThemeItem) {
+			state.savedThemes = [theme, ...state.savedThemes];
+			saveSavedThemes(state.savedThemes);
+		},
+
+		deleteTheme(themeId: string) {
+			state.savedThemes = state.savedThemes.filter((item) => item.id !== themeId);
+			saveSavedThemes(state.savedThemes);
 		}
 	};
 }

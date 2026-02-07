@@ -39,4 +39,14 @@ export interface ThemeExportState {
 	themeResult: ThemeResponse | null;
 	themeColorsWithUsage: ThemeColorWithUsage[];
 	lastGeneratedPaletteVersion: number;
+	saveOnCopy: boolean;
 }
+
+export type SavedThemeItem = {
+	id: string;
+	name: string;
+	editorType: EditorThemeType;
+	themeResult: ThemeResponse;
+	themeColorsWithUsage: ThemeColorWithUsage[];
+	createdAt: string;
+};
