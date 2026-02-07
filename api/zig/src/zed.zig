@@ -155,6 +155,8 @@ pub fn generateZedTheme(
         .accents = accents,
 
         .@"vim.mode.text" = bg_very_dark,
+        .@"vim.normal.foreground" = bg_very_dark,
+        .@"vim.helix_normal.foreground" = bg_very_dark,
         .@"vim.normal.background" = foreground,
         .@"vim.helix_normal.background" = foreground,
         .@"vim.visual.background" = c2,
@@ -450,6 +452,31 @@ pub fn generateZedTheme(
         .c6 = c6,
         .c7 = c7,
         .c8 = c8,
+    };
+
+    return ZedThemeResponse{
+        .theme = theme,
+        .themeOverrides = base_overrides,
+    };
+}
+
+pub fn generateOverridableFromZedTheme(theme: ZedTheme) !ZedThemeResponse {
+    if (theme.themes.len == 0) {
+        return error.InvalidTheme;
+    }
+    const style = theme.themes[0].style;
+
+    const base_overrides = ThemeOverrides{
+        .background = style.background,
+        .foreground = style.text,
+        .c1 = style.accents[0],
+        .c2 = style.accents[1],
+        .c3 = style.accents[2],
+        .c4 = style.accents[3],
+        .c5 = style.accents[4],
+        .c6 = style.accents[5],
+        .c7 = style.accents[6],
+        .c8 = style.accents[7],
     };
 
     return ZedThemeResponse{

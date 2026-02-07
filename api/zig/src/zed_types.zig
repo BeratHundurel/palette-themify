@@ -40,6 +40,8 @@ pub const ZedThemeStyle = struct {
 
     // Vim mode colors
     @"vim.mode.text": []const u8,
+    @"vim.normal.foreground": []const u8,
+    @"vim.helix_normal.foreground": []const u8,
     @"vim.normal.background": []const u8,
     @"vim.helix_normal.background": []const u8,
     @"vim.visual.background": []const u8,

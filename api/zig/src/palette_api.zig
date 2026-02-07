@@ -1,11 +1,14 @@
 const std = @import("std");
+
 const zigimg = @import("zigimg");
+
 const color_utils = @import("color_utils.zig");
-const vscode = @import("vscode.zig");
-const zed = @import("zed.zig");
-const VSCodeThemeResponse = @import("vscode_types.zig").VSCodeThemeResponse;
-const ZedThemeResponse = @import("zed_types.zig").ZedThemeResponse;
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
+const vscode = @import("vscode.zig");
+const VSCodeThemeResponse = @import("vscode_types.zig").VSCodeThemeResponse;
+const zed = @import("zed.zig");
+const ZedThemeResponse = @import("zed_types.zig").ZedThemeResponse;
+const ZedTheme = @import("zed_types.zig").ZedTheme;
 
 pub const ExtractError = error{
     NotAnImage,
@@ -117,7 +120,7 @@ pub const ThemeType = enum {
     zed,
 };
 
-pub fn generateThemeJson(
+pub fn returnThemeJson(
     allocator: std.mem.Allocator,
     colors: []const []const u8,
     theme_type: ThemeType,
@@ -191,5 +194,14 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
     const theme_name = req.name orelse "Generated Theme";
     const overrides = req.overrides orelse ThemeOverrides{};
 
-    return try generateThemeJson(allocator, colors, theme_type, theme_name, overrides);
+    return try returnThemeJson(allocator, colors, theme_type, theme_name, overrides);
+}
+
+pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
+    const parsed = try std.json.parseFromSlice(ZedTheme, allocator, request_body, .{
+        .ignore_unknown_fields = true,
+    });
+    defer parsed.deinit();
+    
+    return try zed.generateOverridableFromZedTheme(parsed.value);
 }
