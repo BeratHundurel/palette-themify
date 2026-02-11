@@ -36,11 +36,17 @@ func wallhavenSearchHandler(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to contact wallhaven: " + err.Error()})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			_ = c.Error(err)
+		}
+	}()
 
 	c.Status(resp.StatusCode)
 	c.Header("Content-Type", resp.Header.Get("Content-Type"))
-	io.Copy(c.Writer, resp.Body)
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		_ = c.Error(err)
+	}
 }
 
 func wallhavenGetWallpaperHandler(c *gin.Context) {
@@ -67,11 +73,17 @@ func wallhavenGetWallpaperHandler(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to contact wallhaven: " + err.Error()})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			_ = c.Error(err)
+		}
+	}()
 
 	c.Status(resp.StatusCode)
 	c.Header("Content-Type", resp.Header.Get("Content-Type"))
-	io.Copy(c.Writer, resp.Body)
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		_ = c.Error(err)
+	}
 }
 
 func wallhavenDownloadHandler(c *gin.Context) {
@@ -98,7 +110,11 @@ func wallhavenDownloadHandler(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to fetch image: " + err.Error()})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			_ = c.Error(err)
+		}
+	}()
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType == "" {
@@ -107,5 +123,7 @@ func wallhavenDownloadHandler(c *gin.Context) {
 
 	c.Status(resp.StatusCode)
 	c.Header("Content-Type", contentType)
-	io.Copy(c.Writer, resp.Body)
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		_ = c.Error(err)
+	}
 }

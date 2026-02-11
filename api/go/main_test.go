@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
 // --- API Integration Tests ---
 
 func TestSavePaletteHandler_InvalidRequest(t *testing.T) {
@@ -115,7 +116,8 @@ func TestWallhavenHandlers(t *testing.T) {
 			var b bytes.Buffer
 			img := image.NewRGBA(image.Rect(0, 0, 1, 1))
 			img.Set(0, 0, color.RGBA{1, 2, 3, 255})
-			png.Encode(&b, img)
+			err := png.Encode(&b, img)
+			assert.NoError(t, err)
 			return b.Bytes()
 		}()
 
@@ -154,9 +156,25 @@ func TestApplyPaletteHandler(t *testing.T) {
 	router := gin.New()
 	router.POST("/apply-palette", applyPaletteHandler)
 
+	malformedBody := &bytes.Buffer{}
+	malformedWriter := multipart.NewWriter(malformedBody)
+	if err := malformedWriter.WriteField("palette", "invalid-json"); err != nil {
+		t.Fatalf("write malformed palette: %v", err)
+	}
+	if err := malformedWriter.Close(); err != nil {
+		t.Fatalf("close malformed writer: %v", err)
+	}
+	malformedReq := httptest.NewRequest("POST", "/apply-palette", malformedBody)
+	malformedReq.Header.Set("Content-Type", malformedWriter.FormDataContentType())
+	malformedResp := httptest.NewRecorder()
+	router.ServeHTTP(malformedResp, malformedReq)
+	assert.Equal(t, http.StatusBadRequest, malformedResp.Code)
+
 	img := createTestImage(10, 10)
 	var buf bytes.Buffer
-	png.Encode(&buf, img)
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("encode test image: %v", err)
+	}
 
 	palette := []Color{
 		{Hex: "#FF0000"},
@@ -168,9 +186,15 @@ func TestApplyPaletteHandler(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("file", "test.png")
-	part.Write(buf.Bytes())
-	writer.WriteField("palette", string(paletteJSON))
-	writer.Close()
+	if _, err := part.Write(buf.Bytes()); err != nil {
+		t.Fatalf("write multipart file: %v", err)
+	}
+	if err := writer.WriteField("palette", string(paletteJSON)); err != nil {
+		t.Fatalf("write palette field: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/apply-palette", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())

@@ -21,7 +21,9 @@ func main() {
 
 	defer func() {
 		if DB != nil {
-			CloseDatabase()
+			if err := CloseDatabase(); err != nil {
+				log.Printf("Failed to close database: %v", err)
+			}
 		}
 	}()
 
@@ -65,5 +67,7 @@ func main() {
 	router.GET("/wallhaven/download", wallhavenDownloadHandler)
 
 	log.Println("Starting server on :8088")
-	router.Run(":8088")
+	if err := router.Run(":8088"); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

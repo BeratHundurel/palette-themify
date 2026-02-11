@@ -32,7 +32,11 @@ func applyPaletteHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open uploaded file: " + err.Error()})
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			_ = c.Error(err)
+		}
+	}()
 
 	paletteStr := c.PostForm("palette")
 	if paletteStr == "" {

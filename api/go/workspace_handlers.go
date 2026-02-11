@@ -11,13 +11,13 @@ import (
 )
 
 type WorkspaceStateData struct {
-	Colors             []Color    `json:"colors"`
-	Selectors          []Selector `json:"selectors"`
-	ActiveSelectorId   string     `json:"activeSelectorId"`
-	Luminosity         float64    `json:"luminosity"`
-	Nearest            int        `json:"nearest"`
-	Power              int        `json:"power"`
-	MaxDistance        float64    `json:"maxDistance"`
+	Colors           []Color    `json:"colors"`
+	Selectors        []Selector `json:"selectors"`
+	ActiveSelectorId string     `json:"activeSelectorId"`
+	Luminosity       float64    `json:"luminosity"`
+	Nearest          int        `json:"nearest"`
+	Power            int        `json:"power"`
+	MaxDistance      float64    `json:"maxDistance"`
 }
 
 type Selector struct {
@@ -35,30 +35,30 @@ type Selection struct {
 }
 
 type WorkspaceData struct {
-	ID                 string     `json:"id"`
-	Name               string     `json:"name"`
-	ImageData          string     `json:"imageData"`
-	Colors             []Color    `json:"colors"`
-	Selectors          []Selector `json:"selectors"`
-	ActiveSelectorId   string     `json:"activeSelectorId"`
-	Luminosity         float64    `json:"luminosity"`
-	Nearest            int        `json:"nearest"`
-	Power              int        `json:"power"`
-	MaxDistance        float64    `json:"maxDistance"`
-	ShareToken         *string    `json:"shareToken,omitempty"`
-	CreatedAt          string     `json:"createdAt"`
+	ID               string     `json:"id"`
+	Name             string     `json:"name"`
+	ImageData        string     `json:"imageData"`
+	Colors           []Color    `json:"colors"`
+	Selectors        []Selector `json:"selectors"`
+	ActiveSelectorId string     `json:"activeSelectorId"`
+	Luminosity       float64    `json:"luminosity"`
+	Nearest          int        `json:"nearest"`
+	Power            int        `json:"power"`
+	MaxDistance      float64    `json:"maxDistance"`
+	ShareToken       *string    `json:"shareToken,omitempty"`
+	CreatedAt        string     `json:"createdAt"`
 }
 
 type SaveWorkspaceRequest struct {
-	Name               string     `json:"name" binding:"required"`
-	ImageData          string     `json:"imageData" binding:"required"`
-	Colors             []Color    `json:"colors"`
-	Selectors          []Selector `json:"selectors"`
-	ActiveSelectorId   string     `json:"activeSelectorId"`
-	Luminosity         float64    `json:"luminosity"`
-	Nearest            int        `json:"nearest"`
-	Power              int        `json:"power"`
-	MaxDistance        float64    `json:"maxDistance"`
+	Name             string     `json:"name" binding:"required"`
+	ImageData        string     `json:"imageData" binding:"required"`
+	Colors           []Color    `json:"colors"`
+	Selectors        []Selector `json:"selectors"`
+	ActiveSelectorId string     `json:"activeSelectorId"`
+	Luminosity       float64    `json:"luminosity"`
+	Nearest          int        `json:"nearest"`
+	Power            int        `json:"power"`
+	MaxDistance      float64    `json:"maxDistance"`
 }
 
 type GetWorkspacesResponse struct {
@@ -137,13 +137,13 @@ func saveUserWorkspace(userID uint, req SaveWorkspaceRequest) error {
 	}
 
 	stateData := WorkspaceStateData{
-		Colors:             req.Colors,
-		Selectors:          req.Selectors,
-		ActiveSelectorId:   req.ActiveSelectorId,
-		Luminosity:         req.Luminosity,
-		Nearest:            req.Nearest,
-		Power:              req.Power,
-		MaxDistance:        req.MaxDistance,
+		Colors:           req.Colors,
+		Selectors:        req.Selectors,
+		ActiveSelectorId: req.ActiveSelectorId,
+		Luminosity:       req.Luminosity,
+		Nearest:          req.Nearest,
+		Power:            req.Power,
+		MaxDistance:      req.MaxDistance,
 	}
 
 	stateJSON, err := json.Marshal(stateData)
@@ -183,18 +183,18 @@ func getUserWorkspaces(userID uint) ([]WorkspaceData, error) {
 		}
 
 		workspaces[i] = WorkspaceData{
-			ID:                 fmt.Sprintf("%d", dbWorkspace.ID),
-			Name:               dbWorkspace.Name,
-			ImageData:          dbWorkspace.ImageData,
-			Colors:             state.Colors,
-			Selectors:          state.Selectors,
-			ActiveSelectorId:   state.ActiveSelectorId,
-			Luminosity:         state.Luminosity,
-			Nearest:            state.Nearest,
-			Power:              state.Power,
-			MaxDistance:        state.MaxDistance,
-			ShareToken:         dbWorkspace.ShareToken,
-			CreatedAt:          dbWorkspace.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
+			ID:               fmt.Sprintf("%d", dbWorkspace.ID),
+			Name:             dbWorkspace.Name,
+			ImageData:        dbWorkspace.ImageData,
+			Colors:           state.Colors,
+			Selectors:        state.Selectors,
+			ActiveSelectorId: state.ActiveSelectorId,
+			Luminosity:       state.Luminosity,
+			Nearest:          state.Nearest,
+			Power:            state.Power,
+			MaxDistance:      state.MaxDistance,
+			ShareToken:       dbWorkspace.ShareToken,
+			CreatedAt:        dbWorkspace.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
 		}
 	}
 
@@ -254,6 +254,9 @@ func shareWorkspaceHandler(c *gin.Context) {
 
 func getSharedWorkspaceHandler(c *gin.Context) {
 	shareToken := c.Param("token")
+	if shareToken == "" {
+		shareToken = c.Query("token")
+	}
 	if shareToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Share token is required"})
 		return
@@ -333,18 +336,18 @@ func getWorkspaceByShareToken(shareToken string) (*WorkspaceData, error) {
 	}
 
 	workspace := &WorkspaceData{
-		ID:                 fmt.Sprintf("%d", dbWorkspace.ID),
-		Name:               dbWorkspace.Name,
-		ImageData:          dbWorkspace.ImageData,
-		Colors:             state.Colors,
-		Selectors:          state.Selectors,
-		ActiveSelectorId:   state.ActiveSelectorId,
-		Luminosity:         state.Luminosity,
-		Nearest:            state.Nearest,
-		Power:              state.Power,
-		MaxDistance:        state.MaxDistance,
-		ShareToken:         dbWorkspace.ShareToken,
-		CreatedAt:          dbWorkspace.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
+		ID:               fmt.Sprintf("%d", dbWorkspace.ID),
+		Name:             dbWorkspace.Name,
+		ImageData:        dbWorkspace.ImageData,
+		Colors:           state.Colors,
+		Selectors:        state.Selectors,
+		ActiveSelectorId: state.ActiveSelectorId,
+		Luminosity:       state.Luminosity,
+		Nearest:          state.Nearest,
+		Power:            state.Power,
+		MaxDistance:      state.MaxDistance,
+		ShareToken:       dbWorkspace.ShareToken,
+		CreatedAt:        dbWorkspace.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
 	}
 
 	return workspace, nil
