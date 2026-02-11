@@ -590,7 +590,6 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, root: 
         try addColor(allocator, &colors, value);
     }
     if (getFirstStringField(style_obj, &.{ "success", "created" })) |value| {
-        std.debug.print("found success color: {s}\n", .{value});
         try addColor(allocator, &colors, value);
     }
     if (getFirstStringField(style_obj, &.{ "info", "renamed" })) |value| {
@@ -618,4 +617,28 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, root: 
     defer allocator.free(palette);
 
     return try generateZedTheme(allocator, palette, theme_name, overrides);
+}
+
+test "generateOverridableFromZedThemeValue rejects invalid json" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const bad_root = std.json.Value{ .string = "not an object" };
+    try std.testing.expectError(error.InvalidTheme, generateOverridableFromZedThemeValue(allocator, bad_root));
+}
+
+test "generateOverridableFromZedThemeValue builds overrides" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const json =
+        "{" ++ "\"name\":\"Sample\"," ++ "\"themes\":[{" ++ "\"name\":\"Sample\"," ++ "\"appearance\":\"dark\"," ++ "\"style\":{" ++ "\"background\":\"#001122\"," ++ "\"text\":\"#DDEEFF\"," ++ "\"accents\":[\"#AA0000\",\"#00AA00\",\"#0000AA\",\"#AAAA00\",\"#00AAAA\",\"#AA00AA\",\"#666666\",\"#999999\"]," ++ "\"error\":\"#FF0000\"," ++ "\"warning\":\"#FFAA00\"," ++ "\"success\":\"#00FF00\"," ++ "\"info\":\"#0099FF\"," ++ "\"syntax\":{\"constant\":{\"color\":\"#FF00FF\"}}" ++ "}" ++ "}]" ++ "}";
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const response = try generateOverridableFromZedThemeValue(allocator, parsed.value);
+
+    try std.testing.expect(response.themeOverrides.background != null);
+    try std.testing.expect(response.themeOverrides.foreground != null);
 }

@@ -210,3 +210,42 @@ pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []c
     };
     return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
 }
+
+test "handleGenerateTheme rejects empty colors" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const body = "{\"colors\":[],\"type\":\"vscode\"}";
+    try std.testing.expectError(error.NoColors, handleGenerateTheme(allocator, body));
+}
+
+test "returnThemeJson produces vscode theme payload" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const colors = [_][]const u8{
+        "#112233",
+        "#445566",
+        "#778899",
+        "#AABBCC",
+        "#DDEEFF",
+        "#FFAA00",
+        "#00AABB",
+        "#BB00AA",
+        "#33CC66",
+        "#CC3366",
+    };
+
+    const json = try returnThemeJson(allocator, &colors, .vscode, "Test Theme", ThemeOverrides{});
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const root_obj = switch (parsed.value) {
+        .object => |obj| obj,
+        else => return error.InvalidTheme,
+    };
+
+    try std.testing.expect(root_obj.get("theme") != null);
+    try std.testing.expect(root_obj.get("themeOverrides") != null);
+}

@@ -672,3 +672,34 @@ pub fn selectBackgroundAndForeground(allocator: std.mem.Allocator, colors: []con
         .remaining_indices = remaining_slice,
     };
 }
+
+test "hexToHsl and hslToRgb roundtrip" {
+    const hsl = hexToHsl("#336699");
+    const rgb = hslToRgb(hsl.h, hsl.s, hsl.l);
+    try std.testing.expectEqual(@as(u8, 0x33), rgb.r);
+    try std.testing.expectEqual(@as(u8, 0x66), rgb.g);
+    try std.testing.expectEqual(@as(u8, 0x99), rgb.b);
+}
+
+test "luminance and contrast ratio basics" {
+    const black = "#000000";
+    const white = "#FFFFFF";
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), getLuminance(black), 0.0001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), getLuminance(white), 0.0001);
+    try std.testing.expectApproxEqAbs(@as(f32, 21.0), contrastRatio(black, white), 0.01);
+}
+
+test "ensureReadableContrast returns color meeting minimum" {
+    const background = "#000000";
+    const proposed = "#111111";
+    const adjusted = ensureReadableContrast(proposed, background, 7.0);
+    try std.testing.expect(contrastRatio(adjusted, background) >= 7.0);
+}
+
+test "selectDiverseColors returns requested count" {
+    const allocator = std.testing.allocator;
+    const colors = [_][]const u8{ "#112233", "#445566", "#778899", "#AABBCC" };
+    const selected = try selectDiverseColors(allocator, &colors, 2);
+    defer allocator.free(selected);
+    try std.testing.expectEqual(@as(usize, 2), selected.len);
+}
