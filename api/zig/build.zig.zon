@@ -10,7 +10,7 @@
         },
         .tokamak = .{
             .url = "git+https://github.com/cztomsik/tokamak#main",
-            .hash = "tokamak-2.0.0-FbnSefG8BgCyMdgKZGK0ZPxJiEHIBDi8B-GGK5chlwSm",
+            .hash = "tokamak-2.0.0-FbnSecXvBgD2Lu1k2bzdRn3XJBeJX8FH1EiEBhiciWWy",
         },
     },
     .paths = .{
