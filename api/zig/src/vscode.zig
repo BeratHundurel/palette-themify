@@ -56,12 +56,11 @@ pub fn generateVSCodeTheme(
         sum_luminance += color_utils.getLuminance(color);
     }
     const average_luminance = sum_luminance / @as(f32, @floatFromInt(palette.items.len));
-    const dark_base = average_luminance < 128.0; // Luminance range is 0-1, but comparison seems off - effectively always dark
+    const dark_base = average_luminance < 128.0;
 
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
-    const c0 = overrides.background orelse palette.items[selection.background_index];
     const remaining = selection.remaining_indices;
     const c1_raw = overrides.c1 orelse palette.items[remaining[0]];
     const c2_raw = overrides.c2 orelse palette.items[remaining[1]];
@@ -72,14 +71,13 @@ pub fn generateVSCodeTheme(
     const c7_raw = overrides.c7 orelse palette.items[remaining[6]];
     const c8_raw = overrides.c8 orelse palette.items[remaining[7]];
 
-    const base_luminance = color_utils.getLuminance(c0);
-    const darken_amount = if (dark_base) 0.75 + (base_luminance) * 0.20 else 0.0;
-    const lighten_amount = if (dark_base) 0.0 else 0.75 + (1.0 - base_luminance) * 0.20;
-    const background = if (dark_base) color_utils.darkenColor(c0, darken_amount) else color_utils.lightenColor(c0, lighten_amount);
-
-    const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
-    const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
-
+    const background = if (overrides.background) |bg| bg else blk: {
+        const bg_raw = palette.items[selection.background_index];
+        const base_luminance = color_utils.getLuminance(bg_raw);
+        const darken_amount = if (dark_base) 0.75 + (base_luminance) * 0.20 else 0.0;
+        const lighten_amount = if (dark_base) 0.0 else 0.75 + (1.0 - base_luminance) * 0.20;
+        break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
+    };
     const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
     const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.15) else color_utils.lightenColor(background, 0.15);
     const bg_medium = if (dark_base) color_utils.darkenColor(background, 0.10) else color_utils.lightenColor(background, 0.10);
@@ -87,30 +85,33 @@ pub fn generateVSCodeTheme(
     const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
     const bg_inactive = if (dark_base) color_utils.darkenColor(background, 0.50) else color_utils.lightenColor(background, 0.50);
 
+    const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
+    const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
+
     // These are more often used against very dark backgrounds, so adjust accordingly
-    const c1 = color_utils.adjustForContrast(c1_raw, bg_very_dark, 3.5);
-    const c2 = color_utils.adjustForContrast(c2_raw, bg_very_dark, 3.5);
+    const c1 = color_utils.adjustForContrast(c1_raw, bg_very_dark, 3);
+    const c2 = color_utils.adjustForContrast(c2_raw, bg_very_dark, 3);
 
-    const numbers_raw = color_utils.getHarmonicColor(c2, .complementary);
-    const numbers = color_utils.adjustForContrast(numbers_raw, background, 3.5);
+    const constants_raw = color_utils.getHarmonicColor(c2, .@"split-complementary");
+    const constants = color_utils.adjustForContrast(constants_raw, background, 3);
 
-    const c3 = color_utils.adjustForContrast(c3_raw, background, 3.5);
-    const c4 = color_utils.adjustForContrast(c4_raw, background, 3.5);
-    const c5 = color_utils.adjustForContrast(c5_raw, background, 3.5);
-    const c6 = color_utils.adjustForContrast(c6_raw, background, 3.5);
-    const c7 = color_utils.adjustForContrast(c7_raw, background, 3.5);
-    const c8 = color_utils.adjustForContrast(c8_raw, background, 3.5);
+    const c3 = color_utils.adjustForContrast(c3_raw, background, 3);
+    const c4 = color_utils.adjustForContrast(c4_raw, background, 3);
+    const c5 = color_utils.adjustForContrast(c5_raw, background, 3);
+    const c6 = color_utils.adjustForContrast(c6_raw, background, 3);
+    const c7 = color_utils.adjustForContrast(c7_raw, background, 3);
+    const c8 = color_utils.adjustForContrast(c8_raw, background, 3);
 
-    const semantic_error = color_utils.adjustForContrast(semantic.error_color, background, 3.5);
-    const semantic_warning = color_utils.adjustForContrast(semantic.warning_color, background, 3.5);
-    const semantic_success = color_utils.adjustForContrast(semantic.success_color, background, 3.5);
-    const semantic_info = color_utils.adjustForContrast(semantic.info_color, background, 3.5);
+    const semantic_error = color_utils.adjustForContrast(semantic.error_color, background, 3);
+    const semantic_warning = color_utils.adjustForContrast(semantic.warning_color, background, 3);
+    const semantic_success = color_utils.adjustForContrast(semantic.success_color, background, 3);
+    const semantic_info = color_utils.adjustForContrast(semantic.info_color, background, 3);
 
     const c3_dark = if (dark_base) color_utils.darkenColor(c3, 0.8) else color_utils.lightenColor(c3, 0.8);
     const semantic_error_dark = if (dark_base) color_utils.darkenColor(semantic_error, 0.8) else color_utils.lightenColor(semantic_error, 0.8);
     const semantic_warning_dark = if (dark_base) color_utils.darkenColor(semantic_warning, 0.8) else color_utils.lightenColor(semantic_warning, 0.8);
     const semantic_info_dark = if (dark_base) color_utils.darkenColor(semantic_info, 0.8) else color_utils.lightenColor(semantic_info, 0.8);
-    const button_fg = if (dark_base) background else color_utils.darkenColor(c0, 0.9);
+    const button_fg = background;
 
     const fg30 = color_utils.addAlpha(foreground, "30");
     const fg50 = color_utils.addAlpha(foreground, "50");
@@ -183,7 +184,7 @@ pub fn generateVSCodeTheme(
         .@"panel.border" = c1_40,
         .@"panelTitle.activeBorder" = c2,
         .@"terminal.foreground" = foreground,
-        .@"terminal.ansiBlack" = if (dark_base) color_utils.darkenColor(c0, 0.9) else color_utils.darkenColor(c0, 0.2),
+        .@"terminal.ansiBlack" = if (dark_base) color_utils.darkenColor(background, 0.9) else color_utils.darkenColor(background, 0.2),
         .@"terminal.ansiRed" = semantic_error,
         .@"terminal.ansiGreen" = semantic_success,
         .@"terminal.ansiYellow" = semantic_warning,
@@ -361,7 +362,7 @@ pub fn generateVSCodeTheme(
         },
         .{
             .scope = &[_][]const u8{ "constant.numeric", "constant.character", "constant.language.boolean", "constant.language.null", "number" },
-            .settings = .{ .foreground = numbers },
+            .settings = .{ .foreground = constants },
         },
         .{
             .scope = &[_][]const u8{ "constant.language", "constant.other", "entity.name.class", "entity.other.inherited-class", "entity.name.type", "variable.other.constant", "support.constant", "support.class", "support.type" },

@@ -62,7 +62,6 @@ pub fn generateZedTheme(
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
-    const c0 = overrides.background orelse palette.items[selection.background_index];
     const remaining = selection.remaining_indices;
     const c1_raw = overrides.c1 orelse palette.items[remaining[0]];
     const c2_raw = overrides.c2 orelse palette.items[remaining[1]];
@@ -73,15 +72,17 @@ pub fn generateZedTheme(
     const c7_raw = overrides.c7 orelse palette.items[remaining[6]];
     const c8_raw = overrides.c8 orelse palette.items[remaining[7]];
 
-    const base_luminance = color_utils.getLuminance(c0);
-    const darken_amount = if (dark_base) 0.75 + (base_luminance) * 0.20 else 0.0;
-    const lighten_amount = if (dark_base) 0.0 else 0.75 + (1.0 - base_luminance) * 0.20;
-
-    const background = if (dark_base) color_utils.darkenColor(c0, darken_amount) else color_utils.lightenColor(c0, lighten_amount);
-    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
-    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.15) else color_utils.lightenColor(background, 0.15);
-    const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.05);
-    const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.20) else color_utils.darkenColor(background, 0.10);
+    const background = if (overrides.background) |bg| bg else blk: {
+        const bg_raw = palette.items[selection.background_index];
+        const base_luminance = color_utils.getLuminance(bg_raw);
+        const darken_amount = if (dark_base) 0.6 + (base_luminance) * 0.20 else 0.0;
+        const lighten_amount = if (dark_base) 0.0 else 0.6 + (1.0 - base_luminance) * 0.20;
+        break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
+    };
+    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.25) else color_utils.lightenColor(background, 0.25);
+    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
+    const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
+    const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.20) else color_utils.darkenColor(background, 0.20);
 
     const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
@@ -460,27 +461,161 @@ pub fn generateZedTheme(
     };
 }
 
-pub fn generateOverridableFromZedTheme(theme: ZedTheme) !ZedThemeResponse {
-    if (theme.themes.len == 0) {
+fn isHexColor(value: []const u8) bool {
+    if (value.len != 7 and value.len != 9) return false;
+    if (value[0] != '#') return false;
+    for (value[1..]) |ch| {
+        if (!std.ascii.isHex(ch)) return false;
+    }
+    return true;
+}
+
+fn addColor(allocator: std.mem.Allocator, colors: *std.ArrayList([]const u8), value: []const u8) !void {
+    if (!isHexColor(value)) return;
+    for (colors.items) |existing| {
+        if (std.mem.eql(u8, existing, value)) return;
+    }
+    try colors.append(allocator, value);
+}
+
+fn getStringField(obj: std.json.ObjectMap, key: []const u8) ?[]const u8 {
+    if (obj.get(key)) |value| {
+        return switch (value) {
+            .string => |str| str,
+            else => null,
+        };
+    }
+    return null;
+}
+
+fn getObjectField(obj: std.json.ObjectMap, key: []const u8) ?std.json.ObjectMap {
+    if (obj.get(key)) |value| {
+        return switch (value) {
+            .object => |child| child,
+            else => null,
+        };
+    }
+    return null;
+}
+
+fn getArrayField(obj: std.json.ObjectMap, key: []const u8) ?std.json.Array {
+    if (obj.get(key)) |value| {
+        return switch (value) {
+            .array => |arr| arr,
+            else => null,
+        };
+    }
+    return null;
+}
+
+fn getFirstStringField(obj: std.json.ObjectMap, keys: []const []const u8) ?[]const u8 {
+    for (keys) |key| {
+        if (getStringField(obj, key)) |value| {
+            return value;
+        }
+    }
+    return null;
+}
+
+pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, root: std.json.Value) !ZedThemeResponse {
+    const root_obj = switch (root) {
+        .object => |obj| obj,
+        else => return error.InvalidTheme,
+    };
+
+    const themes_value = root_obj.get("themes") orelse return error.InvalidTheme;
+    const themes_array = switch (themes_value) {
+        .array => |arr| arr,
+        else => return error.InvalidTheme,
+    };
+    if (themes_array.items.len == 0) {
         return error.InvalidTheme;
     }
-    const style = theme.themes[0].style;
 
-    const base_overrides = ThemeOverrides{
-        .background = style.background,
-        .foreground = style.text,
-        .c1 = style.accents[0],
-        .c2 = style.accents[1],
-        .c3 = style.accents[2],
-        .c4 = style.accents[3],
-        .c5 = style.accents[4],
-        .c6 = style.accents[5],
-        .c7 = style.accents[6],
-        .c8 = style.accents[7],
+    const first_theme_value = themes_array.items[0];
+    const theme_obj = switch (first_theme_value) {
+        .object => |obj| obj,
+        else => return error.InvalidTheme,
     };
 
-    return ZedThemeResponse{
-        .theme = theme,
-        .themeOverrides = base_overrides,
-    };
+    const style_obj = getObjectField(theme_obj, "style") orelse return error.InvalidTheme;
+
+    var theme_name: []const u8 = "Generated Theme";
+    if (getStringField(root_obj, "name")) |name| {
+        if (name.len > 0) theme_name = name;
+    } else if (getStringField(theme_obj, "name")) |name| {
+        if (name.len > 0) theme_name = name;
+    }
+
+    var overrides = ThemeOverrides{};
+    var colors = std.ArrayList([]const u8){};
+    defer colors.deinit(allocator);
+
+    if (getStringField(style_obj, "background")) |background| {
+        overrides.background = background;
+        try addColor(allocator, &colors, background);
+    }
+    if (getStringField(style_obj, "text")) |foreground| {
+        overrides.foreground = foreground;
+        try addColor(allocator, &colors, foreground);
+    }
+
+    if (getArrayField(style_obj, "accents")) |accents| {
+        const max_len = @min(accents.items.len, 8);
+        for (accents.items[0..max_len], 0..) |item, idx| {
+            const accent = switch (item) {
+                .string => |str| str,
+                else => continue,
+            };
+
+            switch (idx) {
+                0 => overrides.c1 = accent,
+                1 => overrides.c2 = accent,
+                2 => overrides.c3 = accent,
+                3 => overrides.c4 = accent,
+                4 => overrides.c5 = accent,
+                5 => overrides.c6 = accent,
+                6 => overrides.c7 = accent,
+                7 => overrides.c8 = accent,
+                else => {},
+            }
+            try addColor(allocator, &colors, accent);
+        }
+    }
+
+    if (getFirstStringField(style_obj, &.{ "error", "deleted", "conflict" })) |value| {
+        try addColor(allocator, &colors, value);
+    }
+    if (getFirstStringField(style_obj, &.{ "warning", "modified", "conflict" })) |value| {
+        try addColor(allocator, &colors, value);
+    }
+    if (getFirstStringField(style_obj, &.{ "success", "created" })) |value| {
+        std.debug.print("found success color: {s}\n", .{value});
+        try addColor(allocator, &colors, value);
+    }
+    if (getFirstStringField(style_obj, &.{ "info", "renamed" })) |value| {
+        try addColor(allocator, &colors, value);
+    }
+
+    if (getObjectField(style_obj, "syntax")) |syntax_obj| {
+        if (getObjectField(syntax_obj, "constant")) |constant_obj| {
+            if (getStringField(constant_obj, "color")) |value| {
+                try addColor(allocator, &colors, value);
+            }
+        }
+        if (getObjectField(syntax_obj, "number")) |number_obj| {
+            if (getStringField(number_obj, "color")) |value| {
+                try addColor(allocator, &colors, value);
+            }
+        }
+    }
+
+    if (colors.items.len == 0) {
+        return error.InvalidTheme;
+    }
+
+    const palette = try allocator.dupe([]const u8, colors.items);
+    defer allocator.free(palette);
+
+    return try generateZedTheme(allocator, palette, theme_name, overrides);
 }

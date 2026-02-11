@@ -36,6 +36,16 @@ export async function generateTheme(
 	return res.json();
 }
 
+export async function generateOverridable(theme: unknown): Promise<ThemeResponse> {
+	const res = await fetch(buildZigURL('/generate-overridable'), {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(theme)
+	});
+	await ensureOk(res);
+	return res.json();
+}
+
 export async function applyPaletteBlob(imageBlob: Blob, colors: Color[], params: ApplyParams): Promise<Blob> {
 	const formData = new FormData();
 	formData.append('file', imageBlob, 'image.png');

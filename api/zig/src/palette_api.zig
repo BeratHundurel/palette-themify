@@ -198,10 +198,15 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
 }
 
 pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
-    const parsed = try std.json.parseFromSlice(ZedTheme, allocator, request_body, .{
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, request_body, .{
         .ignore_unknown_fields = true,
-    });
+    }) catch |err| {
+        return err;
+    };
     defer parsed.deinit();
-    
-    return try zed.generateOverridableFromZedTheme(parsed.value);
+
+    const response = zed.generateOverridableFromZedThemeValue(allocator, parsed.value) catch |err| {
+        return err;
+    };
+    return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
 }

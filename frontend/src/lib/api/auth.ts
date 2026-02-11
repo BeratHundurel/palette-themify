@@ -83,10 +83,10 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 		body: JSON.stringify(credentials)
 	});
 
-  await ensureOk(response);
+	await ensureOk(response);
 	const data = (await response.json()) as AuthResponse;
-  if (data.token) setAuthToken(data.token);
-	
+	if (data.token) setAuthToken(data.token);
+
 	return data;
 }
 

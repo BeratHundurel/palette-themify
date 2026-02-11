@@ -10,6 +10,7 @@ const routes: []const tk.Route = &.{
         .get("/health", health),
         .post0("/extract-palette", extractPalette),
         .post0("/generate-theme", generateTheme),
+        .post0("/generate-overridable", generateOverridable),
     } },
 };
 
