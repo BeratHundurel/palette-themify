@@ -47,10 +47,6 @@
 			}
 		}
 	});
-
-	function openAuthModal() {
-		showAuthModal = true;
-	}
 </script>
 
 <Toaster />
@@ -77,9 +73,9 @@
 			<div class="flex items-center gap-4">
 				{#if authStore.state.isAuthenticated}
 					<UserProfile />
-				{:else if !authStore.state.isLoading}
+				{:else}
 					<button
-						onclick={openAuthModal}
+						onclick={() => (showAuthModal = true)}
 						class="border-brand/50 hover:shadow-brand-lg flex w-32 cursor-pointer items-center justify-center gap-2 rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow,color] duration-300"
 					>
 						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,9 +88,6 @@
 						</svg>
 						<span>Sign In</span>
 					</button>
-				{:else}
-					<!-- Placeholder to maintain layout during loading -->
-					<div class="w-56"></div>
 				{/if}
 			</div>
 		</div>
