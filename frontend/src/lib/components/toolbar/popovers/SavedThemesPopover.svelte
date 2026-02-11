@@ -51,7 +51,16 @@
 	aria-labelledby="saved-themes-title"
 	tabindex="-1"
 >
-	<h3 id="saved-themes-title" class="text-brand mb-3 text-xs font-medium">Saved Themes</h3>
+	<div class="mb-3 flex items-center justify-between p-2">
+		<h3 id="saved-themes-title" class="text-brand text-xs font-medium">Saved Themes</h3>
+		<button
+			type="button"
+			title="Import theme"
+			class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
+		>
+			Import a theme</button
+		>
+	</div>
 	<div class="scrollable-content custom-scrollbar max-h-72 overflow-y-auto">
 		{#if appStore.state.savedThemes.length === 0}
 			<div class="flex flex-col items-center justify-center py-12 text-center">
@@ -78,7 +87,7 @@
 							</h4>
 							<div class="mb-2 flex items-center justify-end gap-1">
 								<button
-									class="text-brand hover:bg-brand/10 flex items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
+									class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
 									onclick={() => handleThemeLoad(item)}
 									type="button"
 									title="Load into inspector"
@@ -89,7 +98,7 @@
 									Load
 								</button>
 								<button
-									class="text-brand hover:bg-brand/10 flex items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
+									class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
 									onclick={() => handleThemeCopy(item)}
 									type="button"
 									title="Copy theme"
@@ -101,7 +110,7 @@
 									Copy
 								</button>
 								<button
-									class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
+									class="flex cursor-pointer items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
 									onclick={() => handleThemeDelete(item.id, item.name)}
 									type="button"
 									title="Delete theme"
@@ -116,35 +125,38 @@
 									</svg>
 								</button>
 							</div>
-							<div class="group-hover:border-brand/50 group border-t border-zinc-600 bg-zinc-900/50 px-3 py-2">
-								<div class="mb-2 flex flex-wrap gap-1.5">
-									{#each getPreviewColors(item) as color (color)}
+							<div class="flex flex-wrap gap-1.5">
+								{#each getPreviewColors(item) as color (color)}
+									<div class="group/swatch relative">
 										<span
-											class="inline-block h-5 w-5 rounded-md border border-zinc-700/60 shadow-md"
+											class="inline-block h-8 w-8 cursor-pointer rounded-md border border-zinc-700/50 shadow-md transition-[transform,box-shadow,border-color] duration-300 hover:scale-105 hover:ring-2 hover:ring-white/50"
 											style="background-color: {color}"
 											title={color}
 										></span>
-									{/each}
-									{#if getPreviewColors(item).length === 0}
-										<span class="text-xs text-zinc-500">No preview colors</span>
-									{/if}
-								</div>
-								<span class="flex items-center gap-1.5 text-xs text-zinc-500">
-									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
-									{new Date(item.createdAt).toLocaleDateString('en-US', {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric'
-									})}
-								</span>
+									</div>
+								{/each}
+								{#if getPreviewColors(item).length === 0}
+									<span class="text-xs text-zinc-500">No preview colors</span>
+								{/if}
 							</div>
+						</div>
+
+						<div class="group-hover:border-brand/50 group border-t border-zinc-600 bg-zinc-900/50 px-3 py-1.5">
+							<span class="flex items-center gap-1.5 text-xs text-zinc-500">
+								<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+									/>
+								</svg>
+								{new Date(item.createdAt).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric'
+								})}
+							</span>
 						</div>
 					</li>
 				{/each}
