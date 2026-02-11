@@ -62,11 +62,6 @@ export function getAuthHeaders(): Record<string, string> {
 	return headers;
 }
 
-async function handleAuthResponse<T>(response: Response): Promise<T> {
-	await ensureOk(response);
-	return response.json() as Promise<T>;
-}
-
 export async function register(userData: RegisterRequest): Promise<AuthResponse> {
 	const response = await fetch(buildURL('/auth/register'), {
 		method: 'POST',
@@ -74,8 +69,8 @@ export async function register(userData: RegisterRequest): Promise<AuthResponse>
 		body: JSON.stringify(userData)
 	});
 
-	const data = await handleAuthResponse<AuthResponse>(response);
-
+	await ensureOk(response);
+	const data = (await response.json()) as AuthResponse;
 	if (data.token) setAuthToken(data.token);
 
 	return data;
@@ -88,8 +83,10 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 		body: JSON.stringify(credentials)
 	});
 
-	const data = await handleAuthResponse<AuthResponse>(response);
-	if (data.token) setAuthToken(data.token);
+  await ensureOk(response);
+	const data = (await response.json()) as AuthResponse;
+  if (data.token) setAuthToken(data.token);
+	
 	return data;
 }
 
@@ -103,7 +100,9 @@ export async function getCurrentUser(): Promise<{ user: User }> {
 		headers: getAuthHeaders()
 	});
 
-	return handleAuthResponse<{ user: User }>(response);
+	await ensureOk(response);
+
+	return response.json();
 }
 
 export async function changePassword(passwordData: ChangePasswordRequest): Promise<{ message: string }> {
@@ -113,7 +112,9 @@ export async function changePassword(passwordData: ChangePasswordRequest): Promi
 		body: JSON.stringify(passwordData)
 	});
 
-	return handleAuthResponse<{ message: string }>(response);
+	await ensureOk(response);
+
+	return response.json();
 }
 
 export async function demoLogin(): Promise<AuthResponse> {
@@ -122,7 +123,9 @@ export async function demoLogin(): Promise<AuthResponse> {
 		headers: { 'Content-Type': 'application/json' }
 	});
 
-	const data = await handleAuthResponse<AuthResponse>(response);
+	await ensureOk(response);
+	const data = (await response.json()) as AuthResponse;
 	if (data.token) setAuthToken(data.token);
+
 	return data;
 }
