@@ -2,10 +2,11 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateTheme, type EditorThemeType } from '$lib/api/theme';
-	import type { SavedThemeItem, Theme, ThemeOverrides, ThemeColorWithUsage } from '$lib/types/theme';
+	import { extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import type { SavedThemeItem, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
-	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 	const THEME_NAME_DEBOUNCE_MS = 300;
@@ -167,68 +168,6 @@
 
 		overrides[key] = normalized;
 		generateThemeFromApi();
-	}
-
-	function extractThemeColorsWithUsage(theme: Theme): ThemeColorWithUsage[] {
-		const colorMap = new SvelteMap<string, SvelteMap<string, SvelteSet<string>>>();
-
-		function traverse(obj: unknown, prefix: string) {
-			if (typeof obj === 'string' && COLOR_REGEX.test(obj)) {
-				const normalizedColor = obj.toUpperCase();
-				const baseColor = normalizedColor.substring(0, 7);
-
-				const variantsMap = colorMap.get(baseColor) ?? colorMap.set(baseColor, new SvelteMap()).get(baseColor)!;
-
-				const usagesSet =
-					variantsMap.get(normalizedColor) ?? variantsMap.set(normalizedColor, new SvelteSet()).get(normalizedColor)!;
-
-				usagesSet.add(prefix);
-			} else if (typeof obj === 'object' && obj !== null) {
-				if (Array.isArray(obj)) {
-					for (let i = 0; i < obj.length; i++) {
-						traverse(obj[i], `${prefix}[${i}]`);
-					}
-				} else {
-					for (const [key, value] of Object.entries(obj)) {
-						traverse(value, prefix ? `${prefix}.${key}` : key);
-					}
-				}
-			}
-		}
-
-		traverse(theme, '');
-
-		const result: ThemeColorWithUsage[] = [];
-		result.length = colorMap.size;
-
-		let resultIndex = 0;
-		for (const [baseColor, variants] of colorMap) {
-			const variantArray = [];
-			variantArray.length = variants.size;
-
-			let variantIndex = 0;
-			let totalUsages = 0;
-
-			for (const [color, usages] of variants) {
-				const sortedUsages = [...usages].sort();
-				variantArray[variantIndex++] = {
-					color,
-					usages: sortedUsages
-				};
-				totalUsages += sortedUsages.length;
-			}
-
-			variantArray.sort((a, b) => b.usages.length - a.usages.length);
-
-			result[resultIndex++] = {
-				baseColor,
-				label: baseColor,
-				variants: variantArray,
-				totalUsages
-			};
-		}
-
-		return result;
 	}
 
 	async function handleEditorTypeChange(type: EditorThemeType) {

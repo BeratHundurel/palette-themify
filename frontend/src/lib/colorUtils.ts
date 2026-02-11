@@ -1,5 +1,6 @@
 import toast from 'svelte-french-toast';
 import type { Color } from './types/color';
+import type { Theme, ThemeColorWithUsage } from './types/theme';
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 	if (!hex || typeof hex !== 'string') {
@@ -123,4 +124,79 @@ function checkSortChange(original: Array<Color>, sorted: Array<Color>): boolean 
 	}
 
 	return true;
+}
+
+const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
+
+export function extractThemeColorsWithUsage(theme: Theme): ThemeColorWithUsage[] {
+	const colorMap = new Map<string, Map<string, Set<string>>>();
+
+	function traverse(value: unknown, prefix: string) {
+		if (typeof value === 'string' && COLOR_REGEX.test(value)) {
+			const normalizedColor = value.toUpperCase();
+			const baseColor = normalizedColor.substring(0, 7);
+
+			let variantsMap = colorMap.get(baseColor);
+			if (!variantsMap) {
+				variantsMap = new Map();
+				colorMap.set(baseColor, variantsMap);
+			}
+
+			let usagesSet = variantsMap.get(normalizedColor);
+			if (!usagesSet) {
+				usagesSet = new Set();
+				variantsMap.set(normalizedColor, usagesSet);
+			}
+
+			usagesSet.add(prefix);
+			return;
+		}
+
+		if (typeof value !== 'object' || value === null) return;
+
+		if (Array.isArray(value)) {
+			for (let i = 0; i < value.length; i++) {
+				traverse(value[i], `${prefix}[${i}]`);
+			}
+			return;
+		}
+
+		for (const [key, entry] of Object.entries(value)) {
+			traverse(entry, prefix ? `${prefix}.${key}` : key);
+		}
+	}
+
+	traverse(theme, '');
+
+	const result: ThemeColorWithUsage[] = [];
+	result.length = colorMap.size;
+
+	let resultIndex = 0;
+	for (const [baseColor, variants] of colorMap) {
+		const variantArray = [] as ThemeColorWithUsage['variants'];
+		variantArray.length = variants.size;
+
+		let variantIndex = 0;
+		let totalUsages = 0;
+
+		for (const [color, usages] of variants) {
+			const sortedUsages = [...usages].sort();
+			variantArray[variantIndex++] = {
+				color,
+				usages: sortedUsages
+			};
+			totalUsages += sortedUsages.length;
+		}
+
+		variantArray.sort((a, b) => b.usages.length - a.usages.length);
+
+		result[resultIndex++] = {
+			baseColor,
+			label: baseColor,
+			variants: variantArray,
+			totalUsages
+		};
+	}
+
+	return result;
 }
