@@ -7,6 +7,8 @@
 - Components are PascalCase and reactive utilities live in \*.svelte.ts (see [frontend/src/lib/stores](frontend/src/lib/stores)).
 - Colors are shaped as { hex: string } (see [frontend/src/lib/types/color.ts](frontend/src/lib/types/color.ts)).
 - Formatting: tabs, single quotes, no trailing commas, print width 120; after Svelte/TS changes run `npm run format` and `npm run lint`.
+- Dont over comment - code should be self explanatory, but add comments for non-obvious logic or decisions.
+- Avoid overengineering: prefer simple, direct solutions.
 
 ## Architecture
 
@@ -19,6 +21,7 @@
 - Frontend: `npm run dev`, `npm run build`, `npm run check`, `npm run lint`, `npm run format` (run in frontend/).
 - Go API: `go run .`, `go test ./...`, `make test-one name=TestName`, `make test` (run in api/go/).
 - Zig API: `zig build run`, `zig build test` (run in api/zig/).
+- Check and resolve diagnostics and warnings if possible.
 
 ## Project Conventions
 
