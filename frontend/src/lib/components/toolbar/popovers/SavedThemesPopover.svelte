@@ -22,7 +22,7 @@
 		}
 	}
 
-	async function handleThemeImport(theme: unknown) {
+	async function handleThemeLoad(theme: unknown) {
 		try {
 			const response = await generateOverridable(theme);
 			appStore.setThemeExportEditorType('zed');
@@ -34,7 +34,7 @@
 			popoverStore.close('themes');
 			popoverStore.state.current = 'themeExport';
 		} catch {
-			toast.error('Could not import the theme. Please check your JSON.');
+			toast.error('Could not load the theme. Please check your JSON.');
 		}
 	}
 
@@ -45,7 +45,7 @@
 		}
 		try {
 			const parsed = JSON.parse(value);
-			await handleThemeImport(parsed);
+			await handleThemeLoad(parsed);
 		} catch {
 			toast.error('Invalid JSON. Please check your input.');
 		}
@@ -58,7 +58,7 @@
 		try {
 			const content = await file.text();
 			const parsed = JSON.parse(content);
-			await handleThemeImport(parsed);
+			await handleThemeLoad(parsed);
 		} catch {
 			toast.error('Could not read the JSON file.');
 		} finally {
@@ -71,15 +71,15 @@
 		importFileInput.click();
 	}
 
-	function handleThemeLoad(item: SavedThemeItem) {
-		appStore.setThemeExportEditorType(item.editorType);
-		appStore.state.themeExport.themeName = item.name;
-		appStore.state.themeExport.themeResult = item.themeResult;
-		appStore.state.themeExport.themeColorsWithUsage = item.themeColorsWithUsage;
-		appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
-		popoverStore.close('themes');
-		popoverStore.state.current = 'themeExport';
-	}
+	// function handleThemeLoad(item: SavedThemeItem) {
+	// 	appStore.setThemeExportEditorType(item.editorType);
+	// 	appStore.state.themeExport.themeName = item.name;
+	// 	appStore.state.themeExport.themeResult = item.themeResult;
+	// 	appStore.state.themeExport.themeColorsWithUsage = item.themeColorsWithUsage;
+	// 	appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
+	// 	popoverStore.close('themes');
+	// 	popoverStore.state.current = 'themeExport';
+	// }
 
 	async function handleThemeDelete(themeId: string, themeName: string) {
 		if (confirm(`Are you sure you want to delete "${themeName}"?`)) {
@@ -188,7 +188,7 @@
 								<div class="mb-2 flex items-center justify-end gap-1">
 									<button
 										class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-										onclick={() => handleThemeLoad(item)}
+										onclick={() => handleThemeLoad(item.themeResult.theme)}
 										type="button"
 										title="Load into inspector"
 									>
