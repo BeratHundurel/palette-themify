@@ -1140,10 +1140,22 @@ function createAppStore() {
 			saveSavedThemes(state.savedThemes);
 		},
 
+		replaceSavedTheme(themeId: string, theme: SavedThemeItem) {
+			const index = state.savedThemes.findIndex((item) => item.id === themeId);
+			if (index === -1) {
+				state.savedThemes = [theme, ...state.savedThemes];
+			} else {
+				const next = [...state.savedThemes];
+				next[index] = theme;
+				state.savedThemes = next;
+			}
+			saveSavedThemes(state.savedThemes);
+		},
+
 		deleteTheme(themeId: string) {
 			state.savedThemes = state.savedThemes.filter((item) => item.id !== themeId);
 			saveSavedThemes(state.savedThemes);
-		}
+		},
 	};
 }
 

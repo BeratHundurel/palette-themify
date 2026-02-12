@@ -201,15 +201,72 @@
 
 	function saveTheme(name: string) {
 		if (!themeResult || !name) return;
-		const saved: SavedThemeItem = {
-			id: `local_${Date.now()}`,
+		const trimmedName = name.trim();
+		if (!trimmedName) return;
+
+		const normalizedName = normalizeThemeName(trimmedName);
+		const signature = getThemeSignature(themeResult);
+		const existingThemes = appStore.state.savedThemes;
+
+		const identicalTheme = existingThemes.find(
+			(item) => item.editorType === editorType && getThemeSignature(item.themeResult) === signature
+		);
+		if (identicalTheme) {
+			return;
+		}
+
+		const nameMatch = existingThemes.find((item) => normalizeThemeName(item.name) === normalizedName);
+		if (nameMatch) {
+			const replace = confirm(`A theme named "${trimmedName}" already exists. Replace it?`);
+			if (replace) {
+				const saved = buildSavedTheme({ id: nameMatch.id, name: trimmedName });
+				appStore.replaceSavedTheme(nameMatch.id, saved);
+				return;
+			}
+
+			const renamed = prompt('Enter a new name for the theme:', trimmedName);
+			if (renamed === null) return;
+			const renameError = validateThemeName(renamed);
+			if (renameError) {
+				toast.error(renameError);
+				return;
+			}
+			const normalizedRename = normalizeThemeName(renamed);
+			if (existingThemes.find((item) => normalizeThemeName(item.name) === normalizedRename)) {
+				toast.error('A theme with that name already exists.');
+				return;
+			}
+			const saved = buildSavedTheme({ name: renamed.trim() });
+			appStore.saveThemeToLocal(saved);
+			return;
+		}
+
+		const saved = buildSavedTheme({ name: trimmedName });
+		appStore.saveThemeToLocal(saved);
+	}
+
+	function normalizeThemeName(name: string): string {
+		return name.trim().toLowerCase();
+	}
+
+	function getThemeSignature(result: SavedThemeItem['themeResult'] | null): string {
+		if (!result) return '';
+		try {
+			return JSON.stringify(result);
+		} catch {
+			return '';
+		}
+	}
+
+	function buildSavedTheme({ id, name }: { id?: string; name: string }): SavedThemeItem {
+		return {
+			id: id ?? `local_${Date.now()}`,
 			name,
 			editorType,
-			themeResult,
+			themeResult: themeResult!,
 			themeColorsWithUsage,
 			createdAt: new Date().toISOString()
 		};
-		appStore.saveThemeToLocal(saved);
 	}
 
 	function isExpanded(index: number): boolean {
