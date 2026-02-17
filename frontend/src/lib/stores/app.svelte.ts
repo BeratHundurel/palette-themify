@@ -208,7 +208,8 @@ function createAppStore() {
 			themeName: 'Generated Theme',
 			lastGeneratedPaletteVersion: 0,
 			editorType: loadThemeExportPreferences(),
-			saveOnCopy: loadThemeExportSaveOnCopy()
+			saveOnCopy: loadThemeExportSaveOnCopy(),
+			loadedThemeOverridesReference: null
 		},
 		savedThemes: loadSavedThemes(),
 		paletteVersion: 0
@@ -1155,7 +1156,7 @@ function createAppStore() {
 		deleteTheme(themeId: string) {
 			state.savedThemes = state.savedThemes.filter((item) => item.id !== themeId);
 			saveSavedThemes(state.savedThemes);
-		},
+		}
 	};
 }
 

@@ -197,15 +197,22 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
     return try returnThemeJson(allocator, colors, theme_type, theme_name, overrides);
 }
 
+pub const GenerateOverridableRequest = struct {
+    theme: std.json.Value,
+    ThemeOverrides: ?ThemeOverrides = null,
+};
+
 pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
-    const parsed = std.json.parseFromSlice(std.json.Value, allocator, request_body, .{
+    const parsed = std.json.parseFromSlice(GenerateOverridableRequest, allocator, request_body, .{
         .ignore_unknown_fields = true,
     }) catch |err| {
         return err;
     };
     defer parsed.deinit();
 
-    const response = zed.generateOverridableFromZedThemeValue(allocator, parsed.value) catch |err| {
+    const req: GenerateOverridableRequest = parsed.value;
+
+    const response = zed.generateOverridableFromZedThemeValue(allocator, req) catch |err| {
         return err;
     };
     return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });

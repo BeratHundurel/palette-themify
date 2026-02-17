@@ -1,5 +1,5 @@
 import type { Color } from '$lib/types/color';
-import type { ThemeOverrides, ThemeResponse } from '$lib/types/theme';
+import type { Theme, ThemeOverrides, ThemeResponse } from '$lib/types/theme';
 
 import { buildURL, buildZigURL, ensureOk } from './base';
 
@@ -36,11 +36,13 @@ export async function generateTheme(
 	return res.json();
 }
 
-export async function generateOverridable(theme: unknown): Promise<ThemeResponse> {
+export async function generateOverridable(theme: Theme, overrides?: ThemeOverrides | null): Promise<ThemeResponse> {
+	const payload = overrides ? { theme, ThemeOverrides: overrides } : { theme };
+
 	const res = await fetch(buildZigURL('/generate-overridable'), {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(theme)
+		body: JSON.stringify(payload)
 	});
 	await ensureOk(res);
 	return res.json();

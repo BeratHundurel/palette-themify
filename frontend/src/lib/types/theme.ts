@@ -40,6 +40,7 @@ export interface ThemeExportState {
 	themeColorsWithUsage: ThemeColorWithUsage[];
 	lastGeneratedPaletteVersion: number;
 	saveOnCopy: boolean;
+	loadedThemeOverridesReference: ThemeOverrides | null;
 }
 
 export type SavedThemeItem = {

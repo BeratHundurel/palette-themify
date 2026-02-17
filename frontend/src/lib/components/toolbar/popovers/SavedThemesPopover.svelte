@@ -4,7 +4,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
-	import type { SavedThemeItem } from '$lib/types/theme';
+	import type { SavedThemeItem, Theme } from '$lib/types/theme';
 	import { generateOverridable } from '$lib/api/theme';
 
 	let isImportOpen = $state(false);
@@ -22,14 +22,19 @@
 		}
 	}
 
-	async function handleThemeLoad(theme: unknown) {
+	async function handleThemeLoad(theme: Theme) {
 		try {
 			const response = await generateOverridable(theme);
+
 			appStore.setThemeExportEditorType('zed');
-			appStore.state.themeExport.themeName = response.theme.name;
+			appStore.state.colors = [];
+			appStore.state.image = null;
+			appStore.state.imageLoaded = false;
 			appStore.state.themeExport.themeResult = response;
+			appStore.state.themeExport.themeName = response.theme.name;
+			appStore.state.themeExport.loadedThemeOverridesReference = response.themeOverrides;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
-			appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
+
 			importJson = '';
 			popoverStore.close('themes');
 			popoverStore.state.current = 'themeExport';
@@ -70,16 +75,6 @@
 		if (!importFileInput) return;
 		importFileInput.click();
 	}
-
-	// function handleThemeLoad(item: SavedThemeItem) {
-	// 	appStore.setThemeExportEditorType(item.editorType);
-	// 	appStore.state.themeExport.themeName = item.name;
-	// 	appStore.state.themeExport.themeResult = item.themeResult;
-	// 	appStore.state.themeExport.themeColorsWithUsage = item.themeColorsWithUsage;
-	// 	appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
-	// 	popoverStore.close('themes');
-	// 	popoverStore.state.current = 'themeExport';
-	// }
 
 	async function handleThemeDelete(themeId: string, themeName: string) {
 		if (confirm(`Are you sure you want to delete "${themeName}"?`)) {

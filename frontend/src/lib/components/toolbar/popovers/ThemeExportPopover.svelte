@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
-	import { generateTheme, type EditorThemeType } from '$lib/api/theme';
+	import { generateOverridable, generateTheme, type EditorThemeType } from '$lib/api/theme';
 	import { extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import type { SavedThemeItem, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
@@ -33,6 +33,20 @@
 			? [...themeColorsWithUsage].sort((a, b) => b.totalUsages - a.totalUsages)
 			: themeColorsWithUsage
 	);
+
+	$effect(() => {
+		if (
+			isOpen &&
+			!isGenerating &&
+			themeResult !== null &&
+			appStore.state.colors.length > 0 &&
+			appStore.state.themeExport.lastGeneratedPaletteVersion === 0
+		) {
+			themeOverrides = {};
+			themeName = 'Generated Theme';
+			generateThemeFromApi();
+		}
+	});
 
 	$effect(() => {
 		if (isOpen && themeResult === null && !isGenerating) {
@@ -129,9 +143,6 @@
 
 	async function generateThemeFromApi() {
 		if (isGenerating) return;
-		if (!appStore.state.colors || appStore.state.colors.length === 0) {
-			return;
-		}
 
 		const validationError = validateThemeName(themeName);
 		if (validationError) {
@@ -139,11 +150,27 @@
 			return;
 		}
 
+		const hasPaletteColors = appStore.state.colors && appStore.state.colors.length > 0;
+
 		try {
 			isGenerating = true;
-			const response = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
+
+			if (hasPaletteColors) {
+				const response = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
+
+				appStore.state.themeExport.themeResult = response;
+				appStore.state.themeExport.loadedThemeOverridesReference = null;
+				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
+				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
+				return;
+			}
+
+			if (editorType !== 'zed' || !themeResult?.theme) {
+				return;
+			}
+
+			const response = await generateOverridable(themeResult.theme, themeOverrides);
 			appStore.state.themeExport.themeResult = response;
-			appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
 		} catch {
 			toast.error('Could not generate the theme. Please try again.');
@@ -155,7 +182,11 @@
 	}
 
 	function resetOverrides() {
-		themeOverrides = {};
+		if (appStore.state.themeExport.loadedThemeOverridesReference && appStore.state.colors.length === 0) {
+			themeOverrides = { ...appStore.state.themeExport.loadedThemeOverridesReference };
+		} else {
+			themeOverrides = {};
+		}
 		generateThemeFromApi();
 	}
 

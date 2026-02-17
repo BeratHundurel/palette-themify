@@ -104,7 +104,11 @@ fn generateOverridable(ctx: *tk.Context, allocator: std.mem.Allocator) anyerror!
         ctx.res.status = 400;
         ctx.res.body = switch (err) {
             error.InvalidTheme => "{\"error\":\"Please provide a zed editor theme\"}",
-            else => "{\"error\":\"Falied to generate theme\"}",
+            else => try std.fmt.allocPrint(
+                allocator,
+                "{{\"error\":\"Failed to generate theme error is {s}\"}}",
+                .{@errorName(err)},
+            ),
         };
         return;
     };

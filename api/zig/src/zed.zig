@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const types = @import("zed_types.zig");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 const color_utils = @import("color_utils.zig");
+const GenerateOverridableRequest = @import("palette_api.zig").GenerateOverridableRequest;
 
 const ZedTheme = types.ZedTheme;
 const ZedThemeStyle = types.ZedThemeStyle;
@@ -510,8 +511,8 @@ fn getFirstStringField(obj: std.json.ObjectMap, keys: []const []const u8) ?[]con
     return null;
 }
 
-pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, root: std.json.Value) !ZedThemeResponse {
-    const root_obj = switch (root) {
+pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, request: GenerateOverridableRequest) !ZedThemeResponse {
+    const root_obj = switch (request.theme) {
         .object => |obj| obj,
         else => return error.InvalidTheme,
     };
@@ -540,17 +541,25 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, root: 
         if (name.len > 0) theme_name = name;
     }
 
-    var overrides = ThemeOverrides{};
+    var overrides = request.ThemeOverrides orelse ThemeOverrides{};
     var colors = std.ArrayList([]const u8){};
     defer colors.deinit(allocator);
 
     if (getStringField(style_obj, "background")) |background| {
-        overrides.background = background;
-        try addColor(allocator, &colors, background);
+        const value = overrides.background orelse background;
+        overrides.background = value;
+        try addColor(allocator, &colors, value);
+    } else if (overrides.background) |value| {
+        overrides.background = value;
+        try addColor(allocator, &colors, value);
     }
     if (getStringField(style_obj, "text")) |foreground| {
-        overrides.foreground = foreground;
-        try addColor(allocator, &colors, foreground);
+        const value = overrides.foreground orelse foreground;
+        overrides.foreground = value;
+        try addColor(allocator, &colors, value);
+    } else if (overrides.foreground) |value| {
+        overrides.foreground = value;
+        try addColor(allocator, &colors, value);
     }
 
     if (getArrayField(style_obj, "accents")) |accents| {
@@ -560,19 +569,30 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, root: 
                 .string => |str| str,
                 else => continue,
             };
+            const accent_value = switch (idx) {
+                0 => overrides.c1 orelse accent,
+                1 => overrides.c2 orelse accent,
+                2 => overrides.c3 orelse accent,
+                3 => overrides.c4 orelse accent,
+                4 => overrides.c5 orelse accent,
+                5 => overrides.c6 orelse accent,
+                6 => overrides.c7 orelse accent,
+                7 => overrides.c8 orelse accent,
+                else => accent,
+            };
 
             switch (idx) {
-                0 => overrides.c1 = accent,
-                1 => overrides.c2 = accent,
-                2 => overrides.c3 = accent,
-                3 => overrides.c4 = accent,
-                4 => overrides.c5 = accent,
-                5 => overrides.c6 = accent,
-                6 => overrides.c7 = accent,
-                7 => overrides.c8 = accent,
+                0 => overrides.c1 = accent_value,
+                1 => overrides.c2 = accent_value,
+                2 => overrides.c3 = accent_value,
+                3 => overrides.c4 = accent_value,
+                4 => overrides.c5 = accent_value,
+                5 => overrides.c6 = accent_value,
+                6 => overrides.c7 = accent_value,
+                7 => overrides.c8 = accent_value,
                 else => {},
             }
-            try addColor(allocator, &colors, accent);
+            try addColor(allocator, &colors, accent_value);
         }
     }
 
@@ -617,7 +637,8 @@ test "generateOverridableFromZedThemeValue rejects invalid json" {
     defer arena.deinit();
     const allocator = arena.allocator();
     const bad_root = std.json.Value{ .string = "not an object" };
-    try std.testing.expectError(error.InvalidTheme, generateOverridableFromZedThemeValue(allocator, bad_root));
+    const request = GenerateOverridableRequest{ .theme = bad_root };
+    try std.testing.expectError(error.InvalidTheme, generateOverridableFromZedThemeValue(allocator, request));
 }
 
 test "generateOverridableFromZedThemeValue builds overrides" {
@@ -630,8 +651,16 @@ test "generateOverridableFromZedThemeValue builds overrides" {
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
     defer parsed.deinit();
 
-    const response = try generateOverridableFromZedThemeValue(allocator, parsed.value);
+    const request = GenerateOverridableRequest{
+        .theme = parsed.value,
+        .ThemeOverrides = ThemeOverrides{ .c1 = "#010203" },
+    };
+    const response = try generateOverridableFromZedThemeValue(allocator, request);
 
     try std.testing.expect(response.themeOverrides.background != null);
     try std.testing.expect(response.themeOverrides.foreground != null);
+    try std.testing.expect(response.themeOverrides.c1 != null);
+
+    const expected_c1 = color_utils.adjustForContrast("#010203", response.themeOverrides.background.?, 3);
+    try std.testing.expectEqualStrings(expected_c1, response.themeOverrides.c1.?);
 }
