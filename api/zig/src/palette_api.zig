@@ -200,6 +200,7 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
 pub const GenerateOverridableRequest = struct {
     theme: std.json.Value,
     ThemeOverrides: ?ThemeOverrides = null,
+    themeType: ThemeType = .zed,
 };
 
 pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
@@ -212,10 +213,20 @@ pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []c
 
     const req: GenerateOverridableRequest = parsed.value;
 
-    const response = zed.generateOverridableFromZedThemeValue(allocator, req) catch |err| {
-        return err;
-    };
-    return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
+    switch (req.themeType) {
+        .vscode => {
+            const response = vscode.generateOverridableFromVSCodeThemeValue(allocator, req) catch |err| {
+                return err;
+            };
+            return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
+        },
+        .zed => {
+            const response = zed.generateOverridableFromZedThemeValue(allocator, req) catch |err| {
+                return err;
+            };
+            return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
+        },
+    }
 }
 
 test "handleGenerateTheme rejects empty colors" {

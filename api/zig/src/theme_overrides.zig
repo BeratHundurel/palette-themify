@@ -9,4 +9,6 @@ pub const ThemeOverrides = struct {
     c6: ?[]const u8 = null,
     c7: ?[]const u8 = null,
     c8: ?[]const u8 = null,
+    c9: ?[]const u8 = null,
+    constants: ?[]const u8 = null,
 };

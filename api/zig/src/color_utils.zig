@@ -79,51 +79,116 @@ pub fn findSemanticColors(colors: []const []const u8) SemanticColors {
     const target_green = RGB{ .r = 80, .g = 180, .b = 80 };
     const target_blue = RGB{ .r = 80, .g = 160, .b = 220 };
 
+    const fallback = blk: {
+        var best_red: []const u8 = colors[0];
+        var best_orange: []const u8 = colors[0];
+        var best_green: []const u8 = colors[0];
+        var best_blue: []const u8 = colors[0];
+
+        var min_red_dist: f32 = std.math.floatMax(f32);
+        var min_orange_dist: f32 = std.math.floatMax(f32);
+        var min_green_dist: f32 = std.math.floatMax(f32);
+        var min_blue_dist: f32 = std.math.floatMax(f32);
+
+        for (colors) |color| {
+            const rgb = parseHexToRgb(color);
+            const hsl = hexToHsl(color);
+
+            if (hsl.s < 0.2 or hsl.l < 0.15 or hsl.l > 0.85) continue;
+
+            const red_dist = rgbDistanceFromRgb(rgb, target_red);
+            const orange_dist = rgbDistanceFromRgb(rgb, target_orange);
+            const green_dist = rgbDistanceFromRgb(rgb, target_green);
+            const blue_dist = rgbDistanceFromRgb(rgb, target_blue);
+
+            if (red_dist < min_red_dist) {
+                min_red_dist = red_dist;
+                best_red = color;
+            }
+            if (orange_dist < min_orange_dist) {
+                min_orange_dist = orange_dist;
+                best_orange = color;
+            }
+            if (green_dist < min_green_dist) {
+                min_green_dist = green_dist;
+                best_green = color;
+            }
+            if (blue_dist < min_blue_dist) {
+                min_blue_dist = blue_dist;
+                best_blue = color;
+            }
+        }
+
+        break :blk SemanticColors{
+            .error_color = best_red,
+            .warning_color = best_orange,
+            .success_color = best_green,
+            .info_color = best_blue,
+        };
+    };
+
+    if (colors.len < 4) {
+        return fallback;
+    }
+
+    var best_total: f32 = std.math.floatMax(f32);
     var best_red: []const u8 = colors[0];
     var best_orange: []const u8 = colors[0];
     var best_green: []const u8 = colors[0];
     var best_blue: []const u8 = colors[0];
+    var found_distinct = false;
 
-    var min_red_dist: f32 = std.math.floatMax(f32);
-    var min_orange_dist: f32 = std.math.floatMax(f32);
-    var min_green_dist: f32 = std.math.floatMax(f32);
-    var min_blue_dist: f32 = std.math.floatMax(f32);
+    for (colors, 0..) |color_r, idx_r| {
+        const hsl_r = hexToHsl(color_r);
+        if (hsl_r.s < 0.2 or hsl_r.l < 0.15 or hsl_r.l > 0.85) continue;
+        const rgb_r = parseHexToRgb(color_r);
+        const dist_r = rgbDistanceFromRgb(rgb_r, target_red);
 
-    for (colors) |color| {
-        const rgb = parseHexToRgb(color);
-        const hsl = hexToHsl(color);
+        for (colors, 0..) |color_o, idx_o| {
+            if (idx_o == idx_r) continue;
+            const hsl_o = hexToHsl(color_o);
+            if (hsl_o.s < 0.2 or hsl_o.l < 0.15 or hsl_o.l > 0.85) continue;
+            const rgb_o = parseHexToRgb(color_o);
+            const dist_o = rgbDistanceFromRgb(rgb_o, target_orange);
 
-        if (hsl.s < 0.2 or hsl.l < 0.15 or hsl.l > 0.85) continue;
+            for (colors, 0..) |color_g, idx_g| {
+                if (idx_g == idx_r or idx_g == idx_o) continue;
+                const hsl_g = hexToHsl(color_g);
+                if (hsl_g.s < 0.2 or hsl_g.l < 0.15 or hsl_g.l > 0.85) continue;
+                const rgb_g = parseHexToRgb(color_g);
+                const dist_g = rgbDistanceFromRgb(rgb_g, target_green);
 
-        const red_dist = rgbDistanceFromRgb(rgb, target_red);
-        const orange_dist = rgbDistanceFromRgb(rgb, target_orange);
-        const green_dist = rgbDistanceFromRgb(rgb, target_green);
-        const blue_dist = rgbDistanceFromRgb(rgb, target_blue);
+                for (colors, 0..) |color_b, idx_b| {
+                    if (idx_b == idx_r or idx_b == idx_o or idx_b == idx_g) continue;
+                    const hsl_b = hexToHsl(color_b);
+                    if (hsl_b.s < 0.2 or hsl_b.l < 0.15 or hsl_b.l > 0.85) continue;
+                    const rgb_b = parseHexToRgb(color_b);
+                    const dist_b = rgbDistanceFromRgb(rgb_b, target_blue);
 
-        if (red_dist < min_red_dist) {
-            min_red_dist = red_dist;
-            best_red = color;
-        }
-        if (orange_dist < min_orange_dist) {
-            min_orange_dist = orange_dist;
-            best_orange = color;
-        }
-        if (green_dist < min_green_dist) {
-            min_green_dist = green_dist;
-            best_green = color;
-        }
-        if (blue_dist < min_blue_dist) {
-            min_blue_dist = blue_dist;
-            best_blue = color;
+                    const total = dist_r + dist_o + dist_g + dist_b;
+                    if (total < best_total) {
+                        best_total = total;
+                        best_red = color_r;
+                        best_orange = color_o;
+                        best_green = color_g;
+                        best_blue = color_b;
+                        found_distinct = true;
+                    }
+                }
+            }
         }
     }
 
-    return SemanticColors{
-        .error_color = best_red,
-        .warning_color = best_orange,
-        .success_color = best_green,
-        .info_color = best_blue,
-    };
+    if (found_distinct) {
+        return SemanticColors{
+            .error_color = best_red,
+            .warning_color = best_orange,
+            .success_color = best_green,
+            .info_color = best_blue,
+        };
+    }
+
+    return fallback;
 }
 
 inline fn parseHexToRgb(hex: []const u8) RGB {
@@ -679,6 +744,64 @@ test "hexToHsl and hslToRgb roundtrip" {
     try std.testing.expectEqual(@as(u8, 0x33), rgb.r);
     try std.testing.expectEqual(@as(u8, 0x66), rgb.g);
     try std.testing.expectEqual(@as(u8, 0x99), rgb.b);
+}
+
+// ── Shared theme-parsing helpers ────────────────────────────────────────────
+
+pub fn isHexColor(value: []const u8) bool {
+    if (value.len != 7 and value.len != 9) return false;
+    if (value[0] != '#') return false;
+    for (value[1..]) |ch| {
+        if (!std.ascii.isHex(ch)) return false;
+    }
+    return true;
+}
+
+pub fn addColor(allocator: std.mem.Allocator, colors: *std.ArrayList([]const u8), value: []const u8) !void {
+    if (!isHexColor(value)) return;
+    for (colors.items) |existing| {
+        if (std.mem.eql(u8, existing, value)) return;
+    }
+    try colors.append(allocator, value);
+}
+
+pub fn getStringField(obj: std.json.ObjectMap, key: []const u8) ?[]const u8 {
+    if (obj.get(key)) |value| {
+        return switch (value) {
+            .string => |str| str,
+            else => null,
+        };
+    }
+    return null;
+}
+
+pub fn getObjectField(obj: std.json.ObjectMap, key: []const u8) ?std.json.ObjectMap {
+    if (obj.get(key)) |value| {
+        return switch (value) {
+            .object => |child| child,
+            else => null,
+        };
+    }
+    return null;
+}
+
+pub fn getArrayField(obj: std.json.ObjectMap, key: []const u8) ?std.json.Array {
+    if (obj.get(key)) |value| {
+        return switch (value) {
+            .array => |arr| arr,
+            else => null,
+        };
+    }
+    return null;
+}
+
+pub fn getFirstStringField(obj: std.json.ObjectMap, keys: []const []const u8) ?[]const u8 {
+    for (keys) |key| {
+        if (getStringField(obj, key)) |value| {
+            return value;
+        }
+    }
+    return null;
 }
 
 test "luminance and contrast ratio basics" {

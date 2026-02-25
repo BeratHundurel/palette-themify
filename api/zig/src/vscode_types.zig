@@ -1,9 +1,14 @@
 const std = @import("std");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 
+pub const ColorHex = struct {
+    hex: []const u8,
+};
+
 pub const VSCodeThemeResponse = struct {
-    themeOverrides: ThemeOverrides,
     theme: VSCodeTheme,
+    themeOverrides: ThemeOverrides,
+    colors: []const ColorHex,
 };
 
 pub const VSCodeTokenSettings = struct {

@@ -1,8 +1,13 @@
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 
+pub const ColorHex = struct {
+    hex: []const u8,
+};
+
 pub const ZedThemeResponse = struct {
-    themeOverrides: ThemeOverrides,
     theme: ZedTheme,
+    themeOverrides: ThemeOverrides,
+    colors: []const ColorHex,
 };
 
 pub const FontStyle = enum {

@@ -83,7 +83,11 @@ fn generateTheme(ctx: *tk.Context, allocator: std.mem.Allocator) anyerror!void {
         ctx.res.status = 400;
         ctx.res.body = switch (err) {
             error.NotEnoughColors => "{\"error\":\"Not enough colors - please provide at least 5 colors\"}",
-            else => "{\"error\":\"Failed to generate theme\"}",
+            else => try std.fmt.allocPrint(
+                allocator,
+                "{{\"error\":\"Failed to generate theme error is {s}\"}}",
+                .{@errorName(err)},
+            ),
         };
         return;
     };
@@ -103,7 +107,7 @@ fn generateOverridable(ctx: *tk.Context, allocator: std.mem.Allocator) anyerror!
     const result = palette_api.handleGenerateOverridable(allocator, body) catch |err| {
         ctx.res.status = 400;
         ctx.res.body = switch (err) {
-            error.InvalidTheme => "{\"error\":\"Please provide a zed editor theme\"}",
+            error.InvalidTheme => "{\"error\":\"Please provide a valid Zed or VSCode theme JSON\"}",
             else => try std.fmt.allocPrint(
                 allocator,
                 "{{\"error\":\"Failed to generate theme error is {s}\"}}",

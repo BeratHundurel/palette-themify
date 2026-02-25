@@ -3,10 +3,12 @@ const std = @import("std");
 const color_utils = @import("color_utils.zig");
 const types = @import("vscode_types.zig");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
+const GenerateOverridableRequest = @import("palette_api.zig").GenerateOverridableRequest;
 const VSCodeTheme = types.VSCodeTheme;
 const VSCodeThemeColors = types.VSCodeThemeColors;
 const VSCodeTokenColor = types.VSCodeTokenColor;
 const VSCodeThemeResponse = types.VSCodeThemeResponse;
+const ColorHex = types.ColorHex;
 
 /// Generates a complete VS Code theme from a palette of colors.
 /// Strategy: Select 10 most diverse colors, pick bg/fg with good contrast,
@@ -17,20 +19,20 @@ pub fn generateVSCodeTheme(
     theme_name: []const u8,
     overrides: ThemeOverrides,
 ) !VSCodeThemeResponse {
+    if (colors.len == 0) {
+        return error.NotEnoughColors;
+    }
+
     const semantic = color_utils.findSemanticColors(colors);
-    const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 10);
+    const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 11);
     defer allocator.free(improved_colors);
 
     var palette = std.ArrayList([]const u8){};
     defer palette.deinit(allocator);
-    try palette.ensureTotalCapacity(allocator, 10);
+    try palette.ensureTotalCapacity(allocator, 11);
     try palette.appendSlice(allocator, improved_colors);
 
-    if (palette.items.len == 0) {
-        return error.NotEnoughColors;
-    }
-
-    if (palette.items.len < 10) {
+    if (palette.items.len < 11) {
         const harmony_schemes = [_]color_utils.HarmonyScheme{
             .complementary,
             .triadic,
@@ -41,7 +43,7 @@ pub fn generateVSCodeTheme(
         var scheme_index: usize = 0;
         var base_index: usize = 0;
 
-        while (palette.items.len < 10) {
+        while (palette.items.len < 11) {
             const base_color = palette.items[base_index % base_count];
             const scheme = harmony_schemes[scheme_index % harmony_schemes.len];
             const harmonic = color_utils.getHarmonicColor(base_color, scheme);
@@ -70,20 +72,20 @@ pub fn generateVSCodeTheme(
     const c6_raw = overrides.c6 orelse palette.items[remaining[5]];
     const c7_raw = overrides.c7 orelse palette.items[remaining[6]];
     const c8_raw = overrides.c8 orelse palette.items[remaining[7]];
+    const c9_raw = overrides.c9 orelse palette.items[remaining[8]];
 
     const background = if (overrides.background) |bg| bg else blk: {
         const bg_raw = palette.items[selection.background_index];
         const base_luminance = color_utils.getLuminance(bg_raw);
-        const darken_amount = if (dark_base) 0.75 + (base_luminance) * 0.20 else 0.0;
-        const lighten_amount = if (dark_base) 0.0 else 0.75 + (1.0 - base_luminance) * 0.20;
+        const darken_amount = if (dark_base) 0.6 + (base_luminance) * 0.33 else 0.0;
+        const lighten_amount = if (dark_base) 0.0 else 0.6 + (1.0 - base_luminance) * 0.33;
         break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
     };
-    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
-    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.15) else color_utils.lightenColor(background, 0.15);
     const bg_medium = if (dark_base) color_utils.darkenColor(background, 0.10) else color_utils.lightenColor(background, 0.10);
-    const bg_light = if (dark_base) color_utils.lightenColor(background, 0.05) else color_utils.darkenColor(background, 0.05);
-    const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
-    const bg_inactive = if (dark_base) color_utils.darkenColor(background, 0.50) else color_utils.lightenColor(background, 0.50);
+    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
+    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.30);
+    const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
+    const bg_inactive = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.30);
 
     const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
@@ -92,7 +94,7 @@ pub fn generateVSCodeTheme(
     const c1 = color_utils.adjustForContrast(c1_raw, bg_very_dark, 3);
     const c2 = color_utils.adjustForContrast(c2_raw, bg_very_dark, 3);
 
-    const constants_raw = color_utils.getHarmonicColor(c2, .@"split-complementary");
+    const constants_raw = overrides.constants orelse color_utils.getHarmonicColor(c2, .@"split-complementary");
     const constants = color_utils.adjustForContrast(constants_raw, background, 3);
 
     const c3 = color_utils.adjustForContrast(c3_raw, background, 3);
@@ -101,6 +103,7 @@ pub fn generateVSCodeTheme(
     const c6 = color_utils.adjustForContrast(c6_raw, background, 3);
     const c7 = color_utils.adjustForContrast(c7_raw, background, 3);
     const c8 = color_utils.adjustForContrast(c8_raw, background, 3);
+    const c9 = color_utils.adjustForContrast(c9_raw, background, 3);
 
     const semantic_error = color_utils.adjustForContrast(semantic.error_color, background, 3);
     const semantic_warning = color_utils.adjustForContrast(semantic.warning_color, background, 3);
@@ -200,7 +203,7 @@ pub fn generateVSCodeTheme(
         .@"terminal.ansiBrightMagenta" = if (dark_base) color_utils.lightenColor(c6, 0.2) else color_utils.darkenColor(c6, 0.2),
         .@"terminal.ansiBrightCyan" = if (dark_base) color_utils.lightenColor(c7, 0.2) else color_utils.darkenColor(c7, 0.2),
         .@"terminal.ansiBrightWhite" = if (dark_base) color_utils.lightenColor(foreground, 0.2) else color_utils.darkenColor(foreground, 0.2),
-        .@"input.background" = bg_lighter,
+        .@"input.background" = bg_light,
         .@"input.border" = c1_40,
         .@"input.foreground" = foreground,
         .@"input.placeholderForeground" = fg50,
@@ -219,7 +222,7 @@ pub fn generateVSCodeTheme(
         .@"dropdown.background" = bg_light,
         .@"dropdown.foreground" = foreground,
         .@"dropdown.border" = c1_40,
-        .@"dropdown.listBackground" = bg_lighter,
+        .@"dropdown.listBackground" = bg_light,
         .@"quickInput.background" = bg_light,
         .@"quickInput.foreground" = foreground,
         .@"quickInputList.focusBackground" = c2_40,
@@ -239,7 +242,7 @@ pub fn generateVSCodeTheme(
         .@"button.hoverBackground" = if (dark_base) color_utils.lightenColor(c2, 0.1) else color_utils.darkenColor(c2, 0.1),
         .@"button.secondaryBackground" = bg_light,
         .@"button.secondaryForeground" = foreground,
-        .@"button.secondaryHoverBackground" = bg_lighter,
+        .@"button.secondaryHoverBackground" = bg_light,
         .@"badge.background" = c2,
         .@"badge.foreground" = button_fg,
         .@"breadcrumb.foreground" = fg70,
@@ -349,40 +352,44 @@ pub fn generateVSCodeTheme(
             .settings = .{ .foreground = fg60, .fontStyle = "italic" },
         },
         .{
-            .scope = &[_][]const u8{ "keyword", "keyword.control", "keyword.operator.new", "keyword.operator.expression", "keyword.other" },
-            .settings = .{ .foreground = c6, .fontStyle = "bold" },
+            .scope = &[_][]const u8{ "keyword", "keyword.control", "keyword.operator.new", "keyword.operator.expression", "keyword.other", "storage.type.function", "meta.function", "meta.script", "meta.embedded" },
+            .settings = .{ .foreground = c6 },
         },
         .{
-            .scope = &[_][]const u8{ "storage", "storage.type", "storage.modifier", "entity.name.tag", "meta.tag" },
-            .settings = .{ .foreground = c6 },
+            .scope = &[_][]const u8{ "storage", "storage.type", "storage.modifier", "entity.name.tag", "meta.tag", "entity.name.function", "meta.function-call", "meta.method-call", "meta.method", "support.function", "variable.function" },
+            .settings = .{ .foreground = c2 },
         },
         .{
             .scope = &[_][]const u8{ "string", "string.quoted", "string.template", "string.regexp", "punctuation.definition.string", "support.constant.property-value", "support.constant.property-value.css", "markup.inline.raw", "markup.fenced_code", "markup.inserted" },
             .settings = .{ .foreground = c3 },
         },
         .{
-            .scope = &[_][]const u8{ "constant.numeric", "constant.character", "constant.language.boolean", "constant.language.null", "number" },
-            .settings = .{ .foreground = constants },
-        },
-        .{
-            .scope = &[_][]const u8{ "constant.language", "constant.other", "entity.name.class", "entity.other.inherited-class", "entity.name.type", "variable.other.constant", "support.constant", "support.class", "support.type" },
+            .scope = &[_][]const u8{ "constant.language", "constant.other", "entity.name.class", "entity.other.inherited-class", "entity.name.type", "entity.name.namespace", "support.class", "support.type" },
             .settings = .{ .foreground = c5 },
         },
         .{
-            .scope = &[_][]const u8{ "variable", "identifier", "variable.other.readwrite", "meta.definition.variable" },
+            .scope = &[_][]const u8{ "constant.numeric", "constant.character", "constant.language.boolean", "constant.language.null", "keyword.constant.bool", "keyword.constant.default", "number", "support.constant" },
+            .settings = .{ .foreground = constants },
+        },
+        .{
+            .scope = &[_][]const u8{ "variable", "variable.other.readwrite", "identifier", "meta.definition.variable" },
             .settings = .{ .foreground = foreground },
         },
         .{
-            .scope = &[_][]const u8{ "variable.other.property", "variable.other.object.property", "meta.object-literal.key", "support.variable", "support.other.variable", "support.type.property-name", "support.type.property-name.css" },
+            .scope = &[_][]const u8{"variable.other.enummember"},
+            .settings = .{ .foreground = c9 },
+        },
+        .{
+            .scope = &[_][]const u8{ "variable.other.property", "variable.other.constant", "variable.other.constant", "variable.other.object.property", "meta.object-literal.key", "support.variable", "support.other.variable", "support.type.property-name", "support.type.property-name.css" },
             .settings = .{ .foreground = c1 },
         },
         .{
-            .scope = &[_][]const u8{ "entity.name.function", "meta.function-call", "meta.method-call", "meta.method", "entity.other.attribute-name", "entity.name.module", "support.module", "support.function", "support.node" },
-            .settings = .{ .foreground = c2 },
+            .scope = &[_][]const u8{ "entity.other.attribute-name", "entity.name.module", "support.module", "support.node" },
+            .settings = .{ .foreground = c6 },
         },
         .{
-            .scope = &[_][]const u8{ "variable.parameter", "meta.parameter" },
-            .settings = .{ .foreground = c7 },
+            .scope = &[_][]const u8{ "variable.parameter", "entity.name.type.enum", "meta.parameter" },
+            .settings = .{ .foreground = c7, .fontStyle = "bold" },
         },
         .{
             .scope = &[_][]const u8{ "punctuation.definition.begin.bracket", "punctuation.definition.end.bracket", "punctuation.definition.begin.bracket.round", "punctuation.definition.end.bracket.round", "punctuation.definition.begin.bracket.square", "punctuation.definition.end.bracket.square", "punctuation.definition.begin.bracket.curly", "punctuation.definition.end.bracket.curly", "meta.brace", "punctuation.section.brackets", "punctuation.section.parens", "punctuation.section.braces" },
@@ -418,15 +425,17 @@ pub fn generateVSCodeTheme(
         },
         .{
             .scope = &[_][]const u8{ "invalid", "invalid.illegal" },
-            .settings = .{ .foreground = c4, .fontStyle = "bold" },
+            .settings = .{ .foreground = c4 },
         },
         .{
             .scope = &[_][]const u8{"invalid.deprecated"},
-            .settings = .{ .foreground = c4_80, .fontStyle = "italic" },
+            .settings = .{ .foreground = c4_80 },
         },
     };
 
     const token_colors_slice = try allocator.dupe(VSCodeTokenColor, &token_colors);
+    const backupColors = try allocator.alloc(ColorHex, colors.len);
+    for (colors, 0..) |c, i| backupColors[i] = .{ .hex = c };
 
     const theme = VSCodeTheme{
         .@"$schema" = "vscode://schemas/color-theme",
@@ -447,10 +456,236 @@ pub fn generateVSCodeTheme(
         .c6 = c6,
         .c7 = c7,
         .c8 = c8,
+        .c9 = c9,
+        .constants = constants,
     };
 
-    return VSCodeThemeResponse{
-        .theme = theme,
-        .themeOverrides = base_overrides,
+    return VSCodeThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .colors = backupColors };
+}
+
+/// Re-generates a VSCode theme by extracting the color palette from an existing
+/// VSCode theme JSON value. Background/foreground/accent overrides from the
+/// request are respected, and the remaining colors are fed back into
+/// generateVSCodeTheme.
+pub fn generateOverridableFromVSCodeThemeValue(allocator: std.mem.Allocator, request: GenerateOverridableRequest) !VSCodeThemeResponse {
+    const root_obj = switch (request.theme) {
+        .object => |obj| obj,
+        else => return error.InvalidTheme,
     };
+
+    var theme_name: []const u8 = "Generated Theme";
+    if (color_utils.getStringField(root_obj, "name")) |name| {
+        if (name.len > 0) theme_name = name;
+    }
+
+    const colors_obj = color_utils.getObjectField(root_obj, "colors") orelse return error.InvalidTheme;
+
+    var overrides = request.ThemeOverrides orelse ThemeOverrides{};
+    var colors = std.ArrayList([]const u8){};
+    defer colors.deinit(allocator);
+
+    // ── background ──────────────────────────────────────────────────────────
+    if (color_utils.getStringField(colors_obj, "editor.background")) |bg| {
+        const value = overrides.background orelse bg;
+        overrides.background = value;
+        try color_utils.addColor(allocator, &colors, value);
+    } else if (overrides.background) |value| {
+        try color_utils.addColor(allocator, &colors, value);
+    }
+
+    // ── foreground ───────────────────────────────────────────────────────────
+    if (color_utils.getStringField(colors_obj, "editor.foreground")) |fg| {
+        const value = overrides.foreground orelse fg;
+        overrides.foreground = value;
+        try color_utils.addColor(allocator, &colors, value);
+    } else if (overrides.foreground) |value| {
+        try color_utils.addColor(allocator, &colors, value);
+    }
+
+    // ── semantic/UI accent colors ─────────────────────────────────────────────
+    // c4 ← error color
+    if (color_utils.getStringField(colors_obj, "editorError.foreground")) |err_color| {
+        const value = overrides.c4 orelse err_color;
+        overrides.c4 = value;
+        try color_utils.addColor(allocator, &colors, value);
+    }
+
+    // additional semantic colors (warning, info, success) → palette candidates
+    const semantic_keys = [_][]const u8{
+        "editorWarning.foreground",
+        "editorInfo.foreground",
+        "editorGutter.addedBackground",
+        "textLink.foreground",
+        "editorCursor.foreground",
+    };
+    for (semantic_keys) |key| {
+        if (color_utils.getStringField(colors_obj, key)) |value| {
+            try color_utils.addColor(allocator, &colors, value);
+        }
+    }
+
+    // ── token colors ─────────────────────────────────────────────────────────
+    // Walk every token rule; assign the first match to the relevant override
+    // slot (c1–c3, c5–c9, constants) and add the color to the palette regardless.
+    if (color_utils.getArrayField(root_obj, "tokenColors")) |token_colors| {
+        for (token_colors.items) |item| {
+            const token_obj = switch (item) {
+                .object => |obj| obj,
+                else => continue,
+            };
+
+            const settings_obj = color_utils.getObjectField(token_obj, "settings") orelse continue;
+            const fg = color_utils.getStringField(settings_obj, "foreground") orelse continue;
+
+            const scope_arr = color_utils.getArrayField(token_obj, "scope") orelse {
+                try color_utils.addColor(allocator, &colors, fg);
+                continue;
+            };
+
+            for (scope_arr.items) |scope_item| {
+                const scope = switch (scope_item) {
+                    .string => |s| s,
+                    else => continue,
+                };
+
+                // property / member access  → c1
+                if (std.mem.indexOf(u8, scope, "variable.other.property") != null or
+                    std.mem.indexOf(u8, scope, "support.type.property-name") != null or
+                    std.mem.indexOf(u8, scope, "variable.member") != null)
+                {
+                    if (overrides.c1 == null) overrides.c1 = fg;
+                    break;
+                }
+                // functions / storage       → c2
+                if (std.mem.indexOf(u8, scope, "entity.name.function") != null or
+                    std.mem.eql(u8, scope, "storage.type") or
+                    std.mem.indexOf(u8, scope, "support.function") != null)
+                {
+                    if (overrides.c2 == null) overrides.c2 = fg;
+                    break;
+                }
+                // strings                  → c3
+                if (std.mem.eql(u8, scope, "string") or
+                    std.mem.eql(u8, scope, "string.quoted") or
+                    std.mem.eql(u8, scope, "string.template"))
+                {
+                    if (overrides.c3 == null) overrides.c3 = fg;
+                    break;
+                }
+                // constants                → constants
+                if (std.mem.indexOf(u8, scope, "constant.numeric") != null or
+                    std.mem.indexOf(u8, scope, "constant.character") != null or
+                    std.mem.indexOf(u8, scope, "constant.language.boolean") != null or
+                    std.mem.indexOf(u8, scope, "constant.language.null") != null or
+                    std.mem.indexOf(u8, scope, "keyword.constant") != null or
+                    std.mem.eql(u8, scope, "number") or
+                    std.mem.indexOf(u8, scope, "support.constant") != null)
+                {
+                    if (overrides.constants == null) overrides.constants = fg;
+                    break;
+                }
+                // types / classes           → c5
+                if (std.mem.indexOf(u8, scope, "entity.name.class") != null or
+                    std.mem.eql(u8, scope, "support.type") or
+                    std.mem.indexOf(u8, scope, "entity.name.type") != null)
+                {
+                    if (overrides.c5 == null) overrides.c5 = fg;
+                    break;
+                }
+                // keywords                  → c6
+                if (std.mem.eql(u8, scope, "keyword") or
+                    std.mem.eql(u8, scope, "keyword.control") or
+                    std.mem.eql(u8, scope, "storage"))
+                {
+                    if (overrides.c6 == null) overrides.c6 = fg;
+                    break;
+                }
+                // parameters / enums        → c7
+                if (std.mem.eql(u8, scope, "variable.parameter") or
+                    std.mem.eql(u8, scope, "entity.name.type.enum"))
+                {
+                    if (overrides.c7 == null) overrides.c7 = fg;
+                    break;
+                }
+                // operators                 → c8
+                if (std.mem.eql(u8, scope, "keyword.operator") or
+                    std.mem.eql(u8, scope, "punctuation.operator"))
+                {
+                    if (overrides.c8 == null) overrides.c8 = fg;
+                    break;
+                }
+                // builtin/special/variant   → c9
+                if (std.mem.eql(u8, scope, "variable.builtin") or
+                    std.mem.eql(u8, scope, "variable.special") or
+                    std.mem.eql(u8, scope, "variable.other.enummember") or
+                    std.mem.indexOf(u8, scope, "support.variable") != null)
+                {
+                    if (overrides.c9 == null) overrides.c9 = fg;
+                    break;
+                }
+            }
+
+            // Always add the color to the palette (deduped by addColor).
+            try color_utils.addColor(allocator, &colors, fg);
+        }
+    }
+
+    if (colors.items.len == 0) {
+        return error.InvalidTheme;
+    }
+
+    const palette = try allocator.dupe([]const u8, colors.items);
+    defer allocator.free(palette);
+
+    return try generateVSCodeTheme(allocator, palette, theme_name, overrides);
+}
+
+test "generateOverridableFromVSCodeThemeValue rejects non-object" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const bad_root = std.json.Value{ .string = "not an object" };
+    const req = GenerateOverridableRequest{ .theme = bad_root };
+    try std.testing.expectError(error.InvalidTheme, generateOverridableFromVSCodeThemeValue(allocator, req));
+}
+
+test "generateOverridableFromVSCodeThemeValue builds overrides from colors" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const json =
+        "{" ++
+        "\"name\":\"TestVSCode\"," ++
+        "\"type\":\"dark\"," ++
+        "\"colors\":{" ++
+        "\"editor.background\":\"#1a1a2e\"," ++
+        "\"editor.foreground\":\"#e0e0ff\"," ++
+        "\"editorError.foreground\":\"#ff5555\"," ++
+        "\"editorWarning.foreground\":\"#ffaa00\"," ++
+        "\"editorInfo.foreground\":\"#55aaff\"," ++
+        "\"editorGutter.addedBackground\":\"#55ff88\"" ++
+        "}," ++
+        "\"tokenColors\":[" ++
+        "{\"scope\":[\"keyword\"],\"settings\":{\"foreground\":\"#cc99ff\"}}," ++
+        "{\"scope\":[\"string\"],\"settings\":{\"foreground\":\"#99ff99\"}}," ++
+        "{\"scope\":[\"entity.name.function\"],\"settings\":{\"foreground\":\"#ffcc00\"}}," ++
+        "{\"scope\":[\"entity.name.class\"],\"settings\":{\"foreground\":\"#ff9966\"}}," ++
+        "{\"scope\":[\"variable.parameter\"],\"settings\":{\"foreground\":\"#66ccff\"}}," ++
+        "{\"scope\":[\"variable.other.property\"],\"settings\":{\"foreground\":\"#ffaacc\"}}" ++
+        "]" ++
+        "}";
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const req = GenerateOverridableRequest{ .theme = parsed.value };
+    const response = try generateOverridableFromVSCodeThemeValue(allocator, req);
+
+    try std.testing.expect(response.themeOverrides.background != null);
+    try std.testing.expect(response.themeOverrides.foreground != null);
+    try std.testing.expect(response.themeOverrides.c4 != null); // error color
+
+    const expected_c4 = color_utils.adjustForContrast("#ff5555", response.themeOverrides.background.?, 3);
+    try std.testing.expectEqualStrings(expected_c4, response.themeOverrides.c4.?);
 }

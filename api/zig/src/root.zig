@@ -7,4 +7,5 @@ test {
     _ = color_utils;
     _ = palette_api;
     _ = zed;
+    _ = vscode;
 }
