@@ -1,4 +1,5 @@
 import type { EditorThemeType } from '$lib/api/theme';
+import type { Color } from './color';
 
 import type { VSCodeTheme } from './vscode';
 import type { ZedTheme } from './zed';
@@ -16,11 +17,14 @@ export type ThemeOverrides = {
 	c6?: string;
 	c7?: string;
 	c8?: string;
+	c9?: string;
+	constants?: string;
 };
 
 export type ThemeResponse = {
-	themeOverrides: ThemeOverrides;
 	theme: Theme;
+	themeOverrides: ThemeOverrides;
+	colors: Color[];
 };
 
 export interface ThemeColorWithUsage {
@@ -34,13 +38,14 @@ export interface ThemeColorWithUsage {
 }
 
 export interface ThemeExportState {
-	editorType: EditorThemeType;
 	themeName: string;
 	themeResult: ThemeResponse | null;
 	themeColorsWithUsage: ThemeColorWithUsage[];
-	lastGeneratedPaletteVersion: number;
 	saveOnCopy: boolean;
+	editorType: EditorThemeType;
+	lastGeneratedPaletteVersion: number;
 	loadedThemeOverridesReference: ThemeOverrides | null;
+	backupColors: Color[] | null;
 }
 
 export type SavedThemeItem = {

@@ -7,6 +7,7 @@
 	let { isOpen = $bindable() } = $props();
 
 	let inputEl = $state<HTMLInputElement | null>(null);
+	let lastQuery = $state('');
 
 	$effect(() => {
 		if (isOpen && inputEl) {
@@ -77,6 +78,7 @@
 		} finally {
 			isSearching = false;
 			loadingMore = false;
+			lastQuery = q;
 		}
 	}
 
@@ -165,10 +167,14 @@
 						bind:this={inputEl}
 						bind:value={appStore.state.searchQuery}
 						onchange={() => {
-							scheduleSearch(appStore.state.searchQuery);
+							if (lastQuery !== appStore.state.searchQuery.trim()) {
+								scheduleSearch(appStore.state.searchQuery);
+							}
 						}}
 						onfocus={() => {
-							scheduleSearch(appStore.state.searchQuery);
+							if (lastQuery !== appStore.state.searchQuery.trim()) {
+								scheduleSearch(appStore.state.searchQuery);
+							}
 						}}
 						oninput={() => {
 							scheduleSearch(appStore.state.searchQuery);

@@ -2,7 +2,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType } from '$lib/api/theme';
-	import { extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import { detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import type { SavedThemeItem, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
@@ -42,14 +42,16 @@
 			appStore.state.colors.length > 0 &&
 			appStore.state.themeExport.lastGeneratedPaletteVersion === 0
 		) {
-			themeOverrides = {};
 			themeName = 'Generated Theme';
+			themeOverrides = {};
 			generateThemeFromApi();
 		}
 	});
 
 	$effect(() => {
 		if (isOpen && themeResult === null && !isGenerating) {
+			themeName = 'Generated Theme';
+			themeOverrides = {};
 			generateThemeFromApi();
 		}
 	});
@@ -63,8 +65,8 @@
 		)
 			return;
 
-		themeOverrides = {};
 		themeName = 'Generated Theme';
+		themeOverrides = {};
 		generateThemeFromApi();
 	});
 
@@ -87,6 +89,7 @@
 	function handleThemeNameChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const newName = target.value;
+
 		appStore.state.themeExport.themeName = newName;
 		themeNameError = validateThemeName(newName);
 
@@ -103,10 +106,6 @@
 		const trimmedName = name.trim();
 
 		if (!themeResult || themeNameError || trimmedName.length === 0) {
-			return;
-		}
-
-		if (appStore.state.colors.length === 0) {
 			return;
 		}
 
@@ -159,18 +158,39 @@
 				const response = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
 
 				appStore.state.themeExport.themeResult = response;
+				appStore.state.themeExport.themeName = response.theme.name;
 				appStore.state.themeExport.loadedThemeOverridesReference = null;
 				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
 				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
 				return;
 			}
 
-			if (editorType !== 'zed' || !themeResult?.theme) {
+			if (!themeResult?.theme) {
 				return;
 			}
 
-			const response = await generateOverridable(themeResult.theme, themeOverrides);
+			const hasBackupColors =
+				appStore.state.themeExport.backupColors && appStore.state.themeExport.backupColors.length > 0;
+
+			if (editorType !== detectThemeType(themeResult.theme) && hasBackupColors) {
+				const response = await generateTheme(
+					appStore.state.themeExport.backupColors!,
+					editorType,
+					themeName.trim(),
+					themeOverrides
+				);
+
+				appStore.state.themeExport.themeResult = response;
+				appStore.state.themeExport.themeName = response.theme.name;
+				appStore.state.themeExport.loadedThemeOverridesReference = null;
+				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
+				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
+				return;
+			}
+
+			const response = await generateOverridable(themeResult.theme, themeOverrides, editorType);
 			appStore.state.themeExport.themeResult = response;
+			appStore.state.themeExport.themeName = response.theme.name;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
 		} catch {
 			toast.error('Could not generate the theme. Please try again.');
@@ -323,7 +343,9 @@
 		{ key: 'c5', label: 'C5', hint: 'Types/constants' },
 		{ key: 'c6', label: 'C6', hint: 'Keywords/preproc' },
 		{ key: 'c7', label: 'C7', hint: 'Parameters' },
-		{ key: 'c8', label: 'C8', hint: 'Operators/constructors' }
+		{ key: 'c8', label: 'C8', hint: 'Operators/constructors' },
+		{ key: 'c9', label: 'C9', hint: 'Builtins/variants' },
+		{ key: 'constants', label: 'Constants', hint: 'Numbers/boolean/constants' }
 	];
 
 	function normalizeHex(value: string | null | undefined): string | null {
@@ -344,7 +366,9 @@
 				{ key: 'c5', label: 'C5' },
 				{ key: 'c6', label: 'C6' },
 				{ key: 'c7', label: 'C7' },
-				{ key: 'c8', label: 'C8' }
+				{ key: 'c8', label: 'C8' },
+				{ key: 'c9', label: 'C9' },
+				{ key: 'constants', label: 'Constants' }
 			] as const
 		).find((entry) => baseOverrides[entry.key] === color);
 

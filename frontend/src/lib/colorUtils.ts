@@ -1,6 +1,13 @@
 import toast from 'svelte-french-toast';
 import type { Color } from './types/color';
 import type { Theme, ThemeColorWithUsage } from './types/theme';
+import type { EditorThemeType } from './api/theme';
+
+export function detectThemeType(theme: Theme): EditorThemeType {
+	if ('themes' in theme && Array.isArray((theme as Record<string, unknown>).themes)) return 'zed';
+	if ('colors' in theme && 'tokenColors' in theme) return 'vscode';
+	return 'zed';
+}
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 	if (!hex || typeof hex !== 'string') {

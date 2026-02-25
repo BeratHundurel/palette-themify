@@ -36,8 +36,16 @@ export async function generateTheme(
 	return res.json();
 }
 
-export async function generateOverridable(theme: Theme, overrides?: ThemeOverrides | null): Promise<ThemeResponse> {
-	const payload = overrides ? { theme, ThemeOverrides: overrides } : { theme };
+export async function generateOverridable(
+	theme: Theme,
+	overrides?: ThemeOverrides | null,
+	themeType: EditorThemeType = 'zed'
+): Promise<ThemeResponse> {
+	const payload = {
+		theme,
+		themeType,
+		...(overrides ? { ThemeOverrides: overrides } : {})
+	};
 
 	const res = await fetch(buildZigURL('/generate-overridable'), {
 		method: 'POST',

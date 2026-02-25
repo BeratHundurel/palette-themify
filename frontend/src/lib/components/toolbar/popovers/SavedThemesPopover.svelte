@@ -2,10 +2,10 @@
 	import { cn } from '$lib/utils';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import { detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
 	import type { SavedThemeItem, Theme } from '$lib/types/theme';
-	import { generateOverridable } from '$lib/api/theme';
+	import { generateOverridable, type EditorThemeType } from '$lib/api/theme';
 
 	let isImportOpen = $state(false);
 	let importJson = $state('');
@@ -22,15 +22,17 @@
 		}
 	}
 
-	async function handleThemeLoad(theme: Theme) {
+	async function handleThemeLoad(theme: Theme, editorType?: EditorThemeType) {
+		const resolvedType = editorType ?? detectThemeType(theme);
 		try {
-			const response = await generateOverridable(theme);
+			const response = await generateOverridable(theme, null, resolvedType);
 
-			appStore.setThemeExportEditorType('zed');
+			appStore.setThemeExportEditorType(resolvedType);
 			appStore.state.colors = [];
 			appStore.state.image = null;
 			appStore.state.imageLoaded = false;
 			appStore.state.themeExport.themeResult = response;
+			appStore.state.themeExport.backupColors = response.colors;
 			appStore.state.themeExport.themeName = response.theme.name;
 			appStore.state.themeExport.loadedThemeOverridesReference = response.themeOverrides;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
@@ -114,7 +116,7 @@
 	{#if isImportOpen}
 		<div class="mb-3 rounded-lg border border-zinc-700/60 bg-zinc-900/60 p-3">
 			<div class="mb-2 flex items-center justify-between">
-				<div class="text-xs font-semibold text-zinc-300">Import Zed theme JSON</div>
+				<div class="text-xs font-semibold text-zinc-300">Import theme JSON (Zed or VSCode)</div>
 				<button
 					type="button"
 					onclick={() => (isImportOpen = !isImportOpen)}
@@ -126,7 +128,7 @@
 			<textarea
 				rows="6"
 				bind:value={importJson}
-				placeholder="Paste your Zed theme JSON"
+				placeholder="Paste your Zed or VSCode theme JSON"
 				class="focus:border-brand/50 w-full rounded-md border border-zinc-700 bg-zinc-950/60 p-2 font-mono text-xs text-zinc-200 placeholder-zinc-600 transition-[border-color,box-shadow,background-color] duration-200 focus:outline-none"
 			></textarea>
 			<div class="mt-2 flex items-center justify-between gap-2">
@@ -183,7 +185,7 @@
 								<div class="mb-2 flex items-center justify-end gap-1">
 									<button
 										class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-										onclick={() => handleThemeLoad(item.themeResult.theme)}
+										onclick={() => handleThemeLoad(item.themeResult.theme, item.editorType)}
 										type="button"
 										title="Load into inspector"
 									>

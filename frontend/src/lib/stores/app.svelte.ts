@@ -15,7 +15,7 @@ import type { WorkspaceData } from '$lib/types/workspace';
 import type { SavedThemeItem, ThemeExportState } from '$lib/types/theme';
 import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 import type { EditorThemeType } from '$lib/api/theme';
-import type { SortMethod } from '$lib/colorUtils';
+import { type SortMethod } from '$lib/colorUtils';
 
 import { authStore } from './auth.svelte';
 import { tutorialStore } from './tutorial.svelte';
@@ -209,7 +209,8 @@ function createAppStore() {
 			lastGeneratedPaletteVersion: 0,
 			editorType: loadThemeExportPreferences(),
 			saveOnCopy: loadThemeExportSaveOnCopy(),
-			loadedThemeOverridesReference: null
+			loadedThemeOverridesReference: null,
+			backupColors: null
 		},
 		savedThemes: loadSavedThemes(),
 		paletteVersion: 0
@@ -219,13 +220,15 @@ function createAppStore() {
 
 	$effect.root(() => {
 		$effect(() => {
-			const signature = state.colors
-				.map((color) => color.hex.toUpperCase())
-				.sort()
-				.join('|');
-			if (signature === lastPaletteSignature) return;
-			lastPaletteSignature = signature;
-			state.paletteVersion += 1;
+			if (state.colors.length !== 0) {
+				const signature = state.colors
+					.map((color) => color.hex.toUpperCase())
+					.sort()
+					.join('|');
+				if (signature === lastPaletteSignature) return;
+				lastPaletteSignature = signature;
+				state.paletteVersion += 1;
+			}
 		});
 
 		$effect(() => {
