@@ -2,6 +2,7 @@ import toast from 'svelte-french-toast';
 import type { Color } from './types/color';
 import type { Theme, ThemeColorWithUsage } from './types/theme';
 import type { EditorThemeType } from './api/theme';
+import { COLOR_REGEX } from './constants';
 
 export function detectThemeType(theme: Theme): EditorThemeType {
 	if ('themes' in theme && Array.isArray((theme as Record<string, unknown>).themes)) return 'zed';
@@ -132,8 +133,6 @@ function checkSortChange(original: Array<Color>, sorted: Array<Color>): boolean 
 
 	return true;
 }
-
-const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 
 export function extractThemeColorsWithUsage(theme: Theme): ThemeColorWithUsage[] {
 	const colorMap = new Map<string, Map<string, Set<string>>>();

@@ -25,3 +25,5 @@ export const UI = {
 	SORT_BUTTON_PADDING: 5,
 	DEFAULT_SELECTOR_ID: 'green'
 } as const;
+
+export const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;

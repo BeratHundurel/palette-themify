@@ -7,8 +7,8 @@
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { COLOR_REGEX } from '$lib/constants';
 
-	const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 	const THEME_NAME_DEBOUNCE_MS = 300;
 
 	let expandedColorIndices = new SvelteSet<number>();
