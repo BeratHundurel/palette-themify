@@ -7,11 +7,19 @@
 	let { isOpen = $bindable() } = $props();
 
 	let inputEl = $state<HTMLInputElement | null>(null);
+	let scrollEl = $state<HTMLDivElement | null>(null);
+	let lastScrollTop = $state(0);
 	let lastQuery = $state('');
 
 	$effect(() => {
 		if (isOpen && inputEl) {
 			inputEl.focus();
+		}
+	});
+
+	$effect(() => {
+		if (isOpen && scrollEl) {
+			scrollEl.scrollTop = lastScrollTop;
 		}
 	});
 
@@ -108,6 +116,7 @@
 	function handleScroll(e: Event) {
 		const target = e.target as HTMLElement;
 		if (!target) return;
+		lastScrollTop = target.scrollTop;
 		const threshold = 300;
 		if (target.scrollHeight - target.scrollTop - target.clientHeight < threshold) {
 			loadMore();
@@ -122,6 +131,9 @@
 	}
 
 	function close() {
+		if (scrollEl) {
+			lastScrollTop = scrollEl.scrollTop;
+		}
 		if (_timer !== null) {
 			clearTimeout(_timer);
 			_timer = null;
@@ -188,7 +200,7 @@
 				</div>
 			</div>
 
-			<div class="custom-scrollbar max-h-[75vh] overflow-auto px-6 py-6" onscroll={handleScroll}>
+			<div class="custom-scrollbar max-h-[75vh] overflow-auto px-6 py-6" bind:this={scrollEl} onscroll={handleScroll}>
 				{#if isSearching}
 					<div class="flex flex-col items-center py-12">
 						<div
