@@ -100,18 +100,18 @@
 				{/if}
 
 				<div class="space-y-6">
-					<!-- Image & Processing Group -->
 					<div class="space-y-3">
 						<div class="flex items-center gap-3">
-							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Image & Processing</h3>
+							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Themes & Processing</h3>
 							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
 						<div class="flex gap-3">
+							<ThemeExport />
 							<SavedPalettes />
+							<SavedThemes />
 						</div>
 					</div>
 
-					<!-- Settings Group -->
 					<div class="space-y-3">
 						<div class="flex items-center gap-3">
 							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Settings</h3>
@@ -123,7 +123,6 @@
 						</div>
 					</div>
 
-					<!-- Copy & Export Group -->
 					<div class="space-y-6">
 						<div class="space-y-3">
 							<div class="flex items-center gap-3">
@@ -133,17 +132,6 @@
 							<div class="flex gap-3">
 								<CopyOptions />
 								<Download />
-							</div>
-						</div>
-
-						<div class="space-y-3">
-							<div class="flex items-center gap-3">
-								<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Generation</h3>
-								<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
-							</div>
-							<div class="flex gap-3">
-								<ThemeExport />
-								<SavedThemes />
 							</div>
 						</div>
 					</div>

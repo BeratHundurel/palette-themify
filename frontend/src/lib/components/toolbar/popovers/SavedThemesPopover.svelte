@@ -102,7 +102,7 @@
 	aria-labelledby="saved-themes-title"
 	tabindex="-1"
 >
-	<div class="mb-3 flex items-center justify-between p-2">
+	<div class="mb-3 flex items-center justify-between">
 		<h3 id="saved-themes-title" class="text-brand text-xs font-medium">Saved Themes</h3>
 		<button
 			type="button"
