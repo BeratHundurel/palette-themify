@@ -3,7 +3,6 @@ export type PopoverName =
 	| 'saved'
 	| 'copy'
 	| 'application'
-	| 'workspaces'
 	| 'themeExport'
 	| 'wallhaven'
 	| 'themes';

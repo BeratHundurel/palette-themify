@@ -74,7 +74,7 @@ func resetTestDB(t *testing.T) {
 	if DB == nil {
 		t.Fatalf("database not initialized")
 	}
-	if err := DB.Exec("TRUNCATE TABLE palettes, workspaces, users RESTART IDENTITY CASCADE").Error; err != nil {
+	if err := DB.Exec("TRUNCATE TABLE palettes, users RESTART IDENTITY CASCADE").Error; err != nil {
 		t.Fatalf("reset database: %v", err)
 	}
 }
