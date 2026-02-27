@@ -86,7 +86,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 func runMigrations() error {
-	return DB.AutoMigrate(&Palette{}, &User{}, &Workspace{})
+	return DB.AutoMigrate(&Palette{}, &User{})
 }
 
 func initializeDemoUser() error {

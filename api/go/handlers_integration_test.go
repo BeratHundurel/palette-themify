@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -108,17 +107,6 @@ func setupPaletteRouter() *gin.Engine {
 	return router
 }
 
-func setupWorkspaceRouter() *gin.Engine {
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	router.POST("/workspaces", saveWorkspaceHandler)
-	router.GET("/workspaces", getWorkspacesHandler)
-	router.POST("/workspaces/:id/share", shareWorkspaceHandler)
-	router.DELETE("/workspaces/:id/share", removeWorkspaceShareHandler)
-	router.GET("/shared", getSharedWorkspaceHandler)
-	return router
-}
-
 func setupAuthRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -128,25 +116,6 @@ func setupAuthRouter() *gin.Engine {
 	auth.Use(authMiddleware())
 	auth.GET("/me", getMeHandler)
 	return router
-}
-
-func createWorkspaceRequest(name string) SaveWorkspaceRequest {
-	return SaveWorkspaceRequest{
-		Name:      name,
-		ImageData: "data:image/png;base64,AAA",
-		Colors: []Color{
-			{Hex: "#112233"},
-			{Hex: "#445566"},
-		},
-		Selectors: []Selector{
-			{ID: "1", Color: "#112233", Selected: true},
-		},
-		ActiveSelectorId: "1",
-		Luminosity:       1.0,
-		Nearest:          2,
-		Power:            2,
-		MaxDistance:      0,
-	}
 }
 
 func TestMain(m *testing.M) {
@@ -247,80 +216,6 @@ func TestGetPalettesHandler_ReturnsSavedPalettes(t *testing.T) {
 		assert.Equal(t, "Saved", resp.Palettes[0].Name)
 		assert.Equal(t, "#112233", resp.Palettes[0].Palette[0].Hex)
 	}
-}
-
-func TestSaveWorkspaceHandler_AuthRequired(t *testing.T) {
-	setupTestDB(t)
-	resetTestDB(t)
-
-	router := setupWorkspaceRouter()
-	reqBody, err := json.Marshal(createWorkspaceRequest("My Workspace"))
-	if err != nil {
-		t.Fatalf("marshal request: %v", err)
-	}
-
-	req := httptest.NewRequest("POST", "/workspaces", bytes.NewReader(reqBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
-func TestWorkspaceShareFlow(t *testing.T) {
-	setupTestDB(t)
-	resetTestDB(t)
-
-	user := createTestUser(t)
-	token, err := generateJWTToken(user)
-	if err != nil {
-		t.Fatalf("generate token: %v", err)
-	}
-
-	request := createWorkspaceRequest("Shared Workspace")
-	if err := saveUserWorkspace(user.ID, request); err != nil {
-		t.Fatalf("save workspace: %v", err)
-	}
-
-	var workspace Workspace
-	if err := DB.Where("user_id = ?", user.ID).First(&workspace).Error; err != nil {
-		t.Fatalf("load workspace: %v", err)
-	}
-
-	router := setupWorkspaceRouter()
-	shareReq := httptest.NewRequest("POST", "/workspaces/"+fmt.Sprintf("%d", workspace.ID)+"/share", nil)
-	shareReq.Header.Set("Authorization", "Bearer "+token)
-	shareResp := httptest.NewRecorder()
-	router.ServeHTTP(shareResp, shareReq)
-
-	assert.Equal(t, http.StatusOK, shareResp.Code)
-	var shareBody map[string]string
-	if err := json.Unmarshal(shareResp.Body.Bytes(), &shareBody); err != nil {
-		t.Fatalf("decode share response: %v", err)
-	}
-	shareToken := shareBody["shareToken"]
-	if shareToken == "" {
-		t.Fatalf("missing share token")
-	}
-
-	getReq := httptest.NewRequest("GET", "/shared?token="+shareToken, nil)
-	getResp := httptest.NewRecorder()
-	router.ServeHTTP(getResp, getReq)
-
-	assert.Equal(t, http.StatusOK, getResp.Code)
-	var shared WorkspaceData
-	if err := json.Unmarshal(getResp.Body.Bytes(), &shared); err != nil {
-		t.Fatalf("decode shared workspace: %v", err)
-	}
-	assert.Equal(t, request.Name, shared.Name)
-
-	removeReq := httptest.NewRequest("DELETE", "/workspaces/"+fmt.Sprintf("%d", workspace.ID)+"/share", nil)
-	removeReq.Header.Set("Authorization", "Bearer "+token)
-	removeResp := httptest.NewRecorder()
-	router.ServeHTTP(removeResp, removeReq)
-
-	assert.Equal(t, http.StatusOK, removeResp.Code)
 }
 
 func TestAuthRegisterLoginMeFlow(t *testing.T) {

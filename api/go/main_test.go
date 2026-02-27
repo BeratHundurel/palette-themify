@@ -489,27 +489,6 @@ func TestShepardsMethodColor(t *testing.T) {
 	})
 }
 
-func TestColorObservationDistance(t *testing.T) {
-	obs := colorObservation{0.5, 0.5, 0.5}
-
-	t.Run("Distance to same point is 0", func(t *testing.T) {
-		dist := obs.Distance([]float64{0.5, 0.5, 0.5})
-		assert.Equal(t, 0.0, dist)
-	})
-
-	t.Run("Distance calculation", func(t *testing.T) {
-		dist := obs.Distance([]float64{0.0, 0.0, 0.0})
-		expected := 0.75
-		assert.InDelta(t, expected, dist, 0.0001)
-	})
-
-	t.Run("Distance to opposite corner", func(t *testing.T) {
-		dist := obs.Distance([]float64{1.0, 1.0, 1.0})
-		expected := 0.75
-		assert.InDelta(t, expected, dist, 0.0001)
-	})
-}
-
 func TestProcessImageWithShepardsMethod(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
 	for y := range 4 {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 type Claims struct {
@@ -37,6 +40,24 @@ type AuthResponse struct {
 
 type DemoLoginRequest struct {
 	// No fields needed for demo login
+}
+
+var googleOAuthConfig *oauth2.Config
+
+func getGoogleOAuthConfig() *oauth2.Config {
+	if googleOAuthConfig != nil {
+		return googleOAuthConfig
+	}
+
+	googleOAuthConfig = &oauth2.Config{
+		ClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		ClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+		Endpoint:     google.Endpoint,
+		RedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8088/auth/google/callback"),
+	}
+
+	return googleOAuthConfig
 }
 
 func hashPassword(password string) (string, error) {
@@ -78,12 +99,8 @@ func createDemoUserIfNotExists() (*User, error) {
 		return nil, fmt.Errorf("database not available")
 	}
 
-	demoEmail := "demo@imagepalette.com"
+	demoEmail := fmt.Sprintf("demo-%d@imagepalette.com", time.Now().UnixNano())
 	var demoUser User
-
-	if err := DB.Where("email = ?", demoEmail).First(&demoUser).Error; err == nil {
-		return &demoUser, nil
-	}
 
 	hashedPassword, err := hashPassword("demopassword123")
 	if err != nil {
@@ -374,4 +391,113 @@ func demoLoginHandler(c *gin.Context) {
 		User:    *demoUser,
 		Message: "Demo login successful",
 	})
+}
+
+type GoogleUserInfo struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	VerifiedEmail bool   `json:"verified_email"`
+}
+
+func googleLoginHandler(c *gin.Context) {
+	config := getGoogleOAuthConfig()
+
+	if config.ClientID == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Google OAuth not configured"})
+		return
+	}
+
+	url := config.AuthCodeURL("random-state-string", oauth2.AccessTypeOffline)
+	c.JSON(http.StatusOK, gin.H{"url": url})
+}
+
+func googleCallbackHandler(c *gin.Context) {
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code parameter"})
+		return
+	}
+
+	config := getGoogleOAuthConfig()
+
+	token, err := config.Exchange(c.Request.Context(), code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange code for token"})
+		return
+	}
+
+	client := config.Client(c.Request.Context(), token)
+	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+		return
+	}
+	defer resp.Body.Close()
+
+	var userInfo GoogleUserInfo
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user info"})
+		return
+	}
+
+	if !userInfo.VerifiedEmail {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Google email not verified"})
+		return
+	}
+
+	user, err := findOrCreateGoogleUser(userInfo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	jwtToken, err := generateJWTToken(*user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	frontendURL := getEnv("FRONTEND_URL", "http://localhost:5173")
+	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/auth/google/callback?token=%s", frontendURL, jwtToken))
+}
+
+func findOrCreateGoogleUser(userInfo GoogleUserInfo) (*User, error) {
+	if DB == nil {
+		return nil, fmt.Errorf("database not available")
+	}
+
+	var user User
+	if err := DB.Where("google_id = ?", userInfo.ID).First(&user).Error; err == nil {
+		if userInfo.Picture != "" && user.AvatarURL != userInfo.Picture {
+			DB.Model(&user).Update("avatar_url", userInfo.Picture)
+			user.AvatarURL = userInfo.Picture
+		}
+		return &user, nil
+	}
+
+	if err := DB.Where("email = ?", userInfo.Email).First(&user).Error; err == nil {
+		user.GoogleID = userInfo.ID
+		if userInfo.Picture != "" {
+			user.AvatarURL = userInfo.Picture
+		}
+		if err := DB.Save(&user).Error; err != nil {
+			return nil, fmt.Errorf("failed to update user with Google ID: %w", err)
+		}
+		return &user, nil
+	}
+
+	user = User{
+		Name:      userInfo.Name,
+		Email:     userInfo.Email,
+		GoogleID:  userInfo.ID,
+		AvatarURL: userInfo.Picture,
+	}
+
+	if err := DB.Create(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return &user, nil
 }

@@ -7,24 +7,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/muesli/clusters"
 )
 
 type colorObservation []float64
 
-func (c colorObservation) Coordinates() clusters.Coordinates {
-	return clusters.Coordinates(c)
-}
-
-func (c colorObservation) Distance(p clusters.Coordinates) float64 {
-	var sum float64
-	for i, v := range c {
-		diff := v - p[i]
-		sum += diff * diff
-	}
-	return sum
-}
 
 func hexToRGBA(s string) (color.RGBA, error) {
 	s = strings.TrimSpace(s)

@@ -41,6 +41,8 @@ func main() {
 	router.POST("/auth/register", registerHandler)
 	router.POST("/auth/login", loginHandler)
 	router.POST("/auth/demo-login", demoLoginHandler)
+	router.GET("/auth/google", googleLoginHandler)
+	router.GET("/auth/google/callback", googleCallbackHandler)
 
 	auth := router.Group("/auth")
 	auth.Use(authMiddleware())
@@ -52,14 +54,6 @@ func main() {
 	router.GET("/palettes", getPalettesHandler)
 	router.POST("/palettes", savePaletteHandler)
 	router.DELETE("/palettes/:id", deletePaletteHandler)
-
-	router.GET("/workspaces", getWorkspacesHandler)
-	router.POST("/workspaces", saveWorkspaceHandler)
-	router.DELETE("/workspaces/:id", deleteWorkspaceHandler)
-	router.POST("/workspaces/:id/share", shareWorkspaceHandler)
-	router.DELETE("/workspaces/:id/share", removeWorkspaceShareHandler)
-	router.GET("/shared", getSharedWorkspaceHandler)
-
 	router.POST("/apply-palette", applyPaletteHandler)
 
 	router.GET("/wallhaven/search", wallhavenSearchHandler)
