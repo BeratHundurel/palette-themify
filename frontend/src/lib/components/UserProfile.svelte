@@ -8,9 +8,7 @@
 	async function handleLogout() {
 		try {
 			await authStore.logout();
-
 			await appStore.loadSavedPalettes();
-			await appStore.loadSavedWorkspaces();
 
 			showDropdown = false;
 			toast.success('Logged out successfully');

@@ -47,7 +47,7 @@
 		class="absolute inset-0 transition-[opacity,transform] duration-300"
 		style="background: linear-gradient(135deg, {selector.color} 0%, {selector.color} 100%)"
 	>
-		<div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
+		<div class="absolute inset-0 bg-linear-to-br from-white/5 to-transparent"></div>
 
 		<div class="absolute inset-0 bg-black/10 transition-[background-color] duration-300 group-hover:bg-black/5"></div>
 	</div>
@@ -78,7 +78,7 @@
 
 	<!-- Hover shimmer effect -->
 	<div
-		class="absolute inset-0 bg-gradient-to-br from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+		class="absolute inset-0 bg-linear-to-br from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
 		style="transform: translateX(-100%); animation: shimmer 2s infinite;"
 	></div>
 </button>

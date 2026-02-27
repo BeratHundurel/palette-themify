@@ -129,3 +129,25 @@ export async function demoLogin(): Promise<AuthResponse> {
 
 	return data;
 }
+
+export async function getGoogleAuthUrl(): Promise<{ url: string }> {
+	const response = await fetch(buildURL('/auth/google'), {
+		method: 'GET'
+	});
+
+	await ensureOk(response);
+
+	return response.json();
+}
+
+export async function handleGoogleCallback(code: string): Promise<AuthResponse> {
+	const response = await fetch(`${buildURL('/auth/google/callback')}?code=${encodeURIComponent(code)}`, {
+		method: 'GET'
+	});
+
+	await ensureOk(response);
+	const data = (await response.json()) as AuthResponse;
+	if (data.token) setAuthToken(data.token);
+
+	return data;
+}

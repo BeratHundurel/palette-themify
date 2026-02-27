@@ -3,7 +3,6 @@
 	import CopyOptions from './CopyOptions.svelte';
 	import SelectorButton from './SelectorButton.svelte';
 	import SavedPalettes from './SavedPalettes.svelte';
-	import SavedWorkspaces from './SavedWorkspaces.svelte';
 	import ApplyPaletteSettings from './ApplyPaletteSettings.svelte';
 	import WallhavenSettings from './WallhavenSettings.svelte';
 	import ThemeExport from './ThemeExport.svelte';
@@ -12,7 +11,6 @@
 	import WallhavenSettingsPopover from './popovers/WallhavenSettingsPopover.svelte';
 	import CopyOptionsPopover from './popovers/CopyOptionsPopover.svelte';
 	import SavedPalettesPopover from './popovers/SavedPalettesPopover.svelte';
-	import SavedWorkspacesPopover from './popovers/SavedWorkspacesPopover.svelte';
 	import SavedThemesPopover from './popovers/SavedThemesPopover.svelte';
 	import Download from './Download.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
@@ -109,7 +107,6 @@
 							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
 						<div class="flex gap-3">
-							<SavedWorkspaces />
 							<SavedPalettes />
 						</div>
 					</div>
@@ -168,10 +165,6 @@
 
 		{#if popoverStore.state.current === 'saved'}
 			<SavedPalettesPopover />
-		{/if}
-
-		{#if popoverStore.state.current === 'workspaces'}
-			<SavedWorkspacesPopover />
 		{/if}
 
 		{#if popoverStore.state.current === 'themes'}

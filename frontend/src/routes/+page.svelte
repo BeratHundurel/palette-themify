@@ -12,12 +12,6 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import TutorialButton from '$lib/components/tutorial/TutorialButton.svelte';
-	import { getSharedWorkspace } from '$lib/api/workspace';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import toast from 'svelte-french-toast';
-	import { tick } from 'svelte';
 	import Search from '$lib/components/search/Search.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import ThemeExportPopover from '$lib/components/toolbar/popovers/ThemeExportPopover.svelte';
@@ -26,26 +20,7 @@
 
 	onMount(async () => {
 		await authStore.init();
-		await appStore.loadSavedPalettes();
-		await appStore.loadSavedWorkspaces();
-
-		const shareToken = page.url.searchParams.get('share');
-		if (shareToken) {
-			const toastId = toast.loading('Loading shared workspace...');
-			await tick();
-
-			try {
-				const workspace = await getSharedWorkspace(shareToken);
-				await appStore.loadWorkspace(workspace);
-				toast.success(`Loaded: ${workspace.name}`, { id: toastId });
-
-				await goto(resolve('/'), { replaceState: true });
-			} catch {
-				toast.error('Could not load the shared workspace. Please check the link and try again.', {
-					id: toastId
-				});
-			}
-		}
+		appStore.loadSavedPalettes();
 	});
 </script>
 

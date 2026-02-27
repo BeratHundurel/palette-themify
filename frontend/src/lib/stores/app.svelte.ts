@@ -4,14 +4,12 @@ import toast from 'svelte-french-toast';
 
 import * as paletteApi from '$lib/api/palette';
 import * as themeApi from '$lib/api/theme';
-import * as workspaceApi from '$lib/api/workspace';
 import { downloadImage } from '$lib/api/wallhaven';
 import { CANVAS, SELECTION, IMAGE, UI } from '$lib/constants';
 import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
 import type { Color } from '$lib/types/color';
 import type { Selector } from '$lib/types/selector';
 import type { PaletteData } from '$lib/types/palette';
-import type { WorkspaceData } from '$lib/types/workspace';
 import type { SavedThemeItem, ThemeExportState } from '$lib/types/theme';
 import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 import type { EditorThemeType } from '$lib/api/theme';
@@ -62,7 +60,6 @@ interface AppState {
 	activeSelectorId: string;
 	newFilterColor: string;
 	savedPalettes: PaletteData[];
-	savedWorkspaces: WorkspaceData[];
 	sortMethod: SortMethod;
 	applyPaletteSettings: ApplyPaletteSettings;
 	themeExport: ThemeExportState;
@@ -103,7 +100,6 @@ function createAppStore() {
 		activeSelectorId: UI.DEFAULT_SELECTOR_ID,
 		newFilterColor: '',
 		savedPalettes: [],
-		savedWorkspaces: [],
 		sortMethod: 'none',
 		applyPaletteSettings: loadApplyPaletteSettings(),
 		themeExport: {
@@ -766,281 +762,6 @@ function createAppStore() {
 				toast.success('Image downloaded', { id: toastId });
 			} catch {
 				toast.error('Download failed. Please try again.', { id: toastId });
-			}
-		},
-
-		async saveWorkspace() {
-			if (!state.canvas || !state.imageLoaded || !state.image) {
-				toast.error('Load an image before saving a workspace.');
-				return;
-			}
-
-			const workspaceName = prompt('Enter a name for your workspace:');
-			if (!workspaceName) return;
-
-			const toastId = toast.loading('Saving workspace...');
-
-			try {
-				const imageDataUrl = getCleanImageDataUrl();
-				if (!imageDataUrl) {
-					toast.error('Could not prepare the workspace image. Please try again.', { id: toastId });
-					return;
-				}
-
-				if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
-					await workspaceApi.saveWorkspace(workspaceName, imageDataUrl, {
-						colors: state.colors,
-						selectors: state.selectors,
-						activeSelectorId: state.activeSelectorId,
-						luminosity: state.applyPaletteSettings.luminosity,
-						nearest: state.applyPaletteSettings.nearest,
-						power: state.applyPaletteSettings.power,
-						maxDistance: state.applyPaletteSettings.maxDistance,
-						wallhavenSettings: state.wallhavenSettings
-					});
-					toast.success('Workspace saved: ' + workspaceName, { id: toastId });
-					await appStore.loadSavedWorkspaces();
-				} else {
-					if (browser) {
-						const newWorkspace: WorkspaceData = {
-							id: `local_${Date.now()}`,
-							name: workspaceName,
-							imageData: imageDataUrl,
-							colors: state.colors,
-							selectors: state.selectors,
-							activeSelectorId: state.activeSelectorId,
-							luminosity: state.applyPaletteSettings.luminosity,
-							nearest: state.applyPaletteSettings.nearest,
-							power: state.applyPaletteSettings.power,
-							maxDistance: state.applyPaletteSettings.maxDistance,
-							wallhavenSettings: state.wallhavenSettings,
-							createdAt: new Date().toISOString()
-						};
-
-						const stored = localStorage.getItem('savedWorkspaces');
-						const workspaces = stored ? JSON.parse(stored) : [];
-						workspaces.push(newWorkspace);
-						localStorage.setItem('savedWorkspaces', JSON.stringify(workspaces));
-
-						await appStore.loadSavedWorkspaces();
-						toast.success('Workspace saved: ' + workspaceName, { id: toastId });
-					}
-				}
-			} catch {
-				toast.error('Could not save the workspace. Please try again.', { id: toastId });
-			}
-		},
-
-		async loadWorkspace(workspace: WorkspaceData) {
-			const toastId = toast.loading('Loading workspace...');
-
-			try {
-				const img = new Image();
-				img.onload = async () => {
-					state.image = img;
-					if (!state.canvas) {
-						toast.error('Canvas is not available yet. Try again in a moment.', { id: toastId });
-						return;
-					}
-
-					state.canvasContext = state.canvas.getContext('2d')!;
-					state.originalImageWidth = img.width;
-					state.originalImageHeight = img.height;
-
-					const dimensions = calculateImageDimensions(state.originalImageWidth, state.originalImageHeight);
-
-					state.canvasScaleX = dimensions.scaleX;
-					state.canvasScaleY = dimensions.scaleY;
-					state.canvas.width = dimensions.width;
-					state.canvas.height = dimensions.height;
-					state.canvas.style.width = dimensions.width + 'px';
-					state.canvas.style.height = dimensions.height + 'px';
-
-					state.canvasContext.drawImage(img, 0, 0, dimensions.width, dimensions.height);
-					state.imageLoaded = true;
-
-					state.colors = workspace.colors || [];
-					state.selectors = workspace.selectors || [];
-					state.activeSelectorId = workspace.activeSelectorId || UI.DEFAULT_SELECTOR_ID;
-					state.applyPaletteSettings = {
-						luminosity: workspace.luminosity || 1,
-						nearest: workspace.nearest || 30,
-						power: workspace.power || 4,
-						maxDistance: workspace.maxDistance || 0
-					};
-					state.wallhavenSettings = workspace.wallhavenSettings || {
-						categories: '111',
-						purity: '100',
-						sorting: 'relevance',
-						order: 'desc',
-						topRange: '1M',
-						ratios: [],
-						apikey: ''
-					};
-
-					drawImageAndBoxes();
-					toast.success('Workspace loaded: ' + workspace.name, { id: toastId });
-				};
-
-				img.onerror = () => {
-					toast.error('Could not load the workspace image.', { id: toastId });
-				};
-
-				img.src = workspace.imageData;
-			} catch {
-				toast.error('Could not load the workspace. Please try again.', { id: toastId });
-			}
-		},
-
-		async loadSavedWorkspaces() {
-			if (!browser) return;
-
-			try {
-				if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
-					const response = await workspaceApi.getWorkspaces();
-					state.savedWorkspaces = response.workspaces.map((w) => ({
-						...w,
-						colors: w.colors || [],
-						selectors: w.selectors || [],
-						activeSelectorId: w.activeSelectorId || UI.DEFAULT_SELECTOR_ID,
-						luminosity: w.luminosity || 1,
-						nearest: w.nearest || 30,
-						power: w.power || 4,
-						maxDistance: w.maxDistance || 0,
-						wallhavenSettings: w.wallhavenSettings || {
-							categories: '111',
-							purity: '100',
-							sorting: 'relevance',
-							order: 'desc',
-							topRange: '1M',
-							ratios: [],
-							apikey: ''
-						}
-					}));
-				} else if (authStore.state.isAuthenticated && authStore.isDemoUser()) {
-					const response = await workspaceApi.getWorkspaces();
-					const serverWorkspaces = response.workspaces.map((w) => ({
-						...w,
-						colors: w.colors || [],
-						selectors: w.selectors || [],
-						activeSelectorId: w.activeSelectorId || UI.DEFAULT_SELECTOR_ID,
-						luminosity: w.luminosity || 1,
-						nearest: w.nearest || 30,
-						power: w.power || 4,
-						maxDistance: w.maxDistance || 0,
-						wallhavenSettings: w.wallhavenSettings || {
-							categories: '111',
-							purity: '100',
-							sorting: 'relevance',
-							order: 'desc',
-							topRange: '1M',
-							ratios: [],
-							apikey: ''
-						}
-					}));
-
-					const stored = localStorage.getItem('savedWorkspaces');
-					const localWorkspaces = stored ? (JSON.parse(stored) as WorkspaceData[]) : [];
-
-					state.savedWorkspaces = [...localWorkspaces, ...serverWorkspaces];
-				} else {
-					const stored = localStorage.getItem('savedWorkspaces');
-					if (stored) {
-						try {
-							const localWorkspaces = JSON.parse(stored) as WorkspaceData[];
-							state.savedWorkspaces = localWorkspaces;
-						} catch {
-							state.savedWorkspaces = [];
-						}
-					} else {
-						state.savedWorkspaces = [];
-					}
-				}
-			} catch (error) {
-				console.error('Failed to load saved workspaces:', error);
-				state.savedWorkspaces = [];
-			}
-		},
-
-		async deleteWorkspace(workspaceId: string) {
-			try {
-				const isLocalWorkspace = workspaceId.startsWith('local_');
-
-				if (authStore.state.isAuthenticated && !authStore.isDemoUser() && !isLocalWorkspace) {
-					await workspaceApi.deleteWorkspace(workspaceId);
-					toast.success('Workspace deleted');
-					await appStore.loadSavedWorkspaces();
-				} else if (authStore.isDemoUser() && !isLocalWorkspace) {
-					await workspaceApi.deleteWorkspace(workspaceId);
-					toast.success('Workspace deleted');
-					await appStore.loadSavedWorkspaces();
-				} else {
-					if (browser) {
-						const stored = localStorage.getItem('savedWorkspaces');
-						const workspaces = stored ? JSON.parse(stored) : [];
-						const filtered = workspaces.filter((w: WorkspaceData) => w.id !== workspaceId);
-						localStorage.setItem('savedWorkspaces', JSON.stringify(filtered));
-					}
-					await appStore.loadSavedWorkspaces();
-					toast.success('Workspace deleted');
-				}
-			} catch {
-				toast.error('Could not delete the workspace. Please try again.');
-			}
-		},
-
-		async syncWorkspacesOnAuth() {
-			if (!browser) return;
-
-			if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
-				const stored = localStorage.getItem('savedWorkspaces');
-				if (stored) {
-					try {
-						const localWorkspaces = JSON.parse(stored) as WorkspaceData[];
-						const toastId = toast.loading('Syncing your workspaces...');
-						try {
-							await Promise.all(
-								localWorkspaces.map(async (workspace) => {
-									try {
-										await workspaceApi.saveWorkspace(workspace.name, workspace.imageData, {
-											colors: workspace.colors || [],
-											selectors: workspace.selectors || [],
-											activeSelectorId: workspace.activeSelectorId || UI.DEFAULT_SELECTOR_ID,
-											luminosity: workspace.luminosity || 1,
-											nearest: workspace.nearest || 30,
-											power: workspace.power || 4,
-											maxDistance: workspace.maxDistance || 0,
-											wallhavenSettings: workspace.wallhavenSettings || {
-												categories: '111',
-												purity: '100',
-												sorting: 'relevance',
-												order: 'desc',
-												topRange: '1M',
-												ratios: [],
-												apikey: ''
-											}
-										});
-									} catch (err) {
-										console.error('Failed to sync workspace:', workspace.name, err);
-									}
-								})
-							);
-							localStorage.removeItem('savedWorkspaces');
-							toast.success('Workspaces synced successfully', { id: toastId });
-						} catch {
-							toast.error('Some workspaces could not be synced. Try again later.', { id: toastId });
-						}
-					} catch {
-						console.error('Failed to parse local workspaces');
-					}
-				}
-				await appStore.loadSavedWorkspaces();
-			} else if (authStore.state.isAuthenticated && authStore.isDemoUser()) {
-				await appStore.loadSavedWorkspaces();
-			} else {
-				if (state.savedWorkspaces.length > 0) {
-					localStorage.setItem('savedWorkspaces', JSON.stringify(state.savedWorkspaces));
-				}
 			}
 		},
 
