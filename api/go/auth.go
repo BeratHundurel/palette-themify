@@ -38,10 +38,6 @@ type AuthResponse struct {
 	Message string `json:"message"`
 }
 
-type DemoLoginRequest struct {
-	// No fields needed for demo login
-}
-
 var googleOAuthConfig *oauth2.Config
 
 func getGoogleOAuthConfig() *oauth2.Config {
@@ -92,83 +88,6 @@ func generateJWTToken(user User) (string, error) {
 	}
 
 	return tokenString, nil
-}
-
-func createDemoUserIfNotExists() (*User, error) {
-	if DB == nil {
-		return nil, fmt.Errorf("database not available")
-	}
-
-	demoEmail := fmt.Sprintf("demo-%d@imagepalette.com", time.Now().UnixNano())
-	var demoUser User
-
-	hashedPassword, err := hashPassword("demopassword123")
-	if err != nil {
-		return nil, fmt.Errorf("failed to hash demo password: %w", err)
-	}
-
-	demoUser = User{
-		Name:         "Demo User",
-		Email:        demoEmail,
-		PasswordHash: hashedPassword,
-	}
-
-	if err := DB.Create(&demoUser).Error; err != nil {
-		return nil, fmt.Errorf("failed to create demo user: %w", err)
-	}
-
-	if err := createSamplePalettes(demoUser.ID); err != nil {
-		fmt.Printf("Warning: Failed to create sample palettes for demo user: %v\n", err)
-	}
-
-	return &demoUser, nil
-}
-
-func createSamplePalettes(userID uint) error {
-	samplePalettes := []struct {
-		Name     string
-		JsonData string
-	}{
-		{
-			Name:     "Ocean Sunset",
-			JsonData: `[{"hex":"#FF6B35"},{"hex":"#F7931E"},{"hex":"#FFD23F"},{"hex":"#06FFA5"},{"hex":"#4ECDC4"},{"hex":"#1B9AAA"},{"hex":"#EF476F"},{"hex":"#FFC43D"}]`,
-		},
-		{
-			Name:     "Forest Vibes",
-			JsonData: `[{"hex":"#2D5016"},{"hex":"#61A05D"},{"hex":"#8FBC8F"},{"hex":"#B5D6AA"},{"hex":"#D6EAD0"},{"hex":"#4A6741"},{"hex":"#7BA05B"},{"hex":"#A8D8A8"}]`,
-		},
-		{
-			Name:     "Retro Gaming",
-			JsonData: `[{"hex":"#FF0040"},{"hex":"#FF8000"},{"hex":"#FFFF00"},{"hex":"#00FF00"},{"hex":"#0080FF"},{"hex":"#8000FF"},{"hex":"#FF00FF"},{"hex":"#00FFFF"}]`,
-		},
-		{
-			Name:     "Purple Dreams",
-			JsonData: `[{"hex":"#4A154B"},{"hex":"#7B2982"},{"hex":"#A663CC"},{"hex":"#D4B2F7"},{"hex":"#F0E6FF"},{"hex":"#6B2C91"},{"hex":"#9B59B6"},{"hex":"#BB8FCE"}]`,
-		},
-		{
-			Name:     "Warm Autumn",
-			JsonData: `[{"hex":"#8B4513"},{"hex":"#D2691E"},{"hex":"#FF8C00"},{"hex":"#FFA500"},{"hex":"#FFD700"},{"hex":"#CD853F"},{"hex":"#DEB887"},{"hex":"#F4A460"}]`,
-		},
-		{
-			Name:     "Grayscale Classic",
-			JsonData: `[{"hex":"#E3E7E7"},{"hex":"#B5B5AF"},{"hex":"#CCCECB"},{"hex":"#959590"},{"hex":"#6A6C6B"},{"hex":"#343638"},{"hex":"#BA875C"},{"hex":"#85593C"}]`,
-		},
-	}
-
-	for _, palette := range samplePalettes {
-		dbPalette := Palette{
-			UserID:   &userID,
-			Name:     palette.Name,
-			JsonData: palette.JsonData,
-			IsSystem: true,
-		}
-
-		if err := DB.Create(&dbPalette).Error; err != nil {
-			return fmt.Errorf("failed to create palette %s: %w", palette.Name, err)
-		}
-	}
-
-	return nil
 }
 
 func validateJWTToken(tokenString string) (*Claims, error) {
@@ -370,27 +289,6 @@ func changePasswordHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
-}
-
-func demoLoginHandler(c *gin.Context) {
-	demoUser, err := createDemoUserIfNotExists()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo user"})
-		return
-	}
-
-	token, err := generateJWTToken(*demoUser)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-
-	demoUser.PasswordHash = ""
-	c.JSON(http.StatusOK, AuthResponse{
-		Token:   token,
-		User:    *demoUser,
-		Message: "Demo login successful",
-	})
 }
 
 type GoogleUserInfo struct {

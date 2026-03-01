@@ -9,9 +9,6 @@ import (
 	"strings"
 )
 
-type colorObservation []float64
-
-
 func hexToRGBA(s string) (color.RGBA, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {

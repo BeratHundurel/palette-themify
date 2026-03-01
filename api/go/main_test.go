@@ -232,13 +232,6 @@ func TestCreateColorHex(t *testing.T) {
 	assert.Equal(t, "#FFFFFF", color.Hex)
 }
 
-func TestDemoUserEmail(t *testing.T) {
-	demoEmail := "demo@imagepalette.com"
-	assert.Contains(t, demoEmail, "@")
-	assert.Contains(t, demoEmail, "demo")
-	assert.Contains(t, demoEmail, "imagepalette.com")
-}
-
 // --- Color Utility Function Tests ---
 
 func TestHexToRGBA(t *testing.T) {

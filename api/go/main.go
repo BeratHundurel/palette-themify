@@ -40,7 +40,6 @@ func main() {
 
 	router.POST("/auth/register", registerHandler)
 	router.POST("/auth/login", loginHandler)
-	router.POST("/auth/demo-login", demoLoginHandler)
 	router.GET("/auth/google", googleLoginHandler)
 	router.GET("/auth/google/callback", googleCallbackHandler)
 
