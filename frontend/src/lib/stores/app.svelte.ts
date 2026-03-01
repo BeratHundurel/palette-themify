@@ -15,17 +15,14 @@ import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 import type { EditorThemeType } from '$lib/api/theme';
 import { type SortMethod } from '$lib/colorUtils';
 
+import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/savedThemes';
+import { loadWallhavenSettings, saveWallhavenSettings } from '$lib/stores/app/wallhavenSettings';
+import { loadApplyPaletteSettings, saveApplyPaletteSettings } from '$lib/stores/app/applyPaletteSettings';
 import {
-	loadApplyPaletteSettings,
-	loadSavedThemes,
 	loadThemeExportPreferences,
 	loadThemeExportSaveOnCopy,
-	loadWallhavenSettings,
-	saveApplyPaletteSettings,
-	saveSavedThemes,
-	saveThemeExportPreferences,
-	saveWallhavenSettings
-} from '$lib/persistence';
+	saveThemeExportPreferences
+} from '$lib/stores/app/themeExport';
 
 import { authStore } from './auth.svelte';
 import { tutorialStore } from './tutorial.svelte';
@@ -557,7 +554,7 @@ function createAppStore() {
 			if (!paletteName) return;
 
 			try {
-				if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
+				if (authStore.state.isAuthenticated) {
 					const data = await paletteApi.savePalette(paletteName, state.colors);
 					toast.success('Palette saved: ' + data.name);
 					await appStore.loadSavedPalettes();
@@ -637,17 +634,9 @@ function createAppStore() {
 			if (!browser) return;
 
 			try {
-				if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
+				if (authStore.state.isAuthenticated) {
 					const response = await paletteApi.getPalettes();
 					state.savedPalettes = response.palettes;
-				} else if (authStore.state.isAuthenticated && authStore.isDemoUser()) {
-					const response = await paletteApi.getPalettes();
-					const serverPalettes = response.palettes;
-
-					const stored = localStorage.getItem('savedPalettes');
-					const localPalettes = stored ? (JSON.parse(stored) as PaletteData[]) : [];
-
-					state.savedPalettes = [...localPalettes, ...serverPalettes];
 				} else {
 					const stored = localStorage.getItem('savedPalettes');
 					if (stored) {
@@ -671,11 +660,7 @@ function createAppStore() {
 			try {
 				const isLocalPalette = paletteId.startsWith('local_');
 
-				if (authStore.state.isAuthenticated && !authStore.isDemoUser() && !isLocalPalette) {
-					await paletteApi.deletePalette(paletteId);
-					toast.success('Palette deleted');
-					await appStore.loadSavedPalettes();
-				} else if (authStore.isDemoUser() && !isLocalPalette) {
+				if (authStore.state.isAuthenticated && !isLocalPalette) {
 					await paletteApi.deletePalette(paletteId);
 					toast.success('Palette deleted');
 					await appStore.loadSavedPalettes();
@@ -697,7 +682,7 @@ function createAppStore() {
 		async syncPalettesOnAuth() {
 			if (!browser) return;
 
-			if (authStore.state.isAuthenticated && !authStore.isDemoUser()) {
+			if (authStore.state.isAuthenticated) {
 				const stored = localStorage.getItem('savedPalettes');
 				if (stored) {
 					try {
@@ -722,8 +707,6 @@ function createAppStore() {
 						console.error('Failed to parse local palettes');
 					}
 				}
-				await appStore.loadSavedPalettes();
-			} else if (authStore.state.isAuthenticated && authStore.isDemoUser()) {
 				await appStore.loadSavedPalettes();
 			} else {
 				if (state.savedPalettes.length > 0) {

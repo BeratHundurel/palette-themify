@@ -117,19 +117,6 @@ export async function changePassword(passwordData: ChangePasswordRequest): Promi
 	return response.json();
 }
 
-export async function demoLogin(): Promise<AuthResponse> {
-	const response = await fetch(buildURL('/auth/demo-login'), {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' }
-	});
-
-	await ensureOk(response);
-	const data = (await response.json()) as AuthResponse;
-	if (data.token) setAuthToken(data.token);
-
-	return data;
-}
-
 export async function getGoogleAuthUrl(): Promise<{ url: string }> {
 	const response = await fetch(buildURL('/auth/google'), {
 		method: 'GET'

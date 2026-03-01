@@ -84,23 +84,6 @@ function createAuthStore() {
 			}
 		},
 
-		async demoLogin() {
-			state.isLoading = true;
-
-			try {
-				const response = await authApi.demoLogin();
-				state = {
-					user: response.user,
-					isAuthenticated: true,
-					isLoading: false
-				};
-				return response;
-			} catch (error) {
-				state.isLoading = false;
-				throw error;
-			}
-		},
-
 		async googleLogin() {
 			const { url } = await authApi.getGoogleAuthUrl();
 			window.location.href = url;
@@ -134,11 +117,6 @@ function createAuthStore() {
 
 		setUser(user: User) {
 			state.user = user;
-		},
-
-		isDemoUser(): boolean {
-			const email = state.user?.email;
-			return email?.startsWith('demo-') === true && email?.endsWith('@imagepalette.com') === true;
 		}
 	};
 }

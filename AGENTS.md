@@ -39,5 +39,4 @@
 ## Security
 
 - JWT auth middleware validates `Authorization: Bearer` in [api/go/auth.go](api/go/auth.go); the frontend stores the token in localStorage via [frontend/src/lib/api/auth.ts](frontend/src/lib/api/auth.ts).
-- Demo login/user bootstrap and sample palettes are created in [api/go/auth.go](api/go/auth.go).
 - Database config is loaded from env in [api/go/db.go](api/go/db.go); it currently prints the DB password during init.

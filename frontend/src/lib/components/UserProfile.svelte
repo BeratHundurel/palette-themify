@@ -42,9 +42,6 @@
 			</div>
 			<div class="hidden sm:block">
 				<span class="text-sm font-medium">{authStore.state.user.name}</span>
-				{#if authStore.state.user.email === 'demo@imagepalette.com'}
-					<span class="ml-1 rounded bg-orange-500/30 px-1.5 py-0.5 text-xs font-medium text-orange-200">Demo</span>
-				{/if}
 			</div>
 			<svg
 				class="h-4 w-4 transition-transform duration-300"
@@ -67,9 +64,6 @@
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center space-x-2">
 								<p class="truncate text-sm font-semibold text-zinc-300">{authStore.state.user.name}</p>
-								{#if authStore.state.user.email === 'demo@imagepalette.com'}
-									<span class="rounded bg-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-300"> Demo </span>
-								{/if}
 							</div>
 							<p class="truncate text-xs text-zinc-400">{authStore.state.user.email}</p>
 							{#if authStore.state.user.email === 'demo@imagepalette.com'}

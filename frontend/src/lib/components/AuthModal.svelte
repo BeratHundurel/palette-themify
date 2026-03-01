@@ -7,7 +7,7 @@
 
 	let mode = $state<'login' | 'register'>('login');
 	let loading = $state(false);
-	let loadingType = $state<'email' | 'google' | 'demo' | null>(null);
+	let loadingType = $state<'email' | 'google' | null>(null);
 
 	let formData = $state({
 		name: '',
@@ -86,26 +86,6 @@
 		}
 	}
 
-	async function handleDemoLogin() {
-		loading = true;
-		loadingType = 'demo';
-
-		try {
-			await authStore.demoLogin();
-			toast.success('Welcome to the demo!');
-
-			await appStore.syncPalettesOnAuth();
-
-			resetForm();
-			isOpen = false;
-		} catch {
-			toast.error('Could not start the demo. Please try again.');
-		} finally {
-			loading = false;
-			loadingType = null;
-		}
-	}
-
 	async function handleGoogleLogin() {
 		loading = true;
 		loadingType = 'google';
@@ -148,6 +128,7 @@
 
 	$effect(() => {
 		if (isOpen) {
+			console.log('Adding keydown listener');
 			document.addEventListener('keydown', handleKeydown);
 			return () => document.removeEventListener('keydown', handleKeydown);
 		}
@@ -348,63 +329,6 @@
 									Continue with Google
 								{/if}
 							</button>
-
-							<div class="relative">
-								<div class="absolute inset-0 flex items-center">
-									<div class="w-full border-t border-zinc-600"></div>
-								</div>
-								<div class="relative flex justify-center text-sm">
-									<span class="bg-zinc-900 px-2 text-zinc-500">or</span>
-								</div>
-							</div>
-
-							<div class="rounded-md border border-zinc-600 bg-zinc-800 p-3">
-								<div class="mb-2 flex items-center space-x-2">
-									<svg class="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-										/>
-									</svg>
-									<span class="text-sm font-medium text-zinc-300">Try Without Signing Up</span>
-								</div>
-								<p class="mb-3 text-xs text-zinc-400">
-									Explore all features with pre-loaded sample palettes. Perfect for testing the app!
-								</p>
-								<button
-									type="button"
-									onclick={handleDemoLogin}
-									disabled={loading}
-									class="transition- hover:shadow-brand hover:border-brand/50 w-full cursor-pointer rounded-md bg-zinc-900 py-3 font-medium text-zinc-300 hover:border focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									{#if loadingType === 'demo'}
-										<div class="flex items-center justify-center">
-											<svg
-												class="mr-3 -ml-1 h-5 w-5 animate-spin text-zinc-300"
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-											>
-												<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-												></circle>
-												<path
-													class="opacity-75"
-													fill="currentColor"
-													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-												></path>
-											</svg>
-											Processing...
-										</div>
-									{:else}
-										<div class="flex items-center justify-center space-x-2">
-											<span>🎨</span>
-											<span>Launch Demo</span>
-										</div>
-									{/if}
-								</button>
-							</div>
 						</div>
 					</div>
 				{/if}
