@@ -2,7 +2,7 @@ module image-to-palette
 
 go 1.26.0
 
-require github.com/gin-gonic/gin v1.11.0
+require github.com/gin-gonic/gin v1.12.0
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -68,13 +68,13 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 )

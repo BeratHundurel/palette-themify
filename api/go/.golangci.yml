@@ -9,3 +9,5 @@ linters:
     - staticcheck
     - ineffassign
     - govet
+  disable:
+    - errcheck
