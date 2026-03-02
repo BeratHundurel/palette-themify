@@ -2,13 +2,12 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
-	import { detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import { detectThemeAppearance, detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import type { SavedThemeItem, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { COLOR_REGEX } from '$lib/constants';
-
 	const THEME_NAME_DEBOUNCE_MS = 300;
 
 	let expandedColorIndices = new SvelteSet<number>();
@@ -179,7 +178,11 @@
 			const hasBackupColors =
 				appStore.state.themeExport.backupColors && appStore.state.themeExport.backupColors.length > 0;
 
-			if (editorType !== detectThemeType(themeResult.theme) && hasBackupColors) {
+			if (
+				(editorType !== detectThemeType(themeResult.theme) ||
+					themeAppearance !== detectThemeAppearance(themeResult.theme)) &&
+				hasBackupColors
+			) {
 				const response = await generateTheme(
 					appStore.state.themeExport.backupColors!,
 					editorType,
@@ -244,8 +247,7 @@
 
 	async function handleThemeAppearanceChange(appearance: ThemeAppearance) {
 		if (themeAppearance === appearance) return;
-		themeOverrides = {};
-		appStore.state.themeExport.loadedThemeOverridesReference = null;
+
 		appStore.setThemeExportAppearance(appearance);
 		generateThemeFromApi();
 	}

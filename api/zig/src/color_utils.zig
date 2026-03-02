@@ -316,25 +316,35 @@ pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []co
 pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
     const hsl = hexToHsl(hex);
     const dark_bg = isDarkColor(background);
-
     if (hsl.l < 0.12 or hsl.l > 0.88) return hex; // skip very dark/light tones (background-like).
 
-    // Saturation floors. Lower these to keep boosts subtler.
-    const target_s: f32 = if (dark_bg)
-        (if (hsl.s < 0.24) 0.30 else if (hsl.s < 0.30) 0.36 else hsl.s)
-    else
-        (if (hsl.s < 0.20) 0.32 else if (hsl.s < 0.32) 0.44 else if (hsl.s < 0.44) 0.56 else hsl.s);
-    // Boost strength (+0.02) and cap (0.60). Reduce either for gentler boosts.
-    const boost: f32 = if (dark_bg) 0.03 else 0.06;
-    const cap: f32 = if (dark_bg) 0.40 else 0.60;
-    const new_s = @min(@max(hsl.s + boost, target_s), cap);
+    // Saturation range for interpolation.
+    // - s_floor: below this, color is near-neutral — apply maximum boost.
+    // - s_ceil:  above this, color is already vivid — no boost needed.
+    // Tune these to widen or narrow the boost window.
+    const s_floor: f32 = if (dark_bg) 0.18 else 0.20;
+    const s_ceil: f32 = if (dark_bg) 0.30 else 0.80;
+
+    // Maximum saturation target at the low end of the range.
+    // Reduce to keep boosts subtler.
+    const s_target_max: f32 = if (dark_bg) 0.28 else 0.96;
+
+    // Linear interpolation: as hsl.s approaches s_ceil, the target drops toward hsl.s (no boost).
+    // t=0 → fully muted (apply max boost), t=1 → fully vivid (no boost).
+    const t = std.math.clamp((hsl.s - s_floor) / (s_ceil - s_floor), 0.0, 1.0);
+    const target_s = std.math.lerp(s_target_max, hsl.s, t);
+
+    // Small additive nudge on top of the interpolated target.
+    // Reduce for gentler boosts.
+    const boost: f32 = if (dark_bg) 0.01 else 0.06;
+    const new_s = @min(target_s + boost, s_target_max);
 
     if (new_s <= hsl.s) return hex;
 
     const rgb = hslToRgb(hsl.h, new_s, hsl.l);
     const boosted = rgbToHex(rgb.r, rgb.g, rgb.b);
     const min_contrast: f32 = if (dark_bg) 3.0 else 3.5;
-    return ensureReadableContrast(boosted, background, min_contrast); // keep boosted colors readable.
+    return ensureReadableContrast(boosted, background, min_contrast);
 }
 
 /// Multi-stage fallback to ensure readable contrast. Tries adjustment first, then

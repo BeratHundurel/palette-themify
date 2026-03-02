@@ -56,7 +56,7 @@ pub fn extractPaletteFromBytes(
         return ExtractError.NotAnImage;
     };
     defer img.deinit(allocator);
-
+    
     return processImage(allocator, &img);
 }
 

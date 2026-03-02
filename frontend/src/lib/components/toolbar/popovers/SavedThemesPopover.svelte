@@ -2,7 +2,7 @@
 	import { cn } from '$lib/utils';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import { detectThemeAppearance, detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
 	import type { SavedThemeItem, Theme } from '$lib/types/theme';
 	import { generateOverridable, type EditorThemeType } from '$lib/api/theme';
@@ -24,14 +24,16 @@
 
 	async function handleThemeLoad(theme: Theme, editorType?: EditorThemeType) {
 		const resolvedType = editorType ?? detectThemeType(theme);
+		const resolvedAppearance = detectThemeAppearance(theme);
 		try {
-			const response = await generateOverridable(theme, null, resolvedType);
+			const response = await generateOverridable(theme, null, resolvedType, resolvedAppearance);
 
-			appStore.setThemeExportEditorType(resolvedType);
 			appStore.state.colors = [];
 			appStore.state.image = null;
 			appStore.state.imageLoaded = false;
+			appStore.setThemeExportEditorType(resolvedType);
 			appStore.state.themeExport.themeResult = response;
+			appStore.setThemeExportAppearance(resolvedAppearance);
 			appStore.state.themeExport.backupColors = response.colors;
 			appStore.state.themeExport.themeName = response.theme.name;
 			appStore.state.themeExport.loadedThemeOverridesReference = response.themeOverrides;

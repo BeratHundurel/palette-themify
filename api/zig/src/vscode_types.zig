@@ -25,6 +25,7 @@ pub const VSCodeTokenColor = struct {
 pub const VSCodeThemeColors = struct {
     @"editor.background": []const u8,
     @"editor.foreground": []const u8,
+    @"editor.lineHighlightBorder": []const u8,
     foreground: []const u8,
     disabledForeground: []const u8,
     focusBorder: []const u8,
@@ -124,6 +125,7 @@ pub const VSCodeThemeColors = struct {
     @"breadcrumb.focusForeground": []const u8,
     @"breadcrumb.activeSelectionForeground": []const u8,
     @"breadcrumb.background": []const u8,
+    @"scrollbar.shadow": []const u8,
     @"scrollbarSlider.background": []const u8,
     @"scrollbarSlider.hoverBackground": []const u8,
     @"scrollbarSlider.activeBackground": []const u8,

@@ -74,7 +74,7 @@ pub fn generateZedTheme(
     const background = if (overrides.background) |bg| bg else blk: {
         const bg_raw = palette.items[selection.background_index];
         const base_luminance = color_utils.getLuminance(bg_raw);
-        const darken_amount = if (dark_base) 0.5 + (base_luminance) * 0.9 else 0.0;
+        const darken_amount = if (dark_base) 0.5 + (base_luminance) * 1 else 0.0;
         const lighten_amount = if (dark_base) 0.0 else 0.2 + (1.0 - base_luminance) * 0.6;
         break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
     };
@@ -86,16 +86,16 @@ pub fn generateZedTheme(
     const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
-    const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.40) else color_utils.lightenColor(foreground, 0.15);
-    const fg_disabled = if (dark_base) color_utils.darkenColor(foreground, 0.50) else color_utils.lightenColor(foreground, 0.30);
-    const fg_placeholder = if (dark_base) color_utils.darkenColor(foreground, 0.60) else color_utils.lightenColor(foreground, 0.40);
+    const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.20) else color_utils.lightenColor(foreground, 0.15);
+    const fg_disabled = if (dark_base) color_utils.darkenColor(foreground, 0.30) else color_utils.lightenColor(foreground, 0.30);
+    const fg_placeholder = if (dark_base) color_utils.darkenColor(foreground, 0.40) else color_utils.lightenColor(foreground, 0.40);
 
     const fg_12 = color_utils.addAlpha(foreground, "12");
     const fg_26 = color_utils.addAlpha(foreground, "26");
     const fg_40 = color_utils.addAlpha(foreground, "40");
     const fg_66 = color_utils.addAlpha(foreground, "66");
     const fg_80 = color_utils.addAlpha(foreground, "80");
-    const fg_placeholder_66 = color_utils.addAlpha(fg_placeholder, "66");
+    const fg_placeholder_30 = color_utils.addAlpha(fg_placeholder, "30");
 
     const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(c1_raw, background, 3), background);
     const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(c2_raw, background, 3), background);
@@ -147,14 +147,14 @@ pub fn generateZedTheme(
     accents[7] = c8;
 
     const players = try allocator.alloc(Player, 8);
-    players[0] = .{ .cursor = foreground, .selection = fg_40, .background = foreground };
-    players[1] = .{ .cursor = c2, .selection = c2_40, .background = c2 };
-    players[2] = .{ .cursor = c3, .selection = c3_33, .background = c3 };
-    players[3] = .{ .cursor = c4, .selection = color_utils.addAlpha(c4, "40"), .background = c4 };
-    players[4] = .{ .cursor = c5, .selection = color_utils.addAlpha(c5, "40"), .background = c5 };
-    players[5] = .{ .cursor = c6, .selection = color_utils.addAlpha(c6, "40"), .background = c6 };
-    players[6] = .{ .cursor = c7, .selection = color_utils.addAlpha(c7, "40"), .background = c7 };
-    players[7] = .{ .cursor = c8, .selection = color_utils.addAlpha(c8, "40"), .background = c8 };
+    players[0] = .{ .cursor = foreground, .selection = if (dark_base) fg_40 else color_utils.addAlpha(foreground, "20"), .background = foreground };
+    players[1] = .{ .cursor = c2, .selection = if (dark_base) c2_40 else color_utils.addAlpha(c2, "20"), .background = c2 };
+    players[2] = .{ .cursor = c3, .selection = if (dark_base) color_utils.addAlpha(c3, "40") else color_utils.addAlpha(c3, "20"), .background = c3 };
+    players[3] = .{ .cursor = c4, .selection = if (dark_base) color_utils.addAlpha(c4, "40") else color_utils.addAlpha(c4, "20"), .background = c4 };
+    players[4] = .{ .cursor = c5, .selection = if (dark_base) color_utils.addAlpha(c5, "40") else color_utils.addAlpha(c5, "20"), .background = c5 };
+    players[5] = .{ .cursor = c6, .selection = if (dark_base) color_utils.addAlpha(c6, "40") else color_utils.addAlpha(c6, "20"), .background = c6 };
+    players[6] = .{ .cursor = c7, .selection = if (dark_base) color_utils.addAlpha(c7, "40") else color_utils.addAlpha(c7, "20"), .background = c7 };
+    players[7] = .{ .cursor = c8, .selection = if (dark_base) color_utils.addAlpha(c8, "40") else color_utils.addAlpha(c8, "20"), .background = c8 };
 
     const style = ZedThemeStyle{
         .accents = accents,
@@ -221,8 +221,8 @@ pub fn generateZedTheme(
         .@"search.match_background" = c3_33,
 
         .@"panel.background" = bg_dark,
-        .@"panel.focused_border" = foreground,
-        .@"panel.indent_guide" = fg_placeholder_66,
+        .@"panel.focused_border" = fg_40,
+        .@"panel.indent_guide" = fg_placeholder_30,
         .@"panel.indent_guide_active" = fg_80,
         .@"panel.indent_guide_hover" = c2,
         .@"panel.overlay_background" = bg_very_dark,
@@ -256,7 +256,7 @@ pub fn generateZedTheme(
         .@"editor.document_highlight.bracket_background" = color_utils.addAlpha(c2, "17"),
         .@"editor.document_highlight.read_background" = fg_26,
         .@"editor.document_highlight.write_background" = fg_26,
-        .@"editor.indent_guide" = fg_placeholder_66,
+        .@"editor.indent_guide" = fg_placeholder_30,
         .@"editor.indent_guide_active" = fg_placeholder,
 
         .@"terminal.background" = background,

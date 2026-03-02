@@ -391,9 +391,10 @@ function createAppStore() {
 
 		applyThemeResponse(theme: SavedThemeItem) {
 			const preparedTheme = this.ensureThemeSignature(theme);
-			const existingIndex = state.savedThemes.findIndex((item) =>
-				item.id === preparedTheme.id ||
-				(item.signature && preparedTheme.signature && item.signature === preparedTheme.signature)
+			const existingIndex = state.savedThemes.findIndex(
+				(item) =>
+					item.id === preparedTheme.id ||
+					(item.signature && preparedTheme.signature && item.signature === preparedTheme.signature)
 			);
 			if (existingIndex === -1) {
 				state.savedThemes = [preparedTheme, ...state.savedThemes];
