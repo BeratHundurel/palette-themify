@@ -75,6 +75,8 @@
 			}
 
 			await appStore.syncPalettesOnAuth();
+			await appStore.syncPreferencesOnAuth();
+			await appStore.syncSavedThemesOnAuth();
 
 			resetForm();
 			isOpen = false;

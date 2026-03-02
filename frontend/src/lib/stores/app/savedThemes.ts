@@ -16,6 +16,11 @@ export function loadSavedThemes(): SavedThemeItem[] {
 	}
 }
 
+export function clearSavedThemes() {
+	if (!browser) return;
+	localStorage.removeItem(SAVED_THEMES_STORAGE_KEY);
+}
+
 export function saveSavedThemes(themes: SavedThemeItem[]) {
 	if (!browser) return;
 	localStorage.setItem(SAVED_THEMES_STORAGE_KEY, JSON.stringify(themes));

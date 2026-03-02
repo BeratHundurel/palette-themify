@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
 
 const APPLY_PALETTE_SETTINGS_KEY = 'applyPaletteSettings';
-const DEFAULT_APPLY_PALETTE_SETTINGS: ApplyPaletteSettings = {
+export const DEFAULT_APPLY_PALETTE_SETTINGS: ApplyPaletteSettings = {
 	luminosity: 1,
 	nearest: 30,
 	power: 4,
@@ -27,4 +27,9 @@ export function loadApplyPaletteSettings(): ApplyPaletteSettings {
 export function saveApplyPaletteSettings(settings: ApplyPaletteSettings) {
 	if (!browser) return;
 	localStorage.setItem(APPLY_PALETTE_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export function clearApplyPaletteSettings() {
+	if (!browser) return;
+	localStorage.removeItem(APPLY_PALETTE_SETTINGS_KEY);
 }

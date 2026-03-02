@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import type { WallhavenSettings } from '$lib/types/wallhaven';
 
 const WALLHAVEN_SETTINGS_KEY = 'wallhavenSettings';
-const DEFAULT_WALLHAVEN_SETTINGS: WallhavenSettings = {
+export const DEFAULT_WALLHAVEN_SETTINGS: WallhavenSettings = {
 	categories: '111',
 	purity: '100',
 	sorting: 'relevance',
@@ -33,4 +33,9 @@ export function loadWallhavenSettings(): WallhavenSettings {
 export function saveWallhavenSettings(settings: WallhavenSettings) {
 	if (!browser) return;
 	localStorage.setItem(WALLHAVEN_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export function clearWallhavenSettings() {
+	if (!browser) return;
+	localStorage.removeItem(WALLHAVEN_SETTINGS_KEY);
 }

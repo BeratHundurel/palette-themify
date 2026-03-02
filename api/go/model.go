@@ -12,6 +12,7 @@ type User struct {
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 	Palettes     []Palette `json:"palettes" gorm:"foreignKey:UserID"`
+	Themes       []Theme   `json:"themes" gorm:"foreignKey:UserID"`
 }
 
 type Palette struct {
@@ -23,6 +24,18 @@ type Palette struct {
 	IsSystem  bool      `json:"isSystem" gorm:"default:false"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type Theme struct {
+	ID         uint      `json:"id" gorm:"primaryKey"`
+	UserID     *uint     `json:"userId" gorm:"index;uniqueIndex:idx_user_theme_signature"`
+	User       *User     `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	Name       string    `json:"name" gorm:"size:255;not null"`
+	EditorType string    `json:"editorType" gorm:"size:20;uniqueIndex:idx_user_theme_signature"`
+	Signature  string    `json:"signature" gorm:"size:128;uniqueIndex:idx_user_theme_signature"`
+	JsonData   string    `json:"jsonData" gorm:"type:jsonb;not null"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 type UserPreferences struct {

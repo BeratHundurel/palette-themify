@@ -21,6 +21,8 @@
 	onMount(async () => {
 		await authStore.init();
 		appStore.loadSavedPalettes();
+		await appStore.syncPreferencesOnAuth();
+		await appStore.syncSavedThemesOnAuth();
 	});
 </script>
 

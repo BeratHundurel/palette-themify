@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -74,7 +75,7 @@ func resetTestDB(t *testing.T) {
 	if DB == nil {
 		t.Fatalf("database not initialized")
 	}
-	if err := DB.Exec("TRUNCATE TABLE palettes, users RESTART IDENTITY CASCADE").Error; err != nil {
+	if err := DB.Exec("TRUNCATE TABLE palettes, themes, users RESTART IDENTITY CASCADE").Error; err != nil {
 		t.Fatalf("reset database: %v", err)
 	}
 }
@@ -105,6 +106,34 @@ func setupPaletteRouter() *gin.Engine {
 	router.POST("/palettes", savePaletteHandler)
 	router.GET("/palettes", getPalettesHandler)
 	return router
+}
+
+func setupThemeRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.POST("/themes", saveThemeHandler)
+	router.PUT("/themes/:id", updateThemeHandler)
+	router.GET("/themes", getThemesHandler)
+	router.DELETE("/themes/:id", deleteThemeHandler)
+	return router
+}
+
+func buildThemePayload(name string, editorType string, signature string) map[string]any {
+	return map[string]any{
+		"id":                   "local_123",
+		"name":                 name,
+		"editorType":           editorType,
+		"signature":            signature,
+		"themeColorsWithUsage": []any{},
+		"createdAt":            "2024-01-01T00:00:00Z",
+		"themeResult": map[string]any{
+			"theme": map[string]any{
+				"name": name,
+			},
+			"themeOverrides": map[string]any{},
+			"colors":         []any{},
+		},
+	}
 }
 
 func setupAuthRouter() *gin.Engine {
@@ -309,4 +338,167 @@ func TestAuthLoginInvalidPassword(t *testing.T) {
 	router.ServeHTTP(loginResp, loginReq)
 
 	assert.Equal(t, http.StatusUnauthorized, loginResp.Code)
+}
+
+func TestSaveThemeHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupThemeRouter()
+
+	body, err := json.Marshal(buildThemePayload("Theme", "vscode", "sig-1"))
+	if err != nil {
+		t.Fatalf("marshal theme: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/themes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSaveThemeHandler_CreatesAndDedupes(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := generateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	payload := buildThemePayload("Theme", "vscode", "sig-1")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal theme: %v", err)
+	}
+
+	request := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", "/themes", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
+
+	first := request()
+	assert.Equal(t, http.StatusCreated, first.Code)
+
+	second := request()
+	assert.Equal(t, http.StatusOK, second.Code)
+
+	var count int64
+	if err := DB.Model(&Theme{}).Count(&count).Error; err != nil {
+		t.Fatalf("count themes: %v", err)
+	}
+	assert.Equal(t, int64(1), count)
+}
+
+func TestGetThemesHandler_ReturnsThemes(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	_, _, err := saveUserTheme(user.ID, "Theme", "vscode", "sig-1", `{"name":"Theme"}`)
+	if err != nil {
+		t.Fatalf("save theme: %v", err)
+	}
+
+	token, err := generateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+	req := httptest.NewRequest("GET", "/themes", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp GetThemesResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	assert.Len(t, resp.Themes, 1)
+}
+
+func TestUpdateThemeHandler_UpdatesPayload(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	saved, _, err := saveUserTheme(user.ID, "Theme", "vscode", "sig-1", `{"name":"Theme"}`)
+	if err != nil {
+		t.Fatalf("save theme: %v", err)
+	}
+
+	token, err := generateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	payload := buildThemePayload("Theme Updated", "vscode", "sig-2")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal theme: %v", err)
+	}
+
+	req := httptest.NewRequest("PUT", "/themes/"+fmt.Sprintf("%d", saved.ID), bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var updated Theme
+	if err := DB.First(&updated, saved.ID).Error; err != nil {
+		t.Fatalf("load updated theme: %v", err)
+	}
+	assert.Equal(t, "Theme Updated", updated.Name)
+	assert.Equal(t, "sig-2", updated.Signature)
+}
+
+func TestDeleteThemeHandler_RemovesTheme(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	saved, _, err := saveUserTheme(user.ID, "Theme", "vscode", "sig-1", `{"name":"Theme"}`)
+	if err != nil {
+		t.Fatalf("save theme: %v", err)
+	}
+
+	token, err := generateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	req := httptest.NewRequest("DELETE", "/themes/"+fmt.Sprintf("%d", saved.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var count int64
+	if err := DB.Model(&Theme{}).Count(&count).Error; err != nil {
+		t.Fatalf("count themes: %v", err)
+	}
+	assert.Equal(t, int64(0), count)
 }

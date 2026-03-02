@@ -15,7 +15,10 @@ export type GenerateThemeRequest = {
 	type: EditorThemeType;
 	name?: string;
 	overrides?: ThemeOverrides | null;
+	appearance?: ThemeAppearance | null;
 };
+
+export type ThemeAppearance = 'dark' | 'light';
 
 export type EditorThemeType = 'vscode' | 'zed';
 
@@ -23,9 +26,10 @@ export async function generateTheme(
 	colors: Color[],
 	type: EditorThemeType,
 	name?: string,
-	overrides?: ThemeOverrides | null
+	overrides?: ThemeOverrides | null,
+	appearance?: ThemeAppearance | null
 ): Promise<ThemeResponse> {
-	const payload: GenerateThemeRequest = { colors, type, name, overrides };
+	const payload: GenerateThemeRequest = { colors, type, name, overrides, appearance };
 
 	const res = await fetch(buildZigURL('/generate-theme'), {
 		method: 'POST',
@@ -39,11 +43,13 @@ export async function generateTheme(
 export async function generateOverridable(
 	theme: Theme,
 	overrides?: ThemeOverrides | null,
-	themeType: EditorThemeType = 'zed'
+	themeType: EditorThemeType = 'zed',
+	appearance?: ThemeAppearance | null
 ): Promise<ThemeResponse> {
 	const payload = {
 		theme,
 		themeType,
+		appearance,
 		...(overrides ? { ThemeOverrides: overrides } : {})
 	};
 

@@ -80,7 +80,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 func runMigrations() error {
-	return DB.AutoMigrate(&Palette{}, &User{})
+	return DB.AutoMigrate(&Palette{}, &Theme{}, &User{}, &UserPreferences{})
 }
 
 func CloseDatabase() error {

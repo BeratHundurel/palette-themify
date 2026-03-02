@@ -1,4 +1,4 @@
-import type { EditorThemeType } from '$lib/api/theme';
+import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
 import type { Color } from './color';
 
 import type { VSCodeTheme } from './vscode';
@@ -43,6 +43,7 @@ export interface ThemeExportState {
 	themeColorsWithUsage: ThemeColorWithUsage[];
 	saveOnCopy: boolean;
 	editorType: EditorThemeType;
+	appearance: ThemeAppearance;
 	lastGeneratedPaletteVersion: number;
 	loadedThemeOverridesReference: ThemeOverrides | null;
 	backupColors: Color[] | null;
@@ -55,4 +56,5 @@ export type SavedThemeItem = {
 	themeResult: ThemeResponse;
 	themeColorsWithUsage: ThemeColorWithUsage[];
 	createdAt: string;
+	signature?: string;
 };

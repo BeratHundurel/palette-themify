@@ -48,11 +48,18 @@ func main() {
 	{
 		auth.GET("/me", getMeHandler)
 		auth.POST("/change-password", changePasswordHandler)
+		auth.GET("/preferences", getPreferencesHandler)
+		auth.PUT("/preferences", savePreferencesHandler)
 	}
 
 	router.GET("/palettes", getPalettesHandler)
 	router.POST("/palettes", savePaletteHandler)
 	router.DELETE("/palettes/:id", deletePaletteHandler)
+
+	router.GET("/themes", getThemesHandler)
+	router.POST("/themes", saveThemeHandler)
+	router.PUT("/themes/:id", updateThemeHandler)
+	router.DELETE("/themes/:id", deleteThemeHandler)
 	router.POST("/apply-palette", applyPaletteHandler)
 
 	router.GET("/wallhaven/search", wallhavenSearchHandler)
