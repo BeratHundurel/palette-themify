@@ -296,72 +296,12 @@ const VibrancyRule = struct {
     ease_range: f32,
 };
 
-/// Rules to soften high-glow colors without washing them out.
-/// Tweak these to reduce over-saturated accents during contrast adjustment.
-const dark_bg_rules = [_]VibrancyRule{
-    .{
-        .min_s = 0.6,
-        .min_l = 0.55,
-        .max_l = null,
-        .target_l_min = 0.52,
-        .target_l_max = 0.65,
-        .s_min_mul = 0.85,
-        .s_max_mul = 0.70,
-        .ease_range = 0.35,
-    },
-};
-
-/// Light theme counterpart; tweak to soften bright accents on light backgrounds.
-const light_bg_rules = [_]VibrancyRule{
-    .{
-        .min_s = 0.70,
-        .min_l = 0.58,
-        .max_l = null,
-        .target_l_min = 0.54,
-        .target_l_max = 0.66,
-        .s_min_mul = 0.95,
-        .s_max_mul = 0.93,
-        .ease_range = 0.28,
-    },
-};
-
-inline fn easeOut(t: f32) f32 {
-    return 1.0 - (1.0 - t) * (1.0 - t);
-}
-
 /// Adjusts a foreground color to meet minimum contrast ratio against a background.
-/// First reduces saturation/brightness of overly vibrant colors, then iteratively
 /// lightens or darkens until min_contrast is met.
 pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []const u8 {
     var color = fg;
     var iterations: u32 = 0;
     const dark_bg = isDarkColor(bg);
-
-    const rules = if (dark_bg) &dark_bg_rules else &light_bg_rules;
-    const initial_hsl = hexToHsl(color);
-    for (rules) |rule| {
-        if (initial_hsl.s <= rule.min_s) continue;
-        if (initial_hsl.l <= rule.min_l) continue;
-        if (rule.max_l) |max_l| {
-            if (initial_hsl.l >= max_l) continue;
-        }
-
-        const t_raw = (initial_hsl.l - rule.min_l) / rule.ease_range;
-        const t = @min(@max(t_raw, 0.0), 1.0);
-        const eased = easeOut(t);
-
-        const new_l = rule.target_l_min +
-            eased * (rule.target_l_max - rule.target_l_min);
-
-        const s_mul = rule.s_min_mul +
-            eased * (rule.s_max_mul - rule.s_min_mul);
-
-        const new_s = initial_hsl.s * s_mul;
-
-        const rgb = hslToRgb(initial_hsl.h, new_s, new_l);
-        color = rgbToHex(rgb.r, rgb.g, rgb.b);
-        break;
-    }
 
     while (contrastRatio(color, bg) < min_contrast and iterations < 20) : (iterations += 1) {
         const step: f32 = if (iterations < 4) 0.12 else 0.06;
@@ -377,17 +317,16 @@ pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
     const hsl = hexToHsl(hex);
     const dark_bg = isDarkColor(background);
 
-    if (hsl.s < 0.02) return hex; // neutral cutoff; raise to boost fewer colors.
     if (hsl.l < 0.12 or hsl.l > 0.88) return hex; // skip very dark/light tones (background-like).
 
     // Saturation floors. Lower these to keep boosts subtler.
     const target_s: f32 = if (dark_bg)
-        (if (hsl.s < 0.24) 0.28 else if (hsl.s < 0.28) 0.32 else hsl.s)
+        (if (hsl.s < 0.24) 0.30 else if (hsl.s < 0.30) 0.36 else hsl.s)
     else
         (if (hsl.s < 0.20) 0.32 else if (hsl.s < 0.32) 0.44 else if (hsl.s < 0.44) 0.56 else hsl.s);
     // Boost strength (+0.02) and cap (0.60). Reduce either for gentler boosts.
-    const boost: f32 = if (dark_bg) 0.02 else 0.06;
-    const cap: f32 = if (dark_bg) 0.36 else 0.60;
+    const boost: f32 = if (dark_bg) 0.03 else 0.06;
+    const cap: f32 = if (dark_bg) 0.40 else 0.60;
     const new_s = @min(@max(hsl.s + boost, target_s), cap);
 
     if (new_s <= hsl.s) return hex;
@@ -868,10 +807,7 @@ test "adjustForContrast softens glowy colors on dark backgrounds" {
     const input_hsl = hexToHsl(glowy);
     const output_hsl = hexToHsl(adjusted);
 
-    try std.testing.expect(output_hsl.l < input_hsl.l);
-    try std.testing.expect(output_hsl.s < input_hsl.s);
-    try std.testing.expect(output_hsl.l >= 0.50);
-    try std.testing.expect(output_hsl.s >= 0.75);
+    try std.testing.expect(output_hsl.l >= input_hsl.l);
     try std.testing.expect(contrastRatio(adjusted, background) >= 3.0);
 }
 
@@ -880,10 +816,8 @@ test "adjustForContrast keeps light-theme colors readable" {
     const glowy = "#FFEE66";
     const adjusted = adjustForContrast(glowy, background, 3.0);
 
-    const output_hsl = hexToHsl(adjusted);
-
     try std.testing.expect(contrastRatio(adjusted, background) >= 3.0);
-    try std.testing.expect(output_hsl.s >= 0.60);
+    try std.testing.expect(hexToHsl(adjusted).l <= hexToHsl(glowy).l);
 }
 
 test "selectDiverseColors returns requested count" {

@@ -56,7 +56,7 @@ pub fn generateZedTheme(
         }
     }
 
-    const dark_base = if (appearance) |value| value == .dark;
+    const dark_base = if (appearance) |value| value == .dark else true;
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
@@ -74,7 +74,7 @@ pub fn generateZedTheme(
     const background = if (overrides.background) |bg| bg else blk: {
         const bg_raw = palette.items[selection.background_index];
         const base_luminance = color_utils.getLuminance(bg_raw);
-        const darken_amount = if (dark_base) 0.6 + (base_luminance) * 0.2 else 0.0;
+        const darken_amount = if (dark_base) 0.5 + (base_luminance) * 0.9 else 0.0;
         const lighten_amount = if (dark_base) 0.0 else 0.2 + (1.0 - base_luminance) * 0.6;
         break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
     };
@@ -95,6 +95,7 @@ pub fn generateZedTheme(
     const fg_40 = color_utils.addAlpha(foreground, "40");
     const fg_66 = color_utils.addAlpha(foreground, "66");
     const fg_80 = color_utils.addAlpha(foreground, "80");
+    const fg_placeholder_66 = color_utils.addAlpha(fg_placeholder, "66");
 
     const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(c1_raw, background, 3), background);
     const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(c2_raw, background, 3), background);
@@ -130,6 +131,10 @@ pub fn generateZedTheme(
 
     const bright_semantic_warning = if (dark_base) color_utils.lightenColor(semantic_warning, 0.33) else color_utils.darkenColor(semantic_warning, 0.1);
     const accent_bright = if (dark_base) color_utils.lightenColor(c2, 0.33) else color_utils.darkenColor(c2, 0.33);
+
+    const bg_lighter_4d = color_utils.addAlpha(bg_lighter, "4d");
+    const bg_tab_inactive = if (dark_base) color_utils.darkenColor(bg_very_dark, 0.30) else color_utils.lightenColor(bg_very_dark, 0.30);
+    const ansi_black = if (dark_base) color_utils.darkenColor(foreground, 0.7) else color_utils.lightenColor(foreground, 0.7);
 
     const accents = try allocator.alloc([]const u8, 8);
     accents[0] = c1;
@@ -181,15 +186,15 @@ pub fn generateZedTheme(
 
         .@"element.background" = bg_very_dark,
         .@"element.hover" = bg_lighter,
-        .@"element.active" = color_utils.addAlpha(bg_lighter, "4d"),
-        .@"element.selected" = color_utils.addAlpha(bg_lighter, "4d"),
+        .@"element.active" = bg_lighter_4d,
+        .@"element.selected" = bg_lighter_4d,
         .@"element.disabled" = fg_disabled,
         .@"drop_target.background" = color_utils.addAlpha(bg_lighter, "66"),
 
         .@"ghost_element.background" = "#00000000",
         .@"ghost_element.hover" = bg_light,
         .@"ghost_element.active" = bg_lighter,
-        .@"ghost_element.selected" = fg_muted,
+        .@"ghost_element.selected" = c2_88,
         .@"ghost_element.disabled" = fg_disabled,
 
         .text = foreground,
@@ -206,18 +211,18 @@ pub fn generateZedTheme(
 
         .@"status_bar.background" = bg_very_dark,
         .@"title_bar.background" = bg_very_dark,
-        .@"title_bar.inactive_background" = if (dark_base) color_utils.darkenColor(bg_very_dark, 0.30) else color_utils.lightenColor(bg_very_dark, 0.30),
+        .@"title_bar.inactive_background" = bg_tab_inactive,
         .@"toolbar.background" = background,
 
         .@"tab_bar.background" = bg_very_dark,
-        .@"tab.inactive_background" = if (dark_base) color_utils.darkenColor(bg_very_dark, 0.30) else color_utils.lightenColor(bg_very_dark, 0.30),
+        .@"tab.inactive_background" = bg_tab_inactive,
         .@"tab.active_background" = background,
 
         .@"search.match_background" = c3_33,
 
         .@"panel.background" = bg_dark,
         .@"panel.focused_border" = foreground,
-        .@"panel.indent_guide" = fg_placeholder,
+        .@"panel.indent_guide" = fg_placeholder_66,
         .@"panel.indent_guide_active" = fg_80,
         .@"panel.indent_guide_hover" = c2,
         .@"panel.overlay_background" = bg_very_dark,
@@ -251,7 +256,7 @@ pub fn generateZedTheme(
         .@"editor.document_highlight.bracket_background" = color_utils.addAlpha(c2, "17"),
         .@"editor.document_highlight.read_background" = fg_26,
         .@"editor.document_highlight.write_background" = fg_26,
-        .@"editor.indent_guide" = fg_placeholder,
+        .@"editor.indent_guide" = fg_placeholder_66,
         .@"editor.indent_guide_active" = fg_placeholder,
 
         .@"terminal.background" = background,
@@ -259,7 +264,7 @@ pub fn generateZedTheme(
         .@"terminal.foreground" = foreground,
         .@"terminal.dim_foreground" = fg_muted,
         .@"terminal.bright_foreground" = foreground,
-        .@"terminal.ansi.black" = if (dark_base) color_utils.darkenColor(foreground, 0.7) else color_utils.lightenColor(foreground, 0.7),
+        .@"terminal.ansi.black" = ansi_black,
         .@"terminal.ansi.white" = fg_muted,
         .@"terminal.ansi.red" = semantic_error,
         .@"terminal.ansi.green" = semantic_success,
@@ -275,7 +280,7 @@ pub fn generateZedTheme(
         .@"terminal.ansi.bright_blue" = if (dark_base) color_utils.lightenColor(semantic_info, 0.1) else color_utils.darkenColor(semantic_info, 0.1),
         .@"terminal.ansi.bright_magenta" = if (dark_base) color_utils.lightenColor(c6, 0.1) else color_utils.darkenColor(c6, 0.1),
         .@"terminal.ansi.bright_cyan" = if (dark_base) color_utils.lightenColor(c7, 0.1) else color_utils.darkenColor(c7, 0.1),
-        .@"terminal.ansi.dim_black" = if (dark_base) color_utils.darkenColor(foreground, 0.7) else color_utils.lightenColor(foreground, 0.7),
+        .@"terminal.ansi.dim_black" = ansi_black,
         .@"terminal.ansi.dim_white" = fg_muted,
         .@"terminal.ansi.dim_red" = semantic_error,
         .@"terminal.ansi.dim_green" = semantic_success,
@@ -333,7 +338,7 @@ pub fn generateZedTheme(
 
         .@"version_control.added" = semantic_success,
         .@"version_control.deleted" = semantic_error,
-        .@"version_control.modified" = color_utils.lightenColor(semantic_warning, 0.33),
+        .@"version_control.modified" = bright_semantic_warning,
         .@"version_control.renamed" = semantic_info,
         .@"version_control.conflict" = semantic_warning,
         .@"version_control.conflict_marker.ours" = color_utils.addAlpha(semantic_success, "33"),
@@ -638,6 +643,6 @@ test "generateOverridableFromZedThemeValue builds overrides" {
     try std.testing.expect(response.themeOverrides.foreground != null);
     try std.testing.expect(response.themeOverrides.c1 != null);
 
-    const expected_c1 = color_utils.adjustForContrast("#010203", response.themeOverrides.background.?, 3);
+    const expected_c1 = color_utils.boostAccentColor(color_utils.adjustForContrast("#010203", response.themeOverrides.background.?, 3), response.themeOverrides.background.?);
     try std.testing.expectEqualStrings(expected_c1, response.themeOverrides.c1.?);
 }

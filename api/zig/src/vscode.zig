@@ -138,7 +138,7 @@ pub fn generateVSCodeTheme(
         }
     }
 
-    const dark_base = if (appearance) |value| value == .dark;
+    const dark_base = if (appearance) |value| value == .dark else true;
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
@@ -160,7 +160,7 @@ pub fn generateVSCodeTheme(
         const lighten_amount = if (dark_base) 0.0 else 0.2 + (1.0 - base_luminance) * 0.6;
         break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
     };
-    const bg_medium = if (dark_base) color_utils.darkenColor(background, 0.10) else background;
+    const bg_medium = if (dark_base) color_utils.darkenColor(background, 0.10) else color_utils.lightenColor(background, 0.025);
     const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.05);
     const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.15);
     const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.15);
@@ -695,12 +695,12 @@ test "generateOverridableFromVSCodeThemeValue builds overrides from colors" {
 
     try std.testing.expectEqualStrings("#1a1a2e", response.themeOverrides.background.?);
     try std.testing.expectEqualStrings("#e0e0ff", response.themeOverrides.foreground.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ffaacc", bg_very_dark, 3), response.themeOverrides.c1.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ffcc00", bg_very_dark, 3), response.themeOverrides.c2.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#99ff99", response.themeOverrides.background.?, 3), response.themeOverrides.c3.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ff5555", response.themeOverrides.background.?, 3), response.themeOverrides.c4.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ff9966", response.themeOverrides.background.?, 3), response.themeOverrides.c5.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#66ccff", response.themeOverrides.background.?, 3), response.themeOverrides.c7.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#ffaacc", bg_very_dark, 3), response.themeOverrides.background.?), response.themeOverrides.c1.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#ffcc00", bg_very_dark, 3), response.themeOverrides.background.?), response.themeOverrides.c2.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#99ff99", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c3.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#ff5555", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c4.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#ff9966", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c5.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#66ccff", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c7.?);
 }
 
 test "generateOverridableFromVSCodeThemeValue handles string scope" {
@@ -730,6 +730,6 @@ test "generateOverridableFromVSCodeThemeValue handles string scope" {
     const dark_base = response.theme.type == .dark;
     const bg_very_dark = if (dark_base) color_utils.darkenColor(response.themeOverrides.background.?, 0.30) else color_utils.lightenColor(response.themeOverrides.background.?, 0.30);
 
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#00ff00", bg_very_dark, 3), response.themeOverrides.c2.?);
-    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ff0000", response.themeOverrides.background.?, 3), response.themeOverrides.c4.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#00ff00", bg_very_dark, 3), response.themeOverrides.background.?), response.themeOverrides.c2.?);
+    try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#ff0000", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c4.?);
 }
