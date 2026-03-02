@@ -73,8 +73,10 @@ fn formatHexWithAlpha(hex: []const u8, alpha: []const u8) []const u8 {
     return result;
 }
 
+/// Picks semantic colors (error/warn/success/info) by proximity to target hues.
+/// Filters out very muted or extreme-light/dark candidates to avoid muddy accents.
 pub fn findSemanticColors(colors: []const []const u8) SemanticColors {
-    const target_red = RGB{ .r = 220, .g = 60, .b = 60 };
+    const target_red = RGB{ .r = 220, .g = 60, .b = 60 }; // shift these to steer hue targets.
     const target_orange = RGB{ .r = 230, .g = 160, .b = 50 };
     const target_green = RGB{ .r = 80, .g = 180, .b = 80 };
     const target_blue = RGB{ .r = 80, .g = 160, .b = 220 };
@@ -94,7 +96,7 @@ pub fn findSemanticColors(colors: []const []const u8) SemanticColors {
             const rgb = parseHexToRgb(color);
             const hsl = hexToHsl(color);
 
-            if (hsl.s < 0.2 or hsl.l < 0.15 or hsl.l > 0.85) continue;
+            if (hsl.s < 0.2 or hsl.l < 0.15 or hsl.l > 0.85) continue; // lower these to allow more muted picks.
 
             const red_dist = rgbDistanceFromRgb(rgb, target_red);
             const orange_dist = rgbDistanceFromRgb(rgb, target_orange);
@@ -140,7 +142,7 @@ pub fn findSemanticColors(colors: []const []const u8) SemanticColors {
 
     for (colors, 0..) |color_r, idx_r| {
         const hsl_r = hexToHsl(color_r);
-        if (hsl_r.s < 0.2 or hsl_r.l < 0.15 or hsl_r.l > 0.85) continue;
+        if (hsl_r.s < 0.2 or hsl_r.l < 0.15 or hsl_r.l > 0.85) continue; // same cutoff as fallback.
         const rgb_r = parseHexToRgb(color_r);
         const dist_r = rgbDistanceFromRgb(rgb_r, target_red);
 
@@ -295,29 +297,31 @@ const VibrancyRule = struct {
 };
 
 /// Rules to soften high-glow colors without washing them out.
+/// Tweak these to reduce over-saturated accents during contrast adjustment.
 const dark_bg_rules = [_]VibrancyRule{
     .{
-        .min_s = 0.62,
-        .min_l = 0.58,
+        .min_s = 0.6,
+        .min_l = 0.55,
         .max_l = null,
         .target_l_min = 0.52,
-        .target_l_max = 0.68,
-        .s_min_mul = 0.94,
-        .s_max_mul = 0.82,
+        .target_l_max = 0.65,
+        .s_min_mul = 0.85,
+        .s_max_mul = 0.70,
         .ease_range = 0.35,
     },
 };
 
+/// Light theme counterpart; tweak to soften bright accents on light backgrounds.
 const light_bg_rules = [_]VibrancyRule{
     .{
-        .min_s = 0.65,
-        .min_l = 0.55,
+        .min_s = 0.70,
+        .min_l = 0.58,
         .max_l = null,
-        .target_l_min = 0.50,
-        .target_l_max = 0.60,
-        .s_min_mul = 0.92,
-        .s_max_mul = 0.85,
-        .ease_range = 0.35,
+        .target_l_min = 0.54,
+        .target_l_max = 0.66,
+        .s_min_mul = 0.95,
+        .s_max_mul = 0.93,
+        .ease_range = 0.28,
     },
 };
 
@@ -367,6 +371,33 @@ pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []co
     return color;
 }
 
+/// Boosts saturation for muted accent colors while preserving overall lightness.
+/// Skips near-neutral or extreme light/dark colors to avoid tinting backgrounds.
+pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
+    const hsl = hexToHsl(hex);
+    const dark_bg = isDarkColor(background);
+
+    if (hsl.s < 0.02) return hex; // neutral cutoff; raise to boost fewer colors.
+    if (hsl.l < 0.12 or hsl.l > 0.88) return hex; // skip very dark/light tones (background-like).
+
+    // Saturation floors. Lower these to keep boosts subtler.
+    const target_s: f32 = if (dark_bg)
+        (if (hsl.s < 0.24) 0.28 else if (hsl.s < 0.28) 0.32 else hsl.s)
+    else
+        (if (hsl.s < 0.20) 0.32 else if (hsl.s < 0.32) 0.44 else if (hsl.s < 0.44) 0.56 else hsl.s);
+    // Boost strength (+0.02) and cap (0.60). Reduce either for gentler boosts.
+    const boost: f32 = if (dark_bg) 0.02 else 0.06;
+    const cap: f32 = if (dark_bg) 0.36 else 0.60;
+    const new_s = @min(@max(hsl.s + boost, target_s), cap);
+
+    if (new_s <= hsl.s) return hex;
+
+    const rgb = hslToRgb(hsl.h, new_s, hsl.l);
+    const boosted = rgbToHex(rgb.r, rgb.g, rgb.b);
+    const min_contrast: f32 = if (dark_bg) 3.0 else 3.5;
+    return ensureReadableContrast(boosted, background, min_contrast); // keep boosted colors readable.
+}
+
 /// Multi-stage fallback to ensure readable contrast. Tries adjustment first, then
 /// creates a tinted fallback preserving hue, finally falls back to near-neutral if needed.
 pub fn ensureReadableContrast(proposed_color: []const u8, background: []const u8, min_contrast: f32) []const u8 {
@@ -383,14 +414,19 @@ pub fn ensureReadableContrast(proposed_color: []const u8, background: []const u8
     const bg_hsl = hexToHsl(background);
     const proposed_hsl = hexToHsl(proposed_color);
 
-    const target_lightness: f32 = if (dark_bg) 0.85 else 0.15;
-    const rgb = hslToRgb(proposed_hsl.h, @max(proposed_hsl.s * 0.7, 0.1), target_lightness);
+    // Second fallback: preserve hue, clamp saturation, and push lightness toward high-contrast target.
+    // Tune these if colors feel washed: lower 0.8/0.2 to reduce the lightness swing,
+    // or raise the 0.7/0.1 saturation floor to keep more chroma.
+    const target_lightness: f32 = if (dark_bg) 0.8 else 0.2;
+    const rgb = hslToRgb(proposed_hsl.h, @max(proposed_hsl.s * 0.75, 0.12), target_lightness);
     const tinted_fallback = rgbToHex(rgb.r, rgb.g, rgb.b);
 
     if (contrastRatio(tinted_fallback, background) >= min_contrast) {
         return tinted_fallback;
     }
 
+    // Final fallback: near-neutral tint anchored to background hue.
+    // Saturation is kept very low (0.05) and lightness is pushed toward the background-safe end (0.9/0.1).
     const neutral_lightness: f32 = if (dark_bg) 0.9 else 0.1;
     const neutral_rgb = hslToRgb(bg_hsl.h, 0.05, neutral_lightness);
     return rgbToHex(neutral_rgb.r, neutral_rgb.g, neutral_rgb.b);
@@ -656,6 +692,8 @@ pub fn getHarmonicColor(base_color: []const u8, scheme: HarmonyScheme) []const u
 
 /// Scores a color's suitability as a background based on low saturation and
 /// appropriate luminance (dark for dark themes, light for light themes).
+/// Scores a candidate for background use.
+/// Luminance thresholds control how dark/light the picked background will be.
 fn calculateBackgroundScore(hex: []const u8, prefer_dark: bool) f32 {
     const hsl = hexToHsl(hex);
     const luminance = getLuminance(hex);
@@ -664,7 +702,7 @@ fn calculateBackgroundScore(hex: []const u8, prefer_dark: bool) f32 {
 
     var luminance_score: f32 = 0.0;
     if (prefer_dark) {
-        if (luminance < 0.15) {
+        if (luminance < 0.15) { // raise to prefer darker backgrounds.
             luminance_score = 1.0;
         } else if (luminance < 0.4) {
             luminance_score = 0.7 - (luminance - 0.15) * 2.0;
@@ -672,7 +710,7 @@ fn calculateBackgroundScore(hex: []const u8, prefer_dark: bool) f32 {
             luminance_score = 0.2;
         }
     } else {
-        if (luminance > 0.85) {
+        if (luminance > 0.85) { // lower to allow slightly darker light themes.
             luminance_score = 1.0;
         } else if (luminance > 0.6) {
             luminance_score = 0.7 + (luminance - 0.6) * 1.2;
@@ -684,6 +722,7 @@ fn calculateBackgroundScore(hex: []const u8, prefer_dark: bool) f32 {
     return saturation_score * 0.6 + luminance_score * 0.4;
 }
 
+/// Picks the lowest-saturation, most appropriate-luminance color as background.
 pub fn selectBackgroundColor(colors: []const []const u8, prefer_dark: bool) usize {
     var best_index: usize = 0;
     var best_score: f32 = 0.0;
@@ -699,6 +738,7 @@ pub fn selectBackgroundColor(colors: []const []const u8, prefer_dark: bool) usiz
     return best_index;
 }
 
+/// Picks the highest-contrast color vs background, excluding the background index.
 pub fn selectForegroundColor(colors: []const []const u8, background: []const u8, exclude_index: usize) usize {
     var best_index: usize = if (exclude_index == 0) 1 else 0;
     var best_contrast: f32 = 0.0;
@@ -716,6 +756,7 @@ pub fn selectForegroundColor(colors: []const []const u8, background: []const u8,
     return best_index;
 }
 
+/// Returns background + foreground indices and remaining palette indices.
 pub fn selectBackgroundAndForeground(allocator: std.mem.Allocator, colors: []const []const u8, prefer_dark: bool) !BackgroundForegroundSelection {
     const bg_index = selectBackgroundColor(colors, prefer_dark);
     const fg_index = selectForegroundColor(colors, colors[bg_index], bg_index);

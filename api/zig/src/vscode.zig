@@ -138,13 +138,7 @@ pub fn generateVSCodeTheme(
         }
     }
 
-    var sum_luminance: f32 = 0.0;
-    for (palette.items) |color| {
-        sum_luminance += color_utils.getLuminance(color);
-    }
-    const average_luminance = sum_luminance / @as(f32, @floatFromInt(palette.items.len));
-    const dark_base = if (appearance) |value| value == .dark else average_luminance < 128.0;
-
+    const dark_base = if (appearance) |value| value == .dark;
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
@@ -162,38 +156,38 @@ pub fn generateVSCodeTheme(
     const background = if (overrides.background) |bg| bg else blk: {
         const bg_raw = palette.items[selection.background_index];
         const base_luminance = color_utils.getLuminance(bg_raw);
-        const darken_amount = if (dark_base) 0.6 + (base_luminance) * 0.33 else 0.0;
-        const lighten_amount = if (dark_base) 0.0 else 0.6 + (1.0 - base_luminance) * 0.33;
+        const darken_amount = if (dark_base) 0.6 + (base_luminance) * 0.2 else 0.0;
+        const lighten_amount = if (dark_base) 0.0 else 0.2 + (1.0 - base_luminance) * 0.6;
         break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
     };
-    const bg_medium = if (dark_base) color_utils.darkenColor(background, 0.10) else color_utils.lightenColor(background, 0.10);
-    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
-    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.30);
-    const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
+    const bg_medium = if (dark_base) color_utils.darkenColor(background, 0.10) else background;
+    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.05);
+    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.15);
+    const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.15);
     const bg_inactive = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.30);
 
     const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
     // These are more often used against very dark backgrounds, so adjust accordingly
-    const c1 = color_utils.adjustForContrast(c1_raw, bg_very_dark, 3);
-    const c2 = color_utils.adjustForContrast(c2_raw, bg_very_dark, 3);
+    const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(c1_raw, bg_very_dark, 3), background);
+    const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(c2_raw, bg_very_dark, 3), background);
 
     const constants_raw = overrides.constants orelse color_utils.getHarmonicColor(c2, .@"split-complementary");
-    const constants = color_utils.adjustForContrast(constants_raw, background, 3);
+    const constants = color_utils.boostAccentColor(color_utils.adjustForContrast(constants_raw, background, 3), background);
 
-    const c3 = color_utils.adjustForContrast(c3_raw, background, 3);
-    const c4 = color_utils.adjustForContrast(c4_raw, background, 3);
-    const c5 = color_utils.adjustForContrast(c5_raw, background, 3);
-    const c6 = color_utils.adjustForContrast(c6_raw, background, 3);
-    const c7 = color_utils.adjustForContrast(c7_raw, background, 3);
-    const c8 = color_utils.adjustForContrast(c8_raw, background, 3);
-    const c9 = color_utils.adjustForContrast(c9_raw, background, 3);
+    const c3 = color_utils.boostAccentColor(color_utils.adjustForContrast(c3_raw, background, 3), background);
+    const c4 = color_utils.boostAccentColor(color_utils.adjustForContrast(c4_raw, background, 3), background);
+    const c5 = color_utils.boostAccentColor(color_utils.adjustForContrast(c5_raw, background, 3), background);
+    const c6 = color_utils.boostAccentColor(color_utils.adjustForContrast(c6_raw, background, 3), background);
+    const c7 = color_utils.boostAccentColor(color_utils.adjustForContrast(c7_raw, background, 3), background);
+    const c8 = color_utils.boostAccentColor(color_utils.adjustForContrast(c8_raw, background, 3), background);
+    const c9 = color_utils.boostAccentColor(color_utils.adjustForContrast(c9_raw, background, 3), background);
 
-    const semantic_error = color_utils.adjustForContrast(semantic.error_color, background, 3);
-    const semantic_warning = color_utils.adjustForContrast(semantic.warning_color, background, 3);
-    const semantic_success = color_utils.adjustForContrast(semantic.success_color, background, 3);
-    const semantic_info = color_utils.adjustForContrast(semantic.info_color, background, 3);
+    const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.error_color, background, 3), background);
+    const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.warning_color, background, 3), background);
+    const semantic_success = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.success_color, background, 3), background);
+    const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.info_color, background, 3), background);
 
     const c3_dark = if (dark_base) color_utils.darkenColor(c3, 0.8) else color_utils.lightenColor(c3, 0.8);
     const semantic_error_dark = if (dark_base) color_utils.darkenColor(semantic_error, 0.8) else color_utils.lightenColor(semantic_error, 0.8);
