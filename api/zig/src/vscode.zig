@@ -4,11 +4,95 @@ const color_utils = @import("color_utils.zig");
 const types = @import("vscode_types.zig");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 const GenerateOverridableRequest = @import("palette_api.zig").GenerateOverridableRequest;
+const ThemeAppearance = @import("palette_api.zig").ThemeAppearance;
 const VSCodeTheme = types.VSCodeTheme;
 const VSCodeThemeColors = types.VSCodeThemeColors;
 const VSCodeTokenColor = types.VSCodeTokenColor;
 const VSCodeThemeResponse = types.VSCodeThemeResponse;
 const ColorHex = types.ColorHex;
+
+fn applyTokenScope(scope_raw: []const u8, overrides: *ThemeOverrides, fg: []const u8) bool {
+    const scope = std.mem.trim(u8, scope_raw, " \t\n\r");
+    if (scope.len == 0) return false;
+
+    // property / member access -> c1
+    if (std.mem.indexOf(u8, scope, "variable.other.property") != null or
+        std.mem.indexOf(u8, scope, "support.type.property-name") != null or
+        std.mem.indexOf(u8, scope, "variable.member") != null)
+    {
+        if (overrides.c1 == null) overrides.c1 = fg;
+        return true;
+    }
+    // functions / storage -> c2
+    if (std.mem.indexOf(u8, scope, "entity.name.function") != null or
+        std.mem.eql(u8, scope, "storage.type") or
+        std.mem.indexOf(u8, scope, "support.function") != null)
+    {
+        if (overrides.c2 == null) overrides.c2 = fg;
+        return true;
+    }
+    // strings -> c3
+    if (std.mem.eql(u8, scope, "string") or
+        std.mem.eql(u8, scope, "string.quoted") or
+        std.mem.eql(u8, scope, "string.template"))
+    {
+        if (overrides.c3 == null) overrides.c3 = fg;
+        return true;
+    }
+    // constants -> constants
+    if (std.mem.indexOf(u8, scope, "constant.numeric") != null or
+        std.mem.indexOf(u8, scope, "constant.character") != null or
+        std.mem.indexOf(u8, scope, "constant.language.boolean") != null or
+        std.mem.indexOf(u8, scope, "constant.language.null") != null or
+        std.mem.indexOf(u8, scope, "keyword.constant") != null or
+        std.mem.eql(u8, scope, "number") or
+        std.mem.indexOf(u8, scope, "support.constant") != null)
+    {
+        if (overrides.constants == null) overrides.constants = fg;
+        return true;
+    }
+    // types / classes -> c5
+    if (std.mem.indexOf(u8, scope, "entity.name.class") != null or
+        std.mem.eql(u8, scope, "support.type") or
+        std.mem.indexOf(u8, scope, "entity.name.type") != null)
+    {
+        if (overrides.c5 == null) overrides.c5 = fg;
+        return true;
+    }
+    // keywords -> c6
+    if (std.mem.eql(u8, scope, "keyword") or
+        std.mem.eql(u8, scope, "keyword.control") or
+        std.mem.eql(u8, scope, "storage"))
+    {
+        if (overrides.c6 == null) overrides.c6 = fg;
+        return true;
+    }
+    // parameters / enums -> c7
+    if (std.mem.eql(u8, scope, "variable.parameter") or
+        std.mem.eql(u8, scope, "entity.name.type.enum"))
+    {
+        if (overrides.c7 == null) overrides.c7 = fg;
+        return true;
+    }
+    // operators -> c8
+    if (std.mem.eql(u8, scope, "keyword.operator") or
+        std.mem.eql(u8, scope, "punctuation.operator"))
+    {
+        if (overrides.c8 == null) overrides.c8 = fg;
+        return true;
+    }
+    // builtin/special/variant -> c9
+    if (std.mem.eql(u8, scope, "variable.builtin") or
+        std.mem.eql(u8, scope, "variable.special") or
+        std.mem.eql(u8, scope, "variable.other.enummember") or
+        std.mem.indexOf(u8, scope, "support.variable") != null)
+    {
+        if (overrides.c9 == null) overrides.c9 = fg;
+        return true;
+    }
+
+    return false;
+}
 
 /// Generates a complete VS Code theme from a palette of colors.
 /// Strategy: Select 10 most diverse colors, pick bg/fg with good contrast,
@@ -18,6 +102,7 @@ pub fn generateVSCodeTheme(
     colors: []const []const u8,
     theme_name: []const u8,
     overrides: ThemeOverrides,
+    appearance: ?ThemeAppearance,
 ) !VSCodeThemeResponse {
     if (colors.len == 0) {
         return error.NotEnoughColors;
@@ -58,7 +143,7 @@ pub fn generateVSCodeTheme(
         sum_luminance += color_utils.getLuminance(color);
     }
     const average_luminance = sum_luminance / @as(f32, @floatFromInt(palette.items.len));
-    const dark_base = average_luminance < 128.0;
+    const dark_base = if (appearance) |value| value == .dark else average_luminance < 128.0;
 
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
@@ -134,7 +219,6 @@ pub fn generateVSCodeTheme(
     const c2_80 = color_utils.addAlpha(c2, "80");
     const c3_30 = color_utils.addAlpha(c3, "30");
     const c3_80 = color_utils.addAlpha(c3, "80");
-    const c4_80 = color_utils.addAlpha(c4, "80");
     const c5_20 = color_utils.addAlpha(c5, "20");
     const c5_30 = color_utils.addAlpha(c5, "30");
     const c5_40 = color_utils.addAlpha(c5, "40");
@@ -154,7 +238,7 @@ pub fn generateVSCodeTheme(
         .disabledForeground = fg60,
         .focusBorder = c2_60,
         .descriptionForeground = fg70,
-        .errorForeground = c4,
+        .errorForeground = semantic_error,
         .@"icon.foreground" = foreground,
         .@"widget.border" = c1_40,
         .@"selection.background" = c2_50,
@@ -420,16 +504,8 @@ pub fn generateVSCodeTheme(
             .settings = .{ .foreground = c2, .fontStyle = "underline" },
         },
         .{
-            .scope = &[_][]const u8{"markup.deleted"},
-            .settings = .{ .foreground = c4 },
-        },
-        .{
-            .scope = &[_][]const u8{ "invalid", "invalid.illegal" },
-            .settings = .{ .foreground = c4 },
-        },
-        .{
-            .scope = &[_][]const u8{"invalid.deprecated"},
-            .settings = .{ .foreground = c4_80 },
+            .scope = &[_][]const u8{ "markup.deleted", "invalid.deprecated", "invalid", "invalid.illegal" },
+            .settings = .{ .foreground = semantic_error },
         },
     };
 
@@ -503,10 +579,12 @@ pub fn generateOverridableFromVSCodeThemeValue(allocator: std.mem.Allocator, req
     }
 
     // ── semantic/UI accent colors ─────────────────────────────────────────────
-    // c4 ← error color
-    if (color_utils.getStringField(colors_obj, "editorError.foreground")) |err_color| {
+    // c4 ← debugging color
+    if (color_utils.getStringField(colors_obj, "statusBar.debuggingBackground")) |err_color| {
         const value = overrides.c4 orelse err_color;
         overrides.c4 = value;
+        try color_utils.addColor(allocator, &colors, value);
+    } else if (overrides.c4) |value| {
         try color_utils.addColor(allocator, &colors, value);
     }
 
@@ -537,92 +615,29 @@ pub fn generateOverridableFromVSCodeThemeValue(allocator: std.mem.Allocator, req
             const settings_obj = color_utils.getObjectField(token_obj, "settings") orelse continue;
             const fg = color_utils.getStringField(settings_obj, "foreground") orelse continue;
 
-            const scope_arr = color_utils.getArrayField(token_obj, "scope") orelse {
+            const scope_value = token_obj.get("scope") orelse {
                 try color_utils.addColor(allocator, &colors, fg);
                 continue;
             };
 
-            for (scope_arr.items) |scope_item| {
-                const scope = switch (scope_item) {
-                    .string => |s| s,
-                    else => continue,
-                };
+            switch (scope_value) {
+                .array => |scope_arr| {
+                    for (scope_arr.items) |scope_item| {
+                        const scope = switch (scope_item) {
+                            .string => |s| s,
+                            else => continue,
+                        };
 
-                // property / member access  → c1
-                if (std.mem.indexOf(u8, scope, "variable.other.property") != null or
-                    std.mem.indexOf(u8, scope, "support.type.property-name") != null or
-                    std.mem.indexOf(u8, scope, "variable.member") != null)
-                {
-                    if (overrides.c1 == null) overrides.c1 = fg;
-                    break;
-                }
-                // functions / storage       → c2
-                if (std.mem.indexOf(u8, scope, "entity.name.function") != null or
-                    std.mem.eql(u8, scope, "storage.type") or
-                    std.mem.indexOf(u8, scope, "support.function") != null)
-                {
-                    if (overrides.c2 == null) overrides.c2 = fg;
-                    break;
-                }
-                // strings                  → c3
-                if (std.mem.eql(u8, scope, "string") or
-                    std.mem.eql(u8, scope, "string.quoted") or
-                    std.mem.eql(u8, scope, "string.template"))
-                {
-                    if (overrides.c3 == null) overrides.c3 = fg;
-                    break;
-                }
-                // constants                → constants
-                if (std.mem.indexOf(u8, scope, "constant.numeric") != null or
-                    std.mem.indexOf(u8, scope, "constant.character") != null or
-                    std.mem.indexOf(u8, scope, "constant.language.boolean") != null or
-                    std.mem.indexOf(u8, scope, "constant.language.null") != null or
-                    std.mem.indexOf(u8, scope, "keyword.constant") != null or
-                    std.mem.eql(u8, scope, "number") or
-                    std.mem.indexOf(u8, scope, "support.constant") != null)
-                {
-                    if (overrides.constants == null) overrides.constants = fg;
-                    break;
-                }
-                // types / classes           → c5
-                if (std.mem.indexOf(u8, scope, "entity.name.class") != null or
-                    std.mem.eql(u8, scope, "support.type") or
-                    std.mem.indexOf(u8, scope, "entity.name.type") != null)
-                {
-                    if (overrides.c5 == null) overrides.c5 = fg;
-                    break;
-                }
-                // keywords                  → c6
-                if (std.mem.eql(u8, scope, "keyword") or
-                    std.mem.eql(u8, scope, "keyword.control") or
-                    std.mem.eql(u8, scope, "storage"))
-                {
-                    if (overrides.c6 == null) overrides.c6 = fg;
-                    break;
-                }
-                // parameters / enums        → c7
-                if (std.mem.eql(u8, scope, "variable.parameter") or
-                    std.mem.eql(u8, scope, "entity.name.type.enum"))
-                {
-                    if (overrides.c7 == null) overrides.c7 = fg;
-                    break;
-                }
-                // operators                 → c8
-                if (std.mem.eql(u8, scope, "keyword.operator") or
-                    std.mem.eql(u8, scope, "punctuation.operator"))
-                {
-                    if (overrides.c8 == null) overrides.c8 = fg;
-                    break;
-                }
-                // builtin/special/variant   → c9
-                if (std.mem.eql(u8, scope, "variable.builtin") or
-                    std.mem.eql(u8, scope, "variable.special") or
-                    std.mem.eql(u8, scope, "variable.other.enummember") or
-                    std.mem.indexOf(u8, scope, "support.variable") != null)
-                {
-                    if (overrides.c9 == null) overrides.c9 = fg;
-                    break;
-                }
+                        if (applyTokenScope(scope, &overrides, fg)) break;
+                    }
+                },
+                .string => |scope_string| {
+                    var iter = std.mem.splitScalar(u8, scope_string, ',');
+                    while (iter.next()) |scope_item| {
+                        if (applyTokenScope(scope_item, &overrides, fg)) break;
+                    }
+                },
+                else => {},
             }
 
             // Always add the color to the palette (deduped by addColor).
@@ -637,7 +652,7 @@ pub fn generateOverridableFromVSCodeThemeValue(allocator: std.mem.Allocator, req
     const palette = try allocator.dupe([]const u8, colors.items);
     defer allocator.free(palette);
 
-    return try generateVSCodeTheme(allocator, palette, theme_name, overrides);
+    return try generateVSCodeTheme(allocator, palette, theme_name, overrides, request.appearance);
 }
 
 test "generateOverridableFromVSCodeThemeValue rejects non-object" {
@@ -661,7 +676,7 @@ test "generateOverridableFromVSCodeThemeValue builds overrides from colors" {
         "\"colors\":{" ++
         "\"editor.background\":\"#1a1a2e\"," ++
         "\"editor.foreground\":\"#e0e0ff\"," ++
-        "\"editorError.foreground\":\"#ff5555\"," ++
+        "\"statusBar.debuggingBackground\":\"#ff5555\"," ++
         "\"editorWarning.foreground\":\"#ffaa00\"," ++
         "\"editorInfo.foreground\":\"#55aaff\"," ++
         "\"editorGutter.addedBackground\":\"#55ff88\"" ++
@@ -681,11 +696,46 @@ test "generateOverridableFromVSCodeThemeValue builds overrides from colors" {
 
     const req = GenerateOverridableRequest{ .theme = parsed.value };
     const response = try generateOverridableFromVSCodeThemeValue(allocator, req);
+    const dark_base = response.theme.type == .dark;
+    const bg_very_dark = if (dark_base) color_utils.darkenColor(response.themeOverrides.background.?, 0.30) else color_utils.lightenColor(response.themeOverrides.background.?, 0.30);
 
-    try std.testing.expect(response.themeOverrides.background != null);
-    try std.testing.expect(response.themeOverrides.foreground != null);
-    try std.testing.expect(response.themeOverrides.c4 != null); // error color
+    try std.testing.expectEqualStrings("#1a1a2e", response.themeOverrides.background.?);
+    try std.testing.expectEqualStrings("#e0e0ff", response.themeOverrides.foreground.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ffaacc", bg_very_dark, 3), response.themeOverrides.c1.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ffcc00", bg_very_dark, 3), response.themeOverrides.c2.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#99ff99", response.themeOverrides.background.?, 3), response.themeOverrides.c3.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ff5555", response.themeOverrides.background.?, 3), response.themeOverrides.c4.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ff9966", response.themeOverrides.background.?, 3), response.themeOverrides.c5.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#66ccff", response.themeOverrides.background.?, 3), response.themeOverrides.c7.?);
+}
 
-    const expected_c4 = color_utils.adjustForContrast("#ff5555", response.themeOverrides.background.?, 3);
-    try std.testing.expectEqualStrings(expected_c4, response.themeOverrides.c4.?);
+test "generateOverridableFromVSCodeThemeValue handles string scope" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const json =
+        "{" ++
+        "\"name\":\"StringScope\"," ++
+        "\"type\":\"dark\"," ++
+        "\"colors\":{" ++
+        "\"editor.background\":\"#111111\"," ++
+        "\"editor.foreground\":\"#eeeeee\"," ++
+        "\"statusBar.debuggingBackground\":\"#ff0000\"" ++
+        "}," ++
+        "\"tokenColors\":[" ++
+        "{\"scope\":\"entity.name.function, keyword\",\"settings\":{\"foreground\":\"#00ff00\"}}" ++
+        "]" ++
+        "}";
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const req = GenerateOverridableRequest{ .theme = parsed.value };
+    const response = try generateOverridableFromVSCodeThemeValue(allocator, req);
+    const dark_base = response.theme.type == .dark;
+    const bg_very_dark = if (dark_base) color_utils.darkenColor(response.themeOverrides.background.?, 0.30) else color_utils.lightenColor(response.themeOverrides.background.?, 0.30);
+
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#00ff00", bg_very_dark, 3), response.themeOverrides.c2.?);
+    try std.testing.expectEqualStrings(color_utils.adjustForContrast("#ff0000", response.themeOverrides.background.?, 3), response.themeOverrides.c4.?);
 }

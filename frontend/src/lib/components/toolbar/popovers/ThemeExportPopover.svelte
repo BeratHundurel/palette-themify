@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
-	import { generateOverridable, generateTheme, type EditorThemeType } from '$lib/api/theme';
+	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
 	import { detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
 	import type { SavedThemeItem, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
@@ -17,6 +17,7 @@
 	let paletteVersion = $derived(appStore.state.paletteVersion);
 	let themeName = $derived(appStore.state.themeExport.themeName);
 	let editorType = $derived(appStore.state.themeExport.editorType);
+	let themeAppearance = $derived(appStore.state.themeExport.appearance);
 	let themeResult = $derived(appStore.state.themeExport.themeResult);
 	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
 	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
@@ -155,7 +156,13 @@
 			isGenerating = true;
 
 			if (hasPaletteColors) {
-				const response = await generateTheme(appStore.state.colors, editorType, themeName.trim(), themeOverrides);
+				const response = await generateTheme(
+					appStore.state.colors,
+					editorType,
+					themeName.trim(),
+					themeOverrides,
+					themeAppearance
+				);
 
 				appStore.state.themeExport.themeResult = response;
 				appStore.state.themeExport.themeName = response.theme.name;
@@ -177,7 +184,8 @@
 					appStore.state.themeExport.backupColors!,
 					editorType,
 					themeName.trim(),
-					themeOverrides
+					themeOverrides,
+					themeAppearance
 				);
 
 				appStore.state.themeExport.themeResult = response;
@@ -188,7 +196,7 @@
 				return;
 			}
 
-			const response = await generateOverridable(themeResult.theme, themeOverrides, editorType);
+			const response = await generateOverridable(themeResult.theme, themeOverrides, editorType, themeAppearance);
 			appStore.state.themeExport.themeResult = response;
 			appStore.state.themeExport.themeName = response.theme.name;
 			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
@@ -234,6 +242,14 @@
 		generateThemeFromApi();
 	}
 
+	async function handleThemeAppearanceChange(appearance: ThemeAppearance) {
+		if (themeAppearance === appearance) return;
+		themeOverrides = {};
+		appStore.state.themeExport.loadedThemeOverridesReference = null;
+		appStore.setThemeExportAppearance(appearance);
+		generateThemeFromApi();
+	}
+
 	async function exportTheme() {
 		if (!themeResult) return;
 
@@ -259,9 +275,10 @@
 		const signature = getThemeSignature(themeResult);
 		const existingThemes = appStore.state.savedThemes;
 
-		const identicalTheme = existingThemes.find(
-			(item) => item.editorType === editorType && getThemeSignature(item.themeResult) === signature
-		);
+		const identicalTheme = existingThemes.find((item) => {
+			const existingSignature = item.signature ?? getThemeSignature(item.themeResult);
+			return item.editorType === editorType && existingSignature === signature;
+		});
 		if (identicalTheme) {
 			return;
 		}
@@ -316,7 +333,8 @@
 			editorType,
 			themeResult: themeResult!,
 			themeColorsWithUsage,
-			createdAt: new Date().toISOString()
+			createdAt: new Date().toISOString(),
+			signature: getThemeSignature(themeResult)
 		};
 	}
 
@@ -440,6 +458,102 @@
 								<p class="mt-1.5 text-xs text-red-400">{themeNameError}</p>
 							{/if}
 						</div>
+					</div>
+				</div>
+
+				<div class="mb-8">
+					<div class="mb-6 flex items-center gap-2">
+						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Appearance</h3>
+						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2">
+						<button
+							type="button"
+							onclick={() => handleThemeAppearanceChange('dark')}
+							class="group relative overflow-hidden rounded-xl border px-4 py-4 text-left transition-[background-color,border-color,box-shadow] duration-300 {themeAppearance ===
+							'dark'
+								? 'border-brand/70 shadow-brand/20 bg-zinc-900/80 shadow-lg'
+								: 'hover:border-brand/50 border-zinc-700 bg-zinc-950/60 hover:bg-zinc-900/60'}"
+						>
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									<div class="text-sm font-semibold {themeAppearance === 'dark' ? 'text-brand' : 'text-zinc-200'}">
+										Dark
+									</div>
+									<div class="mt-1 text-xs text-zinc-400">Deep surfaces, bold accents</div>
+								</div>
+								<div class="rounded-lg border border-zinc-700 bg-zinc-950/80 p-2">
+									<div class="grid grid-cols-3 gap-1">
+										<div class="h-3 w-5 rounded bg-zinc-800"></div>
+										<div class="h-3 w-5 rounded bg-zinc-700"></div>
+										<div class="h-3 w-5 rounded bg-zinc-600"></div>
+										<div class="h-3 w-5 rounded bg-zinc-900"></div>
+										<div class="h-3 w-5 rounded bg-zinc-800"></div>
+										<div class="h-3 w-5 rounded bg-zinc-700"></div>
+										<div class="h-3 w-5 rounded bg-zinc-950"></div>
+										<div class="h-3 w-5 rounded bg-zinc-900"></div>
+										<div class="h-3 w-5 rounded bg-zinc-800"></div>
+									</div>
+								</div>
+							</div>
+							<div class="mt-3 flex items-center gap-2">
+								<div
+									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {themeAppearance ===
+									'dark'
+										? 'border-brand bg-brand/20'
+										: 'border-zinc-500'}"
+								>
+									{#if themeAppearance === 'dark'}
+										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
+									{/if}
+								</div>
+								<span class="text-xs font-medium text-zinc-400">Optimized for low-light setups</span>
+							</div>
+						</button>
+
+						<button
+							type="button"
+							onclick={() => handleThemeAppearanceChange('light')}
+							class="group relative overflow-hidden rounded-xl border px-4 py-4 text-left transition-[background-color,border-color,box-shadow] duration-300 {themeAppearance ===
+							'light'
+								? 'border-brand/40 shadow-brand/10 bg-zinc-800/40 shadow-lg'
+								: 'hover:border-brand/40 border-zinc-700 bg-zinc-950/60 hover:bg-zinc-900/40'}"
+						>
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									<div class="text-sm font-semibold {themeAppearance === 'light' ? 'text-brand' : 'text-zinc-200'}">
+										Light
+									</div>
+									<div class="mt-1 text-xs text-zinc-400">Airy surfaces, crisp contrast</div>
+								</div>
+								<div class="rounded-lg border border-zinc-700 bg-zinc-900/60 p-2">
+									<div class="grid grid-cols-3 gap-1">
+										<div class="h-3 w-5 rounded bg-zinc-200"></div>
+										<div class="h-3 w-5 rounded bg-zinc-300"></div>
+										<div class="h-3 w-5 rounded bg-zinc-400"></div>
+										<div class="h-3 w-5 rounded bg-zinc-100"></div>
+										<div class="h-3 w-5 rounded bg-zinc-200"></div>
+										<div class="h-3 w-5 rounded bg-zinc-300"></div>
+										<div class="h-3 w-5 rounded bg-zinc-50"></div>
+										<div class="h-3 w-5 rounded bg-zinc-100"></div>
+										<div class="h-3 w-5 rounded bg-zinc-200"></div>
+									</div>
+								</div>
+							</div>
+							<div class="mt-3 flex items-center gap-2">
+								<div
+									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {themeAppearance ===
+									'light'
+										? 'border-brand bg-brand/15'
+										: 'border-zinc-500'}"
+								>
+									{#if themeAppearance === 'light'}
+										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
+									{/if}
+								</div>
+								<span class="text-xs font-medium text-zinc-400">Balanced for daylight work</span>
+							</div>
+						</button>
 					</div>
 				</div>
 

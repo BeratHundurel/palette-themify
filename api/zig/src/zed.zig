@@ -4,6 +4,7 @@ const types = @import("zed_types.zig");
 const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
 const color_utils = @import("color_utils.zig");
 const GenerateOverridableRequest = @import("palette_api.zig").GenerateOverridableRequest;
+const ThemeAppearance = @import("palette_api.zig").ThemeAppearance;
 
 const ZedTheme = types.ZedTheme;
 const ZedThemeStyle = types.ZedThemeStyle;
@@ -19,6 +20,7 @@ pub fn generateZedTheme(
     colors: []const []const u8,
     theme_name: []const u8,
     overrides: ThemeOverrides,
+    appearance: ?ThemeAppearance,
 ) !ZedThemeResponse {
     if (colors.len == 0) {
         return error.NotEnoughColors;
@@ -54,13 +56,7 @@ pub fn generateZedTheme(
         }
     }
 
-    var sum_luminance: f32 = 0.0;
-    for (palette.items) |color| {
-        sum_luminance += color_utils.getLuminance(color);
-    }
-    const average_luminance = sum_luminance / @as(f32, @floatFromInt(palette.items.len));
-    const dark_base = average_luminance < 128.0;
-
+    const dark_base = if (appearance) |value| value == .dark else true;
     const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
     defer allocator.free(selection.remaining_indices);
 
@@ -79,20 +75,20 @@ pub fn generateZedTheme(
         const bg_raw = palette.items[selection.background_index];
         const base_luminance = color_utils.getLuminance(bg_raw);
         const darken_amount = if (dark_base) 0.6 + (base_luminance) * 0.2 else 0.0;
-        const lighten_amount = if (dark_base) 0.0 else 0.6 + (1.0 - base_luminance) * 0.2;
+        const lighten_amount = if (dark_base) 0.0 else 0.2 + (1.0 - base_luminance) * 0.7;
         break :blk if (dark_base) color_utils.darkenColor(bg_raw, darken_amount) else color_utils.lightenColor(bg_raw, lighten_amount);
     };
-    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.20);
-    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.30);
+    const bg_dark = if (dark_base) color_utils.darkenColor(background, 0.20) else color_utils.lightenColor(background, 0.10);
+    const bg_very_dark = if (dark_base) color_utils.darkenColor(background, 0.30) else color_utils.lightenColor(background, 0.20);
     const bg_light = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
     const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.20) else color_utils.darkenColor(background, 0.20);
 
     const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
-    const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.50) else color_utils.lightenColor(foreground, 0.50);
-    const fg_disabled = if (dark_base) color_utils.darkenColor(foreground, 0.60) else color_utils.lightenColor(foreground, 0.60);
-    const fg_placeholder = if (dark_base) color_utils.darkenColor(foreground, 0.70) else color_utils.lightenColor(foreground, 0.70);
+    const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.50) else color_utils.lightenColor(foreground, 0.10);
+    const fg_disabled = if (dark_base) color_utils.darkenColor(foreground, 0.60) else color_utils.lightenColor(foreground, 0.20);
+    const fg_placeholder = if (dark_base) color_utils.darkenColor(foreground, 0.70) else color_utils.lightenColor(foreground, 0.30);
 
     const fg_12 = color_utils.addAlpha(foreground, "12");
     const fg_26 = color_utils.addAlpha(foreground, "26");
@@ -131,8 +127,8 @@ pub fn generateZedTheme(
     const semantic_warning_1f = color_utils.addAlpha(semantic_warning, "1f");
     const semantic_success_26 = color_utils.addAlpha(semantic_success, "26");
     const semantic_success_1f = color_utils.addAlpha(semantic_success, "1f");
-    const semantic_success_88 = color_utils.addAlpha(semantic_success, "88");
 
+    const bright_semantic_warning = if (dark_base) color_utils.lightenColor(semantic_warning, 0.33) else color_utils.darkenColor(semantic_warning, 0.1);
     const accent_bright = if (dark_base) color_utils.lightenColor(c2, 0.33) else color_utils.darkenColor(c2, 0.33);
 
     const accents = try allocator.alloc([]const u8, 8);
@@ -176,7 +172,7 @@ pub fn generateZedTheme(
         .@"border.variant" = c2_88,
         .@"border.focused" = c2_88,
         .@"border.selected" = c2_88,
-        .@"border.transparent" = semantic_success_88,
+        .@"border.transparent" = c2_88,
         .@"border.disabled" = fg_disabled,
 
         .@"elevated_surface.background" = bg_dark,
@@ -308,9 +304,9 @@ pub fn generateZedTheme(
         .ignored = fg_disabled,
         .@"ignored.border" = fg_disabled,
         .@"ignored.background" = color_utils.addAlpha(fg_disabled, "26"),
-        .modified = color_utils.lightenColor(semantic_warning, 0.33),
-        .@"modified.border" = color_utils.lightenColor(semantic_warning, 0.33),
-        .@"modified.background" = color_utils.lightenColor(semantic_warning_26, 0.33),
+        .modified = bright_semantic_warning,
+        .@"modified.border" = bright_semantic_warning,
+        .@"modified.background" = if (dark_base) color_utils.lightenColor(semantic_warning_26, 0.33) else color_utils.darkenColor(semantic_warning_26, 0.2),
         .predictive = fg_disabled,
         .@"predictive.border" = c2,
         .@"predictive.background" = bg_dark,
@@ -609,7 +605,7 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, reques
     const palette = try allocator.dupe([]const u8, colors.items);
     defer allocator.free(palette);
 
-    return try generateZedTheme(allocator, palette, theme_name, overrides);
+    return try generateZedTheme(allocator, palette, theme_name, overrides, request.appearance);
 }
 
 test "generateOverridableFromZedThemeValue rejects invalid json" {
@@ -634,6 +630,7 @@ test "generateOverridableFromZedThemeValue builds overrides" {
     const request = GenerateOverridableRequest{
         .theme = parsed.value,
         .ThemeOverrides = ThemeOverrides{ .c1 = "#010203" },
+        .appearance = .light,
     };
     const response = try generateOverridableFromZedThemeValue(allocator, request);
 

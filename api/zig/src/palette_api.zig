@@ -120,20 +120,26 @@ pub const ThemeType = enum {
     zed,
 };
 
+pub const ThemeAppearance = enum {
+    dark,
+    light,
+};
+
 pub fn returnThemeJson(
     allocator: std.mem.Allocator,
     colors: []const []const u8,
     theme_type: ThemeType,
     theme_name: []const u8,
     overrides: ThemeOverrides,
+    appearance: ?ThemeAppearance,
 ) ![]const u8 {
     switch (theme_type) {
         .vscode => {
-            const response = try vscode.generateVSCodeTheme(allocator, colors, theme_name, overrides);
+            const response = try vscode.generateVSCodeTheme(allocator, colors, theme_name, overrides, appearance);
             return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
         .zed => {
-            const response = try zed.generateZedTheme(allocator, colors, theme_name, overrides);
+            const response = try zed.generateZedTheme(allocator, colors, theme_name, overrides, appearance);
             return try std.json.Stringify.valueAlloc(allocator, response, .{ .whitespace = .minified, .emit_null_optional_fields = false });
         },
     }
@@ -144,6 +150,7 @@ const ThemeRequest = struct {
     type: []const u8,
     name: ?[]const u8 = null,
     overrides: ?ThemeOverrides = null,
+    appearance: ?ThemeAppearance = null,
 };
 
 const ColorInput = struct {
@@ -193,14 +200,16 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
     const theme_type: ThemeType = if (std.mem.eql(u8, req.type, "zed")) .zed else .vscode;
     const theme_name = req.name orelse "Generated Theme";
     const overrides = req.overrides orelse ThemeOverrides{};
+    const appearance = req.appearance;
 
-    return try returnThemeJson(allocator, colors, theme_type, theme_name, overrides);
+    return try returnThemeJson(allocator, colors, theme_type, theme_name, overrides, appearance);
 }
 
 pub const GenerateOverridableRequest = struct {
     theme: std.json.Value,
     ThemeOverrides: ?ThemeOverrides = null,
     themeType: ThemeType = .zed,
+    appearance: ?ThemeAppearance = null,
 };
 
 pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
@@ -254,7 +263,7 @@ test "returnThemeJson produces vscode theme payload" {
         "#CC3366",
     };
 
-    const json = try returnThemeJson(allocator, &colors, .vscode, "Test Theme", ThemeOverrides{});
+    const json = try returnThemeJson(allocator, &colors, .vscode, "Test Theme", ThemeOverrides{}, null);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
     defer parsed.deinit();
