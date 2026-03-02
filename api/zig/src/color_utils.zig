@@ -294,30 +294,30 @@ const VibrancyRule = struct {
     ease_range: f32,
 };
 
-/// Desired rules
+/// Rules to soften high-glow colors without washing them out.
 const dark_bg_rules = [_]VibrancyRule{
     .{
-        .min_s = 0.6,
-        .min_l = 0.55,
+        .min_s = 0.62,
+        .min_l = 0.58,
         .max_l = null,
         .target_l_min = 0.52,
-        .target_l_max = 0.65,
-        .s_min_mul = 0.85,
-        .s_max_mul = 0.70,
+        .target_l_max = 0.68,
+        .s_min_mul = 0.94,
+        .s_max_mul = 0.82,
         .ease_range = 0.35,
     },
 };
 
 const light_bg_rules = [_]VibrancyRule{
     .{
-        .min_s = 0.8,
-        .min_l = 0.4,
-        .max_l = 0.6,
-        .target_l_min = 0.4,
-        .target_l_max = 0.6,
-        .s_min_mul = 0.7,
-        .s_max_mul = 0.7,
-        .ease_range = 0.2,
+        .min_s = 0.65,
+        .min_l = 0.55,
+        .max_l = null,
+        .target_l_min = 0.50,
+        .target_l_max = 0.60,
+        .s_min_mul = 0.92,
+        .s_max_mul = 0.85,
+        .ease_range = 0.35,
     },
 };
 
@@ -817,6 +817,32 @@ test "ensureReadableContrast returns color meeting minimum" {
     const proposed = "#111111";
     const adjusted = ensureReadableContrast(proposed, background, 7.0);
     try std.testing.expect(contrastRatio(adjusted, background) >= 7.0);
+}
+
+test "adjustForContrast softens glowy colors on dark backgrounds" {
+    const background = "#080808";
+    const glowy = "#66FFFF";
+    const adjusted = adjustForContrast(glowy, background, 3.0);
+
+    const input_hsl = hexToHsl(glowy);
+    const output_hsl = hexToHsl(adjusted);
+
+    try std.testing.expect(output_hsl.l < input_hsl.l);
+    try std.testing.expect(output_hsl.s < input_hsl.s);
+    try std.testing.expect(output_hsl.l >= 0.50);
+    try std.testing.expect(output_hsl.s >= 0.75);
+    try std.testing.expect(contrastRatio(adjusted, background) >= 3.0);
+}
+
+test "adjustForContrast keeps light-theme colors readable" {
+    const background = "#F7F7F7";
+    const glowy = "#FFEE66";
+    const adjusted = adjustForContrast(glowy, background, 3.0);
+
+    const output_hsl = hexToHsl(adjusted);
+
+    try std.testing.expect(contrastRatio(adjusted, background) >= 3.0);
+    try std.testing.expect(output_hsl.s >= 0.60);
 }
 
 test "selectDiverseColors returns requested count" {
