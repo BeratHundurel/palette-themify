@@ -1,5 +1,5 @@
 const std = @import("std");
-const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
+const ThemeOverrides = @import("overrides.zig").ThemeOverrides;
 
 pub const ColorHex = struct {
     hex: []const u8,

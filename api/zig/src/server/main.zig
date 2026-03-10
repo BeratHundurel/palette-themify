@@ -1,6 +1,6 @@
 const std = @import("std");
 const tk = @import("tokamak");
-const palette_api = @import("palette_api.zig");
+const palette_api = @import("palette_themify_api").palette_api;
 
 const PORT: u16 = 8089;
 const MAX_BODY_SIZE: usize = 50 * 1024 * 1024;

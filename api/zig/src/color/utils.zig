@@ -1,5 +1,5 @@
 const std = @import("std");
-const types = @import("vscode_types.zig");
+const types = @import("../theme/vscode_types.zig");
 
 pub const HSL = struct {
     h: f32,

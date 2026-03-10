@@ -1,11 +1,15 @@
 const std = @import("std");
-pub const vscode = @import("vscode.zig");
-pub const zed = @import("zed.zig");
-pub const color_utils = @import("color_utils.zig");
-pub const palette_api = @import("palette_api.zig");
+pub const zed = @import("theme/zed.zig");
+pub const color_utils = @import("color/utils.zig");
+pub const palette_api = @import("palette/api.zig");
+pub const theme_common = @import("theme/common.zig");
+pub const theme_overrides = @import("theme/overrides.zig");
+pub const vscode = @import("theme/vscode.zig");
 test {
     _ = color_utils;
     _ = palette_api;
+    _ = theme_common;
+    _ = theme_overrides;
     _ = zed;
     _ = vscode;
 }

@@ -2,14 +2,14 @@ const std = @import("std");
 
 const zigimg = @import("zigimg");
 
-const color_utils = @import("color_utils.zig");
-const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
-const vscode = @import("vscode.zig");
-const VSCodeThemeResponse = @import("vscode_types.zig").VSCodeThemeResponse;
-const zed = @import("zed.zig");
-const ZedThemeResponse = @import("zed_types.zig").ZedThemeResponse;
-const ZedTheme = @import("zed_types.zig").ZedTheme;
-
+const color_utils = @import("../color/utils.zig");
+const ThemeOverrides = @import("../theme/overrides.zig").ThemeOverrides;
+const theme_common = @import("../theme/common.zig");
+const vscode = @import("../theme/vscode.zig");
+const VSCodeThemeResponse = @import("../theme/vscode_types.zig").VSCodeThemeResponse;
+const zed = @import("../theme/zed.zig");
+const ZedThemeResponse = @import("../theme/zed_types.zig").ZedThemeResponse;
+const ZedTheme = @import("../theme/zed_types.zig").ZedTheme;
 pub const ExtractError = error{
     NotAnImage,
     NoColors,
@@ -56,7 +56,7 @@ pub fn extractPaletteFromBytes(
         return ExtractError.NotAnImage;
     };
     defer img.deinit(allocator);
-    
+
     return processImage(allocator, &img);
 }
 
@@ -115,15 +115,9 @@ fn processImage(
     };
 }
 
-pub const ThemeType = enum {
-    vscode,
-    zed,
-};
+pub const ThemeType = theme_common.ThemeType;
 
-pub const ThemeAppearance = enum {
-    dark,
-    light,
-};
+pub const ThemeAppearance = theme_common.ThemeAppearance;
 
 pub fn returnThemeJson(
     allocator: std.mem.Allocator,
@@ -205,12 +199,7 @@ pub fn handleGenerateTheme(allocator: std.mem.Allocator, request_body: []const u
     return try returnThemeJson(allocator, colors, theme_type, theme_name, overrides, appearance);
 }
 
-pub const GenerateOverridableRequest = struct {
-    theme: std.json.Value,
-    ThemeOverrides: ?ThemeOverrides = null,
-    themeType: ThemeType = .zed,
-    appearance: ?ThemeAppearance = null,
-};
+pub const GenerateOverridableRequest = theme_common.GenerateOverridableRequest;
 
 pub fn handleGenerateOverridable(allocator: std.mem.Allocator, request_body: []const u8) ![]const u8 {
     const parsed = std.json.parseFromSlice(GenerateOverridableRequest, allocator, request_body, .{

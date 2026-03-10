@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "palette_themify_api",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
+            .root_source_file = b.path("src/server/main.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    mod.addImport("zigimg", zigimg_dependency.module("zigimg"));
     exe.root_module.addImport("zigimg", zigimg_dependency.module("zigimg"));
 
     tokamak.setup(exe, .{});

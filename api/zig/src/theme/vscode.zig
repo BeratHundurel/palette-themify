@@ -1,10 +1,11 @@
 const std = @import("std");
 
-const color_utils = @import("color_utils.zig");
+const color_utils = @import("../color/utils.zig");
+const theme_common = @import("common.zig");
 const types = @import("vscode_types.zig");
-const ThemeOverrides = @import("theme_overrides.zig").ThemeOverrides;
-const GenerateOverridableRequest = @import("palette_api.zig").GenerateOverridableRequest;
-const ThemeAppearance = @import("palette_api.zig").ThemeAppearance;
+const ThemeOverrides = @import("overrides.zig").ThemeOverrides;
+const GenerateOverridableRequest = theme_common.GenerateOverridableRequest;
+const ThemeAppearance = theme_common.ThemeAppearance;
 const VSCodeTheme = types.VSCodeTheme;
 const VSCodeThemeColors = types.VSCodeThemeColors;
 const VSCodeTokenColor = types.VSCodeTokenColor;
@@ -104,57 +105,11 @@ pub fn generateVSCodeTheme(
     overrides: ThemeOverrides,
     appearance: ?ThemeAppearance,
 ) !VSCodeThemeResponse {
-    if (colors.len == 0) {
-        return error.NotEnoughColors;
-    }
-
-    const semantic = color_utils.findSemanticColors(colors);
-    const improved_colors = try color_utils.selectDiverseColors(allocator, colors, 11);
-    defer allocator.free(improved_colors);
-
-    var palette = std.ArrayList([]const u8){};
-    defer palette.deinit(allocator);
-    try palette.ensureTotalCapacity(allocator, 11);
-    try palette.appendSlice(allocator, improved_colors);
-
-    if (palette.items.len < 11) {
-        const harmony_schemes = [_]color_utils.HarmonyScheme{
-            .complementary,
-            .triadic,
-            .analogous,
-            .@"split-complementary",
-        };
-        const base_count = palette.items.len;
-        var scheme_index: usize = 0;
-        var base_index: usize = 0;
-
-        while (palette.items.len < 11) {
-            const base_color = palette.items[base_index % base_count];
-            const scheme = harmony_schemes[scheme_index % harmony_schemes.len];
-            const harmonic = color_utils.getHarmonicColor(base_color, scheme);
-            try palette.append(allocator, harmonic);
-            scheme_index += 1;
-            base_index += 1;
-        }
-    }
-
-    const dark_base = if (appearance) |value| value == .dark else true;
-    const selection = try color_utils.selectBackgroundAndForeground(allocator, palette.items, dark_base);
-    defer allocator.free(selection.remaining_indices);
-
-    const remaining = selection.remaining_indices;
-    const c1_raw = overrides.c1 orelse palette.items[remaining[0]];
-    const c2_raw = overrides.c2 orelse palette.items[remaining[1]];
-    const c3_raw = overrides.c3 orelse palette.items[remaining[2]];
-    const c4_raw = overrides.c4 orelse palette.items[remaining[3]];
-    const c5_raw = overrides.c5 orelse palette.items[remaining[4]];
-    const c6_raw = overrides.c6 orelse palette.items[remaining[5]];
-    const c7_raw = overrides.c7 orelse palette.items[remaining[6]];
-    const c8_raw = overrides.c8 orelse palette.items[remaining[7]];
-    const c9_raw = overrides.c9 orelse palette.items[remaining[8]];
+    const prepared = try theme_common.prepareThemeSelection(allocator, colors, overrides, appearance);
+    const dark_base = prepared.dark_base;
 
     const background = if (overrides.background) |bg| bg else blk: {
-        const bg_raw = palette.items[selection.background_index];
+        const bg_raw = prepared.background_seed;
         const base_luminance = color_utils.getLuminance(bg_raw);
         const darken_amount = if (dark_base) 0.5 + (base_luminance) * 0.9 else 0.0;
         const lighten_amount = if (dark_base) 0.0 else 0.2 + (1.0 - base_luminance) * 0.6;
@@ -166,26 +121,26 @@ pub fn generateVSCodeTheme(
     const bg_light = if (dark_base) color_utils.lightenColor(background, 0.05) else color_utils.darkenColor(background, 0.05);
     const bg_inactive = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
 
-    const proposed_foreground = overrides.foreground orelse palette.items[selection.foreground_index];
+    const proposed_foreground = overrides.foreground orelse prepared.foreground_seed;
     const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
-    const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(c1_raw, background, 3), background);
-    const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(c2_raw, background, 3), background);
-    const c3 = color_utils.boostAccentColor(color_utils.adjustForContrast(c3_raw, background, 3), background);
-    const c4 = color_utils.boostAccentColor(color_utils.adjustForContrast(c4_raw, background, 3), background);
-    const c5 = color_utils.boostAccentColor(color_utils.adjustForContrast(c5_raw, background, 3), background);
-    const c6 = color_utils.boostAccentColor(color_utils.adjustForContrast(c6_raw, background, 3), background);
-    const c7 = color_utils.boostAccentColor(color_utils.adjustForContrast(c7_raw, background, 3), background);
-    const c8 = color_utils.boostAccentColor(color_utils.adjustForContrast(c8_raw, background, 3), background);
-    const c9 = color_utils.boostAccentColor(color_utils.adjustForContrast(c9_raw, background, 3), background);
+    const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c1_raw, background, 3), background);
+    const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c2_raw, background, 3), background);
+    const c3 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c3_raw, background, 3), background);
+    const c4 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c4_raw, background, 3), background);
+    const c5 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c5_raw, background, 3), background);
+    const c6 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c6_raw, background, 3), background);
+    const c7 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c7_raw, background, 3), background);
+    const c8 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c8_raw, background, 3), background);
+    const c9 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c9_raw, background, 3), background);
 
     const constants_raw = overrides.constants orelse color_utils.getHarmonicColor(c2, .@"split-complementary");
     const constants = color_utils.boostAccentColor(color_utils.adjustForContrast(constants_raw, background, 3), background);
 
-    const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.error_color, background, 3), background);
-    const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.warning_color, background, 3), background);
-    const semantic_success = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.success_color, background, 3), background);
-    const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(semantic.info_color, background, 3), background);
+    const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.error_color, background, 3), background);
+    const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.warning_color, background, 3), background);
+    const semantic_success = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.success_color, background, 3), background);
+    const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.info_color, background, 3), background);
 
     const c3_dark = if (dark_base) color_utils.darkenColor(c3, 0.8) else color_utils.lightenColor(c3, 0.8);
     const semantic_error_dark = if (dark_base) color_utils.darkenColor(semantic_error, 0.8) else color_utils.lightenColor(semantic_error, 0.8);
