@@ -1,8 +1,11 @@
-package main
+package handlers
 
 import (
 	"encoding/json"
 	"errors"
+	"image-to-palette/auth"
+	"image-to-palette/db"
+	"image-to-palette/model"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,20 +16,20 @@ type PreferencesResponse struct {
 	Preferences json.RawMessage `json:"preferences"`
 }
 
-func getPreferencesHandler(c *gin.Context) {
-	if DB == nil {
+func GetPreferencesHandler(c *gin.Context) {
+	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
 		return
 	}
 
-	userID, err := getCurrentUser(c)
+	userID, err := auth.GetCurrentUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	var prefs UserPreferences
-	if err := DB.Where("user_id = ?", userID).First(&prefs).Error; err != nil {
+	var prefs model.UserPreferences
+	if err := db.DB.Where("user_id = ?", userID).First(&prefs).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusOK, gin.H{"preferences": nil})
 			return
@@ -38,13 +41,13 @@ func getPreferencesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, PreferencesResponse{Preferences: json.RawMessage(prefs.JsonData)})
 }
 
-func savePreferencesHandler(c *gin.Context) {
-	if DB == nil {
+func SavePreferencesHandler(c *gin.Context) {
+	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
 		return
 	}
 
-	userID, err := getCurrentUser(c)
+	userID, err := auth.GetCurrentUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
@@ -56,24 +59,24 @@ func savePreferencesHandler(c *gin.Context) {
 		return
 	}
 
-	var prefs UserPreferences
-	if err := DB.Where("user_id = ?", userID).First(&prefs).Error; err != nil {
+	var prefs model.UserPreferences
+	if err := db.DB.Where("user_id = ?", userID).First(&prefs).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
 			return
 		}
 
-		prefs = UserPreferences{
+		prefs = model.UserPreferences{
 			UserID:   userID,
 			JsonData: string(payload),
 		}
-		if err := DB.Create(&prefs).Error; err != nil {
+		if err := db.DB.Create(&prefs).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
 			return
 		}
 	} else {
 		prefs.JsonData = string(payload)
-		if err := DB.Save(&prefs).Error; err != nil {
+		if err := db.DB.Save(&prefs).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
 			return
 		}

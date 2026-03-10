@@ -1,6 +1,10 @@
-package main
+package model
 
 import "time"
+
+type Color struct {
+	Hex string `json:"hex"`
+}
 
 type User struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`

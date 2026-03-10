@@ -2,69 +2,30 @@ package main
 
 import (
 	"log"
-	"time"
 
+	"image-to-palette/db"
+	"image-to-palette/handlers"
 	_ "image/gif"
 	_ "image/jpeg"
 
 	_ "golang.org/x/image/webp"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	if err := InitDatabase(); err != nil {
+	if err := db.InitDatabase(); err != nil {
 		log.Printf("Failed to initialize database: %v", err)
 		log.Println("Continuing without database functionality...")
 	}
 
 	defer func() {
-		if DB != nil {
-			if err := CloseDatabase(); err != nil {
+		if db.DB != nil {
+			if err := db.CloseDatabase(); err != nil {
 				log.Printf("Failed to close database: %v", err)
 			}
 		}
 	}()
 
-	router := gin.Default()
-
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
-		AllowMethods:     []string{"POST", "GET", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
-
-	router.POST("/auth/register", registerHandler)
-	router.POST("/auth/login", loginHandler)
-	router.GET("/auth/google", googleLoginHandler)
-	router.GET("/auth/google/callback", googleCallbackHandler)
-
-	auth := router.Group("/auth")
-	auth.Use(authMiddleware())
-	{
-		auth.GET("/me", getMeHandler)
-		auth.POST("/change-password", changePasswordHandler)
-		auth.GET("/preferences", getPreferencesHandler)
-		auth.PUT("/preferences", savePreferencesHandler)
-	}
-
-	router.GET("/palettes", getPalettesHandler)
-	router.POST("/palettes", savePaletteHandler)
-	router.DELETE("/palettes/:id", deletePaletteHandler)
-
-	router.GET("/themes", getThemesHandler)
-	router.POST("/themes", saveThemeHandler)
-	router.PUT("/themes/:id", updateThemeHandler)
-	router.DELETE("/themes/:id", deleteThemeHandler)
-	router.POST("/apply-palette", applyPaletteHandler)
-
-	router.GET("/wallhaven/search", wallhavenSearchHandler)
-	router.GET("/wallhaven/w/:id", wallhavenGetWallpaperHandler)
-	router.GET("/wallhaven/download", wallhavenDownloadHandler)
+	router := handlers.NewRouter()
 
 	log.Println("Starting server on :8088")
 	if err := router.Run(":8088"); err != nil {

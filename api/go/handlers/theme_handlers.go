@@ -1,9 +1,12 @@
-package main
+package handlers
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image-to-palette/auth"
+	"image-to-palette/db"
+	"image-to-palette/model"
 	"net/http"
 	"time"
 
@@ -25,14 +28,14 @@ type themePayload struct {
 	Signature  string
 }
 
-func saveThemeHandler(c *gin.Context) {
-	if DB == nil {
+func SaveThemeHandler(c *gin.Context) {
+	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
 		return
 	}
 
-	authenticated, userID := isAuthenticated(c)
-	if !authenticated {
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to save themes"})
 		return
 	}
@@ -69,8 +72,8 @@ func saveThemeHandler(c *gin.Context) {
 	c.JSON(status, gin.H{"message": "Theme saved successfully", "theme": responseTheme})
 }
 
-func updateThemeHandler(c *gin.Context) {
-	if DB == nil {
+func UpdateThemeHandler(c *gin.Context) {
+	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
 		return
 	}
@@ -81,8 +84,8 @@ func updateThemeHandler(c *gin.Context) {
 		return
 	}
 
-	authenticated, userID := isAuthenticated(c)
-	if !authenticated {
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to update themes"})
 		return
 	}
@@ -114,14 +117,14 @@ func updateThemeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Theme updated successfully", "theme": responseTheme})
 }
 
-func getThemesHandler(c *gin.Context) {
-	if DB == nil {
+func GetThemesHandler(c *gin.Context) {
+	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
 		return
 	}
 
-	authenticated, userID := isAuthenticated(c)
-	if !authenticated {
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to get themes"})
 		return
 	}
@@ -135,8 +138,8 @@ func getThemesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, GetThemesResponse{Themes: themes})
 }
 
-func deleteThemeHandler(c *gin.Context) {
-	if DB == nil {
+func DeleteThemeHandler(c *gin.Context) {
+	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
 		return
 	}
@@ -147,8 +150,8 @@ func deleteThemeHandler(c *gin.Context) {
 		return
 	}
 
-	authenticated, userID := isAuthenticated(c)
-	if !authenticated {
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to delete themes"})
 		return
 	}
@@ -161,27 +164,27 @@ func deleteThemeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Theme deleted successfully"})
 }
 
-func saveUserTheme(userID uint, name string, editorType string, signature string, jsonData string) (Theme, bool, error) {
-	if DB == nil {
-		return Theme{}, false, fmt.Errorf("database not available")
+func saveUserTheme(userID uint, name string, editorType string, signature string, jsonData string) (model.Theme, bool, error) {
+	if db.DB == nil {
+		return model.Theme{}, false, fmt.Errorf("database not available")
 	}
 
-	var theme Theme
-	err := DB.Where("user_id = ? AND editor_type = ? AND signature = ?", userID, editorType, signature).First(&theme).Error
+	var theme model.Theme
+	err := db.DB.Where("user_id = ? AND editor_type = ? AND signature = ?", userID, editorType, signature).First(&theme).Error
 	if err == nil {
 		theme.Name = name
 		theme.JsonData = jsonData
 		theme.UpdatedAt = time.Now().UTC()
-		if err := DB.Save(&theme).Error; err != nil {
-			return Theme{}, false, err
+		if err := db.DB.Save(&theme).Error; err != nil {
+			return model.Theme{}, false, err
 		}
 		return theme, false, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return Theme{}, false, err
+		return model.Theme{}, false, err
 	}
 
-	newTheme := Theme{
+	newTheme := model.Theme{
 		UserID:     &userID,
 		Name:       name,
 		EditorType: editorType,
@@ -189,21 +192,21 @@ func saveUserTheme(userID uint, name string, editorType string, signature string
 		JsonData:   jsonData,
 	}
 
-	if err := DB.Create(&newTheme).Error; err != nil {
-		return Theme{}, false, err
+	if err := db.DB.Create(&newTheme).Error; err != nil {
+		return model.Theme{}, false, err
 	}
 
 	return newTheme, true, nil
 }
 
-func updateUserTheme(userID uint, themeID string, name string, editorType string, signature string, jsonData string) (Theme, error) {
-	if DB == nil {
-		return Theme{}, fmt.Errorf("database not available")
+func updateUserTheme(userID uint, themeID string, name string, editorType string, signature string, jsonData string) (model.Theme, error) {
+	if db.DB == nil {
+		return model.Theme{}, fmt.Errorf("database not available")
 	}
 
-	var theme Theme
-	if err := DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
-		return Theme{}, fmt.Errorf("theme not found or unauthorized")
+	var theme model.Theme
+	if err := db.DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
+		return model.Theme{}, fmt.Errorf("theme not found or unauthorized")
 	}
 
 	theme.Name = name
@@ -212,20 +215,20 @@ func updateUserTheme(userID uint, themeID string, name string, editorType string
 	theme.JsonData = jsonData
 	theme.UpdatedAt = time.Now().UTC()
 
-	if err := DB.Save(&theme).Error; err != nil {
-		return Theme{}, err
+	if err := db.DB.Save(&theme).Error; err != nil {
+		return model.Theme{}, err
 	}
 
 	return theme, nil
 }
 
 func getUserThemes(userID uint) ([]json.RawMessage, error) {
-	if DB == nil {
+	if db.DB == nil {
 		return nil, fmt.Errorf("database not available")
 	}
 
-	var dbThemes []Theme
-	if err := DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&dbThemes).Error; err != nil {
+	var dbThemes []model.Theme
+	if err := db.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&dbThemes).Error; err != nil {
 		return nil, err
 	}
 
@@ -250,16 +253,16 @@ func getUserThemes(userID uint) ([]json.RawMessage, error) {
 }
 
 func deleteUserTheme(userID uint, themeID string) error {
-	if DB == nil {
+	if db.DB == nil {
 		return fmt.Errorf("database not available")
 	}
 
-	var theme Theme
-	if err := DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
+	var theme model.Theme
+	if err := db.DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
 		return fmt.Errorf("theme not found or unauthorized")
 	}
 
-	return DB.Delete(&theme).Error
+	return db.DB.Delete(&theme).Error
 }
 
 func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
@@ -299,7 +302,7 @@ func decodeThemePayload(raw string) (map[string]any, error) {
 	return payload, nil
 }
 
-func buildThemeResponse(theme Theme, payload map[string]any) (map[string]any, error) {
+func buildThemeResponse(theme model.Theme, payload map[string]any) (map[string]any, error) {
 	if payload == nil {
 		decoded, err := decodeThemePayload(theme.JsonData)
 		if err != nil {

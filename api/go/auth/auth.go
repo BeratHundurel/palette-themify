@@ -1,12 +1,16 @@
-package main
+package auth
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"image-to-palette/db"
+	"image-to-palette/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -33,12 +37,20 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	Token   string `json:"token"`
-	User    User   `json:"user"`
-	Message string `json:"message"`
+	Token   string     `json:"token"`
+	User    model.User `json:"user"`
+	Message string     `json:"message"`
 }
 
 var googleOAuthConfig *oauth2.Config
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+
+	return defaultValue
+}
 
 func getGoogleOAuthConfig() *oauth2.Config {
 	if googleOAuthConfig != nil {
@@ -56,17 +68,17 @@ func getGoogleOAuthConfig() *oauth2.Config {
 	return googleOAuthConfig
 }
 
-func hashPassword(password string) (string, error) {
+func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
 
-func checkPasswordHash(password, hash string) bool {
+func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-func generateJWTToken(user User) (string, error) {
+func GenerateJWTToken(user model.User) (string, error) {
 	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-this-in-production")
 
 	expirationTime := time.Now().Add(24 * time.Hour)
@@ -90,7 +102,7 @@ func generateJWTToken(user User) (string, error) {
 	return tokenString, nil
 }
 
-func validateJWTToken(tokenString string) (*Claims, error) {
+func ValidateJWTToken(tokenString string) (*Claims, error) {
 	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-this-in-production")
 
 	claims := &Claims{}
@@ -112,7 +124,7 @@ func validateJWTToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func authMiddleware() gin.HandlerFunc {
+func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -128,7 +140,7 @@ func authMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := validateJWTToken(bearerToken[1])
+		claims, err := ValidateJWTToken(bearerToken[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
@@ -141,7 +153,7 @@ func authMiddleware() gin.HandlerFunc {
 	}
 }
 
-func getCurrentUser(c *gin.Context) (uint, error) {
+func GetCurrentUser(c *gin.Context) (uint, error) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		return 0, errors.New("user not found in context")
@@ -155,37 +167,56 @@ func getCurrentUser(c *gin.Context) (uint, error) {
 	return uid, nil
 }
 
-func registerHandler(c *gin.Context) {
+func GetUserFromRequest(c *gin.Context) (uint, error) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return 0, errors.New("authorization header required")
+	}
+
+	bearerToken := strings.Split(authHeader, " ")
+	if len(bearerToken) != 2 || bearerToken[0] != "Bearer" {
+		return 0, errors.New("invalid authorization header format")
+	}
+
+	claims, err := ValidateJWTToken(bearerToken[1])
+	if err != nil {
+		return 0, err
+	}
+
+	return claims.UserID, nil
+}
+
+func RegisterHandler(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var existingUser User
-	if err := DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+	var existingUser model.User
+	if err := db.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
 	}
 
-	hashedPassword, err := hashPassword(req.Password)
+	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
-	user := User{
+	user := model.User{
 		Name:         req.Name,
 		Email:        req.Email,
 		PasswordHash: hashedPassword,
 	}
 
-	if err := DB.Create(&user).Error; err != nil {
+	if err := db.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	token, err := generateJWTToken(user)
+	token, err := GenerateJWTToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -199,25 +230,25 @@ func registerHandler(c *gin.Context) {
 	})
 }
 
-func loginHandler(c *gin.Context) {
+func LoginHandler(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var user User
-	if err := DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	var user model.User
+	if err := db.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	if !checkPasswordHash(req.Password, user.PasswordHash) {
+	if !CheckPasswordHash(req.Password, user.PasswordHash) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	token, err := generateJWTToken(user)
+	token, err := GenerateJWTToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -231,15 +262,15 @@ func loginHandler(c *gin.Context) {
 	})
 }
 
-func getMeHandler(c *gin.Context) {
-	userID, err := getCurrentUser(c)
+func GetMeHandler(c *gin.Context) {
+	userID, err := GetCurrentUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	var user User
-	if err := DB.First(&user, userID).Error; err != nil {
+	var user model.User
+	if err := db.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -248,8 +279,8 @@ func getMeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-func changePasswordHandler(c *gin.Context) {
-	userID, err := getCurrentUser(c)
+func ChangePasswordHandler(c *gin.Context) {
+	userID, err := GetCurrentUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
@@ -266,24 +297,24 @@ func changePasswordHandler(c *gin.Context) {
 		return
 	}
 
-	var user User
-	if err := DB.First(&user, userID).Error; err != nil {
+	var user model.User
+	if err := db.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	if !checkPasswordHash(req.CurrentPassword, user.PasswordHash) {
+	if !CheckPasswordHash(req.CurrentPassword, user.PasswordHash) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
 		return
 	}
 
-	hashedPassword, err := hashPassword(req.NewPassword)
+	hashedPassword, err := HashPassword(req.NewPassword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password"})
 		return
 	}
 
-	if err := DB.Model(&user).Update("password_hash", hashedPassword).Error; err != nil {
+	if err := db.DB.Model(&user).Update("password_hash", hashedPassword).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
 		return
 	}
@@ -299,7 +330,7 @@ type GoogleUserInfo struct {
 	VerifiedEmail bool   `json:"verified_email"`
 }
 
-func googleLoginHandler(c *gin.Context) {
+func GoogleLoginHandler(c *gin.Context) {
 	config := getGoogleOAuthConfig()
 
 	if config.ClientID == "" {
@@ -311,7 +342,7 @@ func googleLoginHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 
-func googleCallbackHandler(c *gin.Context) {
+func GoogleCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code parameter"})
@@ -351,7 +382,7 @@ func googleCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	jwtToken, err := generateJWTToken(*user)
+	jwtToken, err := GenerateJWTToken(*user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -361,39 +392,39 @@ func googleCallbackHandler(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/auth/google/callback?token=%s", frontendURL, jwtToken))
 }
 
-func findOrCreateGoogleUser(userInfo GoogleUserInfo) (*User, error) {
-	if DB == nil {
+func findOrCreateGoogleUser(userInfo GoogleUserInfo) (*model.User, error) {
+	if db.DB == nil {
 		return nil, fmt.Errorf("database not available")
 	}
 
-	var user User
-	if err := DB.Where("google_id = ?", userInfo.ID).First(&user).Error; err == nil {
+	var user model.User
+	if err := db.DB.Where("google_id = ?", userInfo.ID).First(&user).Error; err == nil {
 		if userInfo.Picture != "" && user.AvatarURL != userInfo.Picture {
-			DB.Model(&user).Update("avatar_url", userInfo.Picture)
+			db.DB.Model(&user).Update("avatar_url", userInfo.Picture)
 			user.AvatarURL = userInfo.Picture
 		}
 		return &user, nil
 	}
 
-	if err := DB.Where("email = ?", userInfo.Email).First(&user).Error; err == nil {
+	if err := db.DB.Where("email = ?", userInfo.Email).First(&user).Error; err == nil {
 		user.GoogleID = userInfo.ID
 		if userInfo.Picture != "" {
 			user.AvatarURL = userInfo.Picture
 		}
-		if err := DB.Save(&user).Error; err != nil {
+		if err := db.DB.Save(&user).Error; err != nil {
 			return nil, fmt.Errorf("failed to update user with Google ID: %w", err)
 		}
 		return &user, nil
 	}
 
-	user = User{
+	user = model.User{
 		Name:      userInfo.Name,
 		Email:     userInfo.Email,
 		GoogleID:  userInfo.ID,
 		AvatarURL: userInfo.Picture,
 	}
 
-	if err := DB.Create(&user).Error; err != nil {
+	if err := db.DB.Create(&user).Error; err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 

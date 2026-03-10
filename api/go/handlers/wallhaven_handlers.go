@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"io"
@@ -10,7 +10,7 @@ import (
 
 const wallhavenBase = "https://wallhaven.cc/api/v1"
 
-func wallhavenSearchHandler(c *gin.Context) {
+func WallhavenSearchHandler(c *gin.Context) {
 	q := url.Values{}
 	for k, vals := range c.Request.URL.Query() {
 		for _, v := range vals {
@@ -49,7 +49,7 @@ func wallhavenSearchHandler(c *gin.Context) {
 	}
 }
 
-func wallhavenGetWallpaperHandler(c *gin.Context) {
+func WallhavenGetWallpaperHandler(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id required"})
@@ -86,7 +86,7 @@ func wallhavenGetWallpaperHandler(c *gin.Context) {
 	}
 }
 
-func wallhavenDownloadHandler(c *gin.Context) {
+func WallhavenDownloadHandler(c *gin.Context) {
 	imageURL := c.Query("url")
 	if imageURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url query parameter required"})

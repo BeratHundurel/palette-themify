@@ -1,7 +1,8 @@
-package main
+package db
 
 import (
 	"fmt"
+	"image-to-palette/model"
 	"log"
 	"os"
 	"time"
@@ -80,7 +81,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 func runMigrations() error {
-	return DB.AutoMigrate(&Palette{}, &Theme{}, &User{}, &UserPreferences{})
+	return DB.AutoMigrate(&model.Palette{}, &model.Theme{}, &model.User{}, &model.UserPreferences{})
 }
 
 func CloseDatabase() error {
