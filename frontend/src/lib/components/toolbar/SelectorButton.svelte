@@ -27,6 +27,7 @@
 				: s
 		);
 		appStore.redrawCanvas();
+		void appStore.syncPaletteWithSelections();
 	}
 </script>
 
