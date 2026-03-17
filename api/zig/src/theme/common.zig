@@ -5,6 +5,130 @@ const ThemeOverrides = @import("overrides.zig").ThemeOverrides;
 
 const target_palette_size = 11;
 
+pub const TerminalPalette = struct {
+    foreground: []const u8,
+    dim_foreground: []const u8,
+    bright_foreground: []const u8,
+    ansi_black: []const u8,
+    ansi_white: []const u8,
+    ansi_red: []const u8,
+    ansi_green: []const u8,
+    ansi_yellow: []const u8,
+    ansi_blue: []const u8,
+    ansi_magenta: []const u8,
+    ansi_cyan: []const u8,
+    ansi_bright_black: []const u8,
+    ansi_bright_white: []const u8,
+    ansi_bright_red: []const u8,
+    ansi_bright_green: []const u8,
+    ansi_bright_yellow: []const u8,
+    ansi_bright_blue: []const u8,
+    ansi_bright_magenta: []const u8,
+    ansi_bright_cyan: []const u8,
+    ansi_dim_black: []const u8,
+    ansi_dim_white: []const u8,
+    ansi_dim_red: []const u8,
+    ansi_dim_green: []const u8,
+    ansi_dim_yellow: []const u8,
+    ansi_dim_blue: []const u8,
+    ansi_dim_magenta: []const u8,
+    ansi_dim_cyan: []const u8,
+};
+
+fn adjustTerminalVariant(base: []const u8, background: []const u8, amount: f32, make_brighter: bool, min_contrast: f32) []const u8 {
+    const shifted = if (make_brighter)
+        color_utils.lightenColor(base, amount)
+    else
+        color_utils.darkenColor(base, amount);
+
+    return color_utils.ensureReadableContrast(shifted, background, min_contrast);
+}
+
+pub fn buildTerminalPalette(
+    background: []const u8,
+    foreground: []const u8,
+    semantic_error: []const u8,
+    semantic_success: []const u8,
+    semantic_warning: []const u8,
+    semantic_info: []const u8,
+    c6: []const u8,
+    c7: []const u8,
+    dark_base: bool,
+) TerminalPalette {
+    const dim_foreground = color_utils.ensureReadableContrast(
+        if (dark_base) color_utils.darkenColor(foreground, 0.22) else color_utils.lightenColor(foreground, 0.18),
+        background,
+        4.5,
+    );
+    const bright_foreground = color_utils.ensureReadableContrast(
+        if (dark_base) color_utils.lightenColor(foreground, 0.10) else color_utils.darkenColor(foreground, 0.10),
+        background,
+        7.0,
+    );
+
+    const ansi_black = color_utils.ensureReadableContrast(
+        if (dark_base) color_utils.darkenColor(foreground, 0.72) else color_utils.lightenColor(foreground, 0.72),
+        background,
+        2.2,
+    );
+    const ansi_white = dim_foreground;
+
+    const ansi_red = color_utils.ensureReadableContrast(semantic_error, background, 3.0);
+    const ansi_green = color_utils.ensureReadableContrast(semantic_success, background, 3.0);
+    const ansi_yellow = color_utils.ensureReadableContrast(semantic_warning, background, 3.0);
+    const ansi_blue = color_utils.ensureReadableContrast(semantic_info, background, 3.0);
+    const ansi_magenta = color_utils.ensureReadableContrast(c6, background, 3.0);
+    const ansi_cyan = color_utils.ensureReadableContrast(c7, background, 3.0);
+
+    const ansi_bright_black = adjustTerminalVariant(ansi_black, background, if (dark_base) 0.28 else 0.20, dark_base, 3.0);
+    const ansi_bright_white = bright_foreground;
+    const ansi_bright_red = adjustTerminalVariant(ansi_red, background, 0.16, dark_base, 3.0);
+    const ansi_bright_green = adjustTerminalVariant(ansi_green, background, 0.16, dark_base, 3.0);
+    const ansi_bright_yellow = adjustTerminalVariant(ansi_yellow, background, 0.14, dark_base, 3.0);
+    const ansi_bright_blue = adjustTerminalVariant(ansi_blue, background, 0.16, dark_base, 3.0);
+    const ansi_bright_magenta = adjustTerminalVariant(ansi_magenta, background, 0.16, dark_base, 3.0);
+    const ansi_bright_cyan = adjustTerminalVariant(ansi_cyan, background, 0.16, dark_base, 3.0);
+
+    const ansi_dim_black = adjustTerminalVariant(ansi_black, background, if (dark_base) 0.06 else 0.10, !dark_base, 2.0);
+    const ansi_dim_white = dim_foreground;
+    const ansi_dim_red = adjustTerminalVariant(ansi_red, background, 0.18, !dark_base, 2.6);
+    const ansi_dim_green = adjustTerminalVariant(ansi_green, background, 0.18, !dark_base, 2.6);
+    const ansi_dim_yellow = adjustTerminalVariant(ansi_yellow, background, 0.16, !dark_base, 2.6);
+    const ansi_dim_blue = adjustTerminalVariant(ansi_blue, background, 0.18, !dark_base, 2.6);
+    const ansi_dim_magenta = adjustTerminalVariant(ansi_magenta, background, 0.18, !dark_base, 2.6);
+    const ansi_dim_cyan = adjustTerminalVariant(ansi_cyan, background, 0.18, !dark_base, 2.6);
+
+    return .{
+        .foreground = foreground,
+        .dim_foreground = dim_foreground,
+        .bright_foreground = bright_foreground,
+        .ansi_black = ansi_black,
+        .ansi_white = ansi_white,
+        .ansi_red = ansi_red,
+        .ansi_green = ansi_green,
+        .ansi_yellow = ansi_yellow,
+        .ansi_blue = ansi_blue,
+        .ansi_magenta = ansi_magenta,
+        .ansi_cyan = ansi_cyan,
+        .ansi_bright_black = ansi_bright_black,
+        .ansi_bright_white = ansi_bright_white,
+        .ansi_bright_red = ansi_bright_red,
+        .ansi_bright_green = ansi_bright_green,
+        .ansi_bright_yellow = ansi_bright_yellow,
+        .ansi_bright_blue = ansi_bright_blue,
+        .ansi_bright_magenta = ansi_bright_magenta,
+        .ansi_bright_cyan = ansi_bright_cyan,
+        .ansi_dim_black = ansi_dim_black,
+        .ansi_dim_white = ansi_dim_white,
+        .ansi_dim_red = ansi_dim_red,
+        .ansi_dim_green = ansi_dim_green,
+        .ansi_dim_yellow = ansi_dim_yellow,
+        .ansi_dim_blue = ansi_dim_blue,
+        .ansi_dim_magenta = ansi_dim_magenta,
+        .ansi_dim_cyan = ansi_dim_cyan,
+    };
+}
+
 pub const ThemeType = enum {
     vscode,
     zed,
@@ -37,6 +161,10 @@ pub const PreparedThemeSelection = struct {
     c8_raw: []const u8,
     c9_raw: []const u8,
 };
+
+pub fn resolveAccent(raw: []const u8, background: []const u8) []const u8 {
+    return color_utils.boostAccentColor(color_utils.adjustForContrast(raw, background, 3), background);
+}
 
 pub fn prepareThemeSelection(
     allocator: std.mem.Allocator,

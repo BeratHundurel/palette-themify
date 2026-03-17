@@ -7,6 +7,7 @@ pub const ColorHex = struct {
 pub const ZedThemeResponse = struct {
     theme: ZedTheme,
     themeOverrides: ThemeOverrides,
+    rawThemeOverrides: ThemeOverrides,
     colors: []const ColorHex,
 };
 
@@ -47,6 +48,13 @@ pub const ZedThemeStyle = struct {
     @"vim.mode.text": []const u8,
     @"vim.normal.foreground": []const u8,
     @"vim.helix_normal.foreground": []const u8,
+    @"vim.visual.foreground": []const u8,
+    @"vim.helix_select.foreground": []const u8,
+    @"vim.insert.foreground": []const u8,
+    @"vim.visual_line.foreground": []const u8,
+    @"vim.visual_block.foreground": []const u8,
+    @"vim.replace.foreground": []const u8,
+    
     @"vim.normal.background": []const u8,
     @"vim.helix_normal.background": []const u8,
     @"vim.visual.background": []const u8,

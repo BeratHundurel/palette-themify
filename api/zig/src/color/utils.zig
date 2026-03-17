@@ -312,22 +312,21 @@ pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []co
 }
 
 /// Boosts saturation for muted accent colors while preserving overall lightness.
-/// Skips near-neutral or extreme light/dark colors to avoid tinting backgrounds.
 pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
     const hsl = hexToHsl(hex);
     const dark_bg = isDarkColor(background);
     if (hsl.l < 0.12 or hsl.l > 0.88) return hex; // skip very dark/light tones (background-like).
 
     // Saturation range for interpolation.
-    // - s_floor: below this, color is near-neutral — apply maximum boost.
-    // - s_ceil:  above this, color is already vivid — no boost needed.
-    // Tune these to widen or narrow the boost window.
-    const s_floor: f32 = if (dark_bg) 0.18 else 0.20;
-    const s_ceil: f32 = if (dark_bg) 0.30 else 0.80;
+    // - s_floor: below this, color is treated as muted and aims for the strongest boost.
+    // - s_ceil:  by this point the interpolated target has tapered back to the source saturation.
+    // Tune these to widen or narrow the soft-boost window.
+    const s_floor: f32 = if (dark_bg) 0.12 else 0.18;
+    const s_ceil: f32 = if (dark_bg) 0.26 else 0.42;
 
-    // Maximum saturation target at the low end of the range.
-    // Reduce to keep boosts subtler.
-    const s_target_max: f32 = if (dark_bg) 0.28 else 0.96;
+    // Absolute saturation ceiling after interpolation and the additive nudge.
+    // This can sit slightly above s_ceil to allow a final small boost for already-fairly-vivid accents.
+    const s_target_max: f32 = if (dark_bg) 0.30 else 0.46;
 
     // Linear interpolation: as hsl.s approaches s_ceil, the target drops toward hsl.s (no boost).
     // t=0 → fully muted (apply max boost), t=1 → fully vivid (no boost).
@@ -828,6 +827,16 @@ test "adjustForContrast keeps light-theme colors readable" {
 
     try std.testing.expect(contrastRatio(adjusted, background) >= 3.0);
     try std.testing.expect(hexToHsl(adjusted).l <= hexToHsl(glowy).l);
+}
+
+test "boostAccentColor boosts mid-muted accents on dark backgrounds" {
+    const background = "#080808";
+    const input_rgb = hslToRgb(0.55, 0.22, 0.55);
+    const input = rgbToHex(input_rgb.r, input_rgb.g, input_rgb.b);
+    const boosted = boostAccentColor(input, background);
+
+    try std.testing.expect(hexToHsl(boosted).s > hexToHsl(input).s);
+    try std.testing.expect(contrastRatio(boosted, background) >= 3.0);
 }
 
 test "selectDiverseColors returns requested count" {

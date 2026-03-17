@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const theme_common = @import("common.zig");
+const TerminalPalette = theme_common.TerminalPalette;
 const types = @import("zed_types.zig");
 const ThemeOverrides = @import("overrides.zig").ThemeOverrides;
 const color_utils = @import("../color/utils.zig");
@@ -25,6 +26,8 @@ pub fn generateZedTheme(
 ) !ZedThemeResponse {
     const prepared = try theme_common.prepareThemeSelection(allocator, colors, overrides, appearance);
     const dark_base = prepared.dark_base;
+    const has_background_override = overrides.background != null;
+    const has_foreground_override = overrides.foreground != null;
 
     const background = if (overrides.background) |bg| bg else blk: {
         const bg_raw = prepared.background_seed;
@@ -39,11 +42,11 @@ pub fn generateZedTheme(
     const bg_lighter = if (dark_base) color_utils.lightenColor(background, 0.20) else color_utils.darkenColor(background, 0.25);
 
     const proposed_foreground = overrides.foreground orelse prepared.foreground_seed;
-    const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
+    const foreground = if (has_foreground_override) proposed_foreground else color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
-    const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.20) else color_utils.lightenColor(foreground, 0.15);
-    const fg_disabled = if (dark_base) color_utils.darkenColor(foreground, 0.30) else color_utils.lightenColor(foreground, 0.30);
-    const fg_placeholder = if (dark_base) color_utils.darkenColor(foreground, 0.40) else color_utils.lightenColor(foreground, 0.40);
+    const fg_muted = if (dark_base) color_utils.darkenColor(foreground, 0.30) else color_utils.lightenColor(foreground, 0.15);
+    const fg_disabled = if (dark_base) color_utils.darkenColor(foreground, 0.40) else color_utils.lightenColor(foreground, 0.30);
+    const fg_placeholder = if (dark_base) color_utils.darkenColor(foreground, 0.50) else color_utils.lightenColor(foreground, 0.40);
 
     const fg_12 = color_utils.addAlpha(foreground, "12");
     const fg_26 = color_utils.addAlpha(foreground, "26");
@@ -52,18 +55,24 @@ pub fn generateZedTheme(
     const fg_80 = color_utils.addAlpha(foreground, "80");
     const fg_placeholder_30 = color_utils.addAlpha(fg_placeholder, "30");
 
-    const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c1_raw, background, 3), background);
-    const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c2_raw, background, 3), background);
-    const c3 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c3_raw, background, 3), background);
-    const c4 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c4_raw, background, 3), background);
-    const c5 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c5_raw, background, 3), background);
-    const c6 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c6_raw, background, 3), background);
-    const c7 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c7_raw, background, 3), background);
-    const c8 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c8_raw, background, 3), background);
-    const c9 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c9_raw, background, 3), background);
+    const c1 = theme_common.resolveAccent(prepared.c1_raw, background);
+    const c2 = theme_common.resolveAccent(prepared.c2_raw, background);
+    const c3 = theme_common.resolveAccent(prepared.c3_raw, background);
+    const c4 = theme_common.resolveAccent(prepared.c4_raw, background);
+    const c5 = theme_common.resolveAccent(prepared.c5_raw, background);
+    const c6 = theme_common.resolveAccent(prepared.c6_raw, background);
+    const c7 = theme_common.resolveAccent(prepared.c7_raw, background);
+    const c8 = theme_common.resolveAccent(prepared.c8_raw, background);
+    const c9 = theme_common.resolveAccent(prepared.c9_raw, background);
+
+    const vim_normal_foreground = if (color_utils.contrastRatio(foreground, c2) >= color_utils.contrastRatio(bg_very_dark, c2)) foreground else bg_very_dark;
+    const vim_visual_foreground = if (color_utils.contrastRatio(foreground, c6) >= color_utils.contrastRatio(bg_very_dark, c6)) foreground else bg_very_dark;
+    const vim_insert_foreground = if (color_utils.contrastRatio(foreground, c4) >= color_utils.contrastRatio(bg_very_dark, c4)) foreground else bg_very_dark;
+    const vim_visual_block_foreground = if (color_utils.contrastRatio(foreground, c3) >= color_utils.contrastRatio(bg_very_dark, c3)) foreground else bg_very_dark;
+    const vim_replace_foreground = if (color_utils.contrastRatio(foreground, c8) >= color_utils.contrastRatio(bg_very_dark, c8)) foreground else bg_very_dark;
 
     const constants_raw = overrides.constants orelse color_utils.getHarmonicColor(c2, .@"split-complementary");
-    const constants = color_utils.boostAccentColor(color_utils.adjustForContrast(constants_raw, background, 3), background);
+    const constants = theme_common.resolveAccent(constants_raw, background);
 
     const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.error_color, background, 3), background);
     const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.warning_color, background, 3), background);
@@ -89,7 +98,17 @@ pub fn generateZedTheme(
 
     const bg_lighter_4d = color_utils.addAlpha(bg_lighter, "4d");
     const bg_tab_inactive = if (dark_base) color_utils.darkenColor(bg_very_dark, 0.30) else color_utils.lightenColor(bg_very_dark, 0.30);
-    const ansi_black = if (dark_base) color_utils.darkenColor(foreground, 0.7) else color_utils.lightenColor(foreground, 0.7);
+    const terminal: TerminalPalette = theme_common.buildTerminalPalette(
+        background,
+        foreground,
+        semantic_error,
+        semantic_success,
+        semantic_warning,
+        semantic_info,
+        c2,
+        c6,
+        dark_base,
+    );
 
     const accents = try allocator.alloc([]const u8, 8);
     accents[0] = c1;
@@ -114,17 +133,24 @@ pub fn generateZedTheme(
     const style = ZedThemeStyle{
         .accents = accents,
 
-        .@"vim.mode.text" = bg_very_dark,
-        .@"vim.normal.foreground" = bg_very_dark,
-        .@"vim.helix_normal.foreground" = bg_very_dark,
-        .@"vim.normal.background" = foreground,
-        .@"vim.helix_normal.background" = foreground,
-        .@"vim.visual.background" = c2,
-        .@"vim.helix_select.background" = c2,
-        .@"vim.insert.background" = semantic_success,
-        .@"vim.visual_line.background" = c2,
+        .@"vim.mode.text" = vim_normal_foreground,
+        .@"vim.normal.foreground" = vim_normal_foreground,
+        .@"vim.helix_normal.foreground" = vim_normal_foreground,
+        .@"vim.visual.foreground" = vim_visual_foreground,
+        .@"vim.helix_select.foreground" = vim_visual_foreground,
+        .@"vim.insert.foreground" = vim_insert_foreground,
+        .@"vim.visual_line.foreground" = vim_visual_foreground,
+        .@"vim.visual_block.foreground" = vim_visual_block_foreground,
+        .@"vim.replace.foreground" = vim_replace_foreground,
+
+        .@"vim.normal.background" = c2,
+        .@"vim.helix_normal.background" = c2,
+        .@"vim.visual.background" = c6,
+        .@"vim.helix_select.background" = c6,
+        .@"vim.insert.background" = c4,
+        .@"vim.visual_line.background" = c6,
         .@"vim.visual_block.background" = c3,
-        .@"vim.replace.background" = semantic_error,
+        .@"vim.replace.background" = c8,
 
         .@"background.appearance" = .@"opaque",
 
@@ -216,33 +242,33 @@ pub fn generateZedTheme(
 
         .@"terminal.background" = background,
         .@"terminal.ansi.background" = background,
-        .@"terminal.foreground" = foreground,
-        .@"terminal.dim_foreground" = fg_muted,
-        .@"terminal.bright_foreground" = foreground,
-        .@"terminal.ansi.black" = ansi_black,
-        .@"terminal.ansi.white" = fg_muted,
-        .@"terminal.ansi.red" = semantic_error,
-        .@"terminal.ansi.green" = semantic_success,
-        .@"terminal.ansi.yellow" = semantic_warning,
-        .@"terminal.ansi.blue" = semantic_info,
-        .@"terminal.ansi.magenta" = c6,
-        .@"terminal.ansi.cyan" = c7,
-        .@"terminal.ansi.bright_black" = fg_placeholder,
-        .@"terminal.ansi.bright_white" = fg_muted,
-        .@"terminal.ansi.bright_red" = if (dark_base) color_utils.lightenColor(semantic_error, 0.1) else color_utils.darkenColor(semantic_error, 0.1),
-        .@"terminal.ansi.bright_green" = if (dark_base) color_utils.lightenColor(semantic_success, 0.1) else color_utils.darkenColor(semantic_success, 0.1),
-        .@"terminal.ansi.bright_yellow" = if (dark_base) color_utils.lightenColor(semantic_warning, 0.1) else color_utils.darkenColor(semantic_warning, 0.1),
-        .@"terminal.ansi.bright_blue" = if (dark_base) color_utils.lightenColor(semantic_info, 0.1) else color_utils.darkenColor(semantic_info, 0.1),
-        .@"terminal.ansi.bright_magenta" = if (dark_base) color_utils.lightenColor(c6, 0.1) else color_utils.darkenColor(c6, 0.1),
-        .@"terminal.ansi.bright_cyan" = if (dark_base) color_utils.lightenColor(c7, 0.1) else color_utils.darkenColor(c7, 0.1),
-        .@"terminal.ansi.dim_black" = ansi_black,
-        .@"terminal.ansi.dim_white" = fg_muted,
-        .@"terminal.ansi.dim_red" = semantic_error,
-        .@"terminal.ansi.dim_green" = semantic_success,
-        .@"terminal.ansi.dim_yellow" = semantic_warning,
-        .@"terminal.ansi.dim_blue" = semantic_info,
-        .@"terminal.ansi.dim_magenta" = c6,
-        .@"terminal.ansi.dim_cyan" = c7,
+        .@"terminal.foreground" = terminal.foreground,
+        .@"terminal.dim_foreground" = terminal.dim_foreground,
+        .@"terminal.bright_foreground" = terminal.bright_foreground,
+        .@"terminal.ansi.black" = terminal.ansi_black,
+        .@"terminal.ansi.white" = terminal.ansi_white,
+        .@"terminal.ansi.red" = terminal.ansi_red,
+        .@"terminal.ansi.green" = terminal.ansi_green,
+        .@"terminal.ansi.yellow" = terminal.ansi_yellow,
+        .@"terminal.ansi.blue" = terminal.ansi_blue,
+        .@"terminal.ansi.magenta" = terminal.ansi_magenta,
+        .@"terminal.ansi.cyan" = terminal.ansi_cyan,
+        .@"terminal.ansi.bright_black" = terminal.ansi_bright_black,
+        .@"terminal.ansi.bright_white" = terminal.ansi_bright_white,
+        .@"terminal.ansi.bright_red" = terminal.ansi_bright_red,
+        .@"terminal.ansi.bright_green" = terminal.ansi_bright_green,
+        .@"terminal.ansi.bright_yellow" = terminal.ansi_bright_yellow,
+        .@"terminal.ansi.bright_blue" = terminal.ansi_bright_blue,
+        .@"terminal.ansi.bright_magenta" = terminal.ansi_bright_magenta,
+        .@"terminal.ansi.bright_cyan" = terminal.ansi_bright_cyan,
+        .@"terminal.ansi.dim_black" = terminal.ansi_dim_black,
+        .@"terminal.ansi.dim_white" = terminal.ansi_dim_white,
+        .@"terminal.ansi.dim_red" = terminal.ansi_dim_red,
+        .@"terminal.ansi.dim_green" = terminal.ansi_dim_green,
+        .@"terminal.ansi.dim_yellow" = terminal.ansi_dim_yellow,
+        .@"terminal.ansi.dim_blue" = terminal.ansi_dim_blue,
+        .@"terminal.ansi.dim_magenta" = terminal.ansi_dim_magenta,
+        .@"terminal.ansi.dim_cyan" = terminal.ansi_dim_cyan,
 
         .@"link_text.hover" = accent_bright,
 
@@ -308,7 +334,7 @@ pub fn generateZedTheme(
             .boolean = .{ .color = constants, .font_style = null, .font_weight = null },
             .character = .{ .color = c7, .font_style = null, .font_weight = null },
             .@"character.special" = .{ .color = c4, .font_style = null, .font_weight = null },
-            .comment = .{ .color = fg_muted, .font_style = .italic, .font_weight = null },
+            .comment = .{ .color = fg_disabled, .font_style = .italic, .font_weight = null },
             .@"comment.documentation" = .{ .color = semantic_info, .font_style = .italic, .font_weight = null },
             .@"comment.error" = .{ .color = semantic_error, .font_style = .italic, .font_weight = null },
             .@"comment.hint" = .{ .color = semantic_info, .font_style = .italic, .font_weight = null },
@@ -397,8 +423,8 @@ pub fn generateZedTheme(
     };
 
     const base_overrides = ThemeOverrides{
-        .background = background,
-        .foreground = foreground,
+        .background = if (has_background_override) overrides.background else background,
+        .foreground = if (has_foreground_override) overrides.foreground else foreground,
         .c1 = c1,
         .c2 = c2,
         .c3 = c3,
@@ -411,7 +437,22 @@ pub fn generateZedTheme(
         .constants = constants,
     };
 
-    return ZedThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .colors = backupColors };
+    const raw_overrides = ThemeOverrides{
+        .background = overrides.background,
+        .foreground = overrides.foreground,
+        .c1 = prepared.c1_raw,
+        .c2 = prepared.c2_raw,
+        .c3 = prepared.c3_raw,
+        .c4 = prepared.c4_raw,
+        .c5 = prepared.c5_raw,
+        .c6 = prepared.c6_raw,
+        .c7 = prepared.c7_raw,
+        .c8 = prepared.c8_raw,
+        .c9 = prepared.c9_raw,
+        .constants = constants_raw,
+    };
+
+    return ZedThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .rawThemeOverrides = raw_overrides, .colors = backupColors };
 }
 
 pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, request: GenerateOverridableRequest) !ZedThemeResponse {
@@ -597,7 +638,54 @@ test "generateOverridableFromZedThemeValue builds overrides" {
     try std.testing.expect(response.themeOverrides.background != null);
     try std.testing.expect(response.themeOverrides.foreground != null);
     try std.testing.expect(response.themeOverrides.c1 != null);
+    try std.testing.expectEqualStrings("#010203", response.rawThemeOverrides.c1.?);
+    try std.testing.expect(!std.mem.eql(u8, response.themeOverrides.c1.?, response.rawThemeOverrides.c1.?));
+}
 
-    const expected_c1 = color_utils.boostAccentColor(color_utils.adjustForContrast("#010203", response.themeOverrides.background.?, 3), response.themeOverrides.background.?);
-    try std.testing.expectEqualStrings(expected_c1, response.themeOverrides.c1.?);
+test "generateOverridableFromZedThemeValue preserves explicit override exactly" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const json =
+        "{" ++
+        "\"name\":\"ExactOverride\"," ++
+        "\"themes\":[{" ++
+        "\"name\":\"ExactOverride\"," ++
+        "\"appearance\":\"dark\"," ++
+        "\"style\":{\"background\":\"#111111\",\"text\":\"#EEEEEE\",\"accents\":[\"#CC99FF\"]}" ++
+        "}]}";
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const request = GenerateOverridableRequest{
+        .theme = parsed.value,
+        .ThemeOverrides = ThemeOverrides{ .c6 = "#123456" },
+    };
+    const response = try generateOverridableFromZedThemeValue(allocator, request);
+
+    try std.testing.expectEqualStrings("#123456", response.rawThemeOverrides.c6.?);
+    try std.testing.expect(!std.mem.eql(u8, response.themeOverrides.c6.?, response.rawThemeOverrides.c6.?));
+}
+
+test "generateZedTheme preserves exact manual overrides" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const palette = [_][]const u8{ "#112233", "#445566", "#778899", "#AA5500", "#00AA55", "#5500AA", "#CC8844", "#44CC88", "#8844CC", "#EEDD88", "#88DDEE" };
+    const response = try generateZedTheme(allocator, &palette, "Manual Overrides", ThemeOverrides{
+        .background = "#101010",
+        .foreground = "#F0F0F0",
+        .c6 = "#123456",
+        .constants = "#ABCDEF",
+    }, .dark);
+
+    try std.testing.expectEqualStrings("#101010", response.themeOverrides.background.?);
+    try std.testing.expectEqualStrings("#F0F0F0", response.themeOverrides.foreground.?);
+    try std.testing.expectEqualStrings("#123456", response.rawThemeOverrides.c6.?);
+    try std.testing.expectEqualStrings("#ABCDEF", response.rawThemeOverrides.constants.?);
+    try std.testing.expect(!std.mem.eql(u8, response.themeOverrides.c6.?, response.rawThemeOverrides.c6.?));
+    try std.testing.expectEqualStrings("#ABCDEF", response.themeOverrides.constants.?);
 }

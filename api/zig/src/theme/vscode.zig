@@ -2,6 +2,7 @@ const std = @import("std");
 
 const color_utils = @import("../color/utils.zig");
 const theme_common = @import("common.zig");
+const TerminalPalette = theme_common.TerminalPalette;
 const types = @import("vscode_types.zig");
 const ThemeOverrides = @import("overrides.zig").ThemeOverrides;
 const GenerateOverridableRequest = theme_common.GenerateOverridableRequest;
@@ -107,6 +108,8 @@ pub fn generateVSCodeTheme(
 ) !VSCodeThemeResponse {
     const prepared = try theme_common.prepareThemeSelection(allocator, colors, overrides, appearance);
     const dark_base = prepared.dark_base;
+    const has_background_override = overrides.background != null;
+    const has_foreground_override = overrides.foreground != null;
 
     const background = if (overrides.background) |bg| bg else blk: {
         const bg_raw = prepared.background_seed;
@@ -122,25 +125,38 @@ pub fn generateVSCodeTheme(
     const bg_inactive = if (dark_base) color_utils.lightenColor(background, 0.10) else color_utils.darkenColor(background, 0.10);
 
     const proposed_foreground = overrides.foreground orelse prepared.foreground_seed;
-    const foreground = color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
+    const foreground = if (has_foreground_override) proposed_foreground else color_utils.ensureReadableContrast(proposed_foreground, background, 7.0);
 
-    const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c1_raw, background, 3), background);
-    const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c2_raw, background, 3), background);
-    const c3 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c3_raw, background, 3), background);
-    const c4 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c4_raw, background, 3), background);
-    const c5 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c5_raw, background, 3), background);
-    const c6 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c6_raw, background, 3), background);
-    const c7 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c7_raw, background, 3), background);
-    const c8 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c8_raw, background, 3), background);
-    const c9 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c9_raw, background, 3), background);
+    const c1 = theme_common.resolveAccent(prepared.c1_raw, background);
+    const c2 = theme_common.resolveAccent(prepared.c2_raw, background);
+    const c3 = theme_common.resolveAccent(prepared.c3_raw, background);
+    const c4 = theme_common.resolveAccent(prepared.c4_raw, background);
+    const c5 = theme_common.resolveAccent(prepared.c5_raw, background);
+    const c6 = theme_common.resolveAccent(prepared.c6_raw, background);
+    const c7 = theme_common.resolveAccent(prepared.c7_raw, background);
+    const c8 = theme_common.resolveAccent(prepared.c8_raw, background);
+    const c9 = theme_common.resolveAccent(prepared.c9_raw, background);
+    
+    const activity_bar_badge_foreground = if (color_utils.contrastRatio(foreground, c2) >= color_utils.contrastRatio(background, c2)) foreground else background;
 
     const constants_raw = overrides.constants orelse color_utils.getHarmonicColor(c2, .@"split-complementary");
-    const constants = color_utils.boostAccentColor(color_utils.adjustForContrast(constants_raw, background, 3), background);
+    const constants = theme_common.resolveAccent(constants_raw, background);
 
     const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.error_color, background, 3), background);
     const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.warning_color, background, 3), background);
     const semantic_success = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.success_color, background, 3), background);
     const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.info_color, background, 3), background);
+    const terminal: TerminalPalette = theme_common.buildTerminalPalette(
+        background,
+        foreground,
+        semantic_error,
+        semantic_success,
+        semantic_warning,
+        semantic_info,
+        c6,
+        c7,
+        dark_base,
+    );
 
     const c3_dark = if (dark_base) color_utils.darkenColor(c3, 0.8) else color_utils.lightenColor(c3, 0.8);
     const semantic_error_dark = if (dark_base) color_utils.darkenColor(semantic_error, 0.8) else color_utils.lightenColor(semantic_error, 0.8);
@@ -194,7 +210,7 @@ pub fn generateVSCodeTheme(
         .@"activityBar.foreground" = foreground,
         .@"activityBar.activeBorder" = c2,
         .@"activityBarBadge.background" = c2,
-        .@"activityBarBadge.foreground" = if (dark_base) foreground else background,
+        .@"activityBarBadge.foreground" = activity_bar_badge_foreground,
         .@"sideBar.background" = bg_dark,
         .@"sideBar.foreground" = foreground,
         .@"sideBar.border" = c1_20,
@@ -217,23 +233,23 @@ pub fn generateVSCodeTheme(
         .@"panel.background" = background,
         .@"panel.border" = c1_40,
         .@"panelTitle.activeBorder" = c2,
-        .@"terminal.foreground" = foreground,
-        .@"terminal.ansiBlack" = if (dark_base) color_utils.darkenColor(background, 0.9) else color_utils.darkenColor(background, 0.2),
-        .@"terminal.ansiRed" = semantic_error,
-        .@"terminal.ansiGreen" = semantic_success,
-        .@"terminal.ansiYellow" = semantic_warning,
-        .@"terminal.ansiBlue" = semantic_info,
-        .@"terminal.ansiMagenta" = c6,
-        .@"terminal.ansiCyan" = c7,
-        .@"terminal.ansiWhite" = foreground,
-        .@"terminal.ansiBrightBlack" = if (dark_base) color_utils.darkenColor(foreground, 0.3) else color_utils.lightenColor(foreground, 0.3),
-        .@"terminal.ansiBrightRed" = if (dark_base) color_utils.lightenColor(semantic_error, 0.2) else color_utils.darkenColor(semantic_error, 0.2),
-        .@"terminal.ansiBrightGreen" = if (dark_base) color_utils.lightenColor(semantic_success, 0.2) else color_utils.darkenColor(semantic_success, 0.2),
-        .@"terminal.ansiBrightYellow" = if (dark_base) color_utils.lightenColor(semantic_warning, 0.2) else color_utils.darkenColor(semantic_warning, 0.2),
-        .@"terminal.ansiBrightBlue" = if (dark_base) color_utils.lightenColor(semantic_info, 0.2) else color_utils.darkenColor(semantic_info, 0.2),
-        .@"terminal.ansiBrightMagenta" = if (dark_base) color_utils.lightenColor(c6, 0.2) else color_utils.darkenColor(c6, 0.2),
-        .@"terminal.ansiBrightCyan" = if (dark_base) color_utils.lightenColor(c7, 0.2) else color_utils.darkenColor(c7, 0.2),
-        .@"terminal.ansiBrightWhite" = if (dark_base) color_utils.lightenColor(foreground, 0.2) else color_utils.darkenColor(foreground, 0.2),
+        .@"terminal.foreground" = terminal.foreground,
+        .@"terminal.ansiBlack" = terminal.ansi_black,
+        .@"terminal.ansiRed" = terminal.ansi_red,
+        .@"terminal.ansiGreen" = terminal.ansi_green,
+        .@"terminal.ansiYellow" = terminal.ansi_yellow,
+        .@"terminal.ansiBlue" = terminal.ansi_blue,
+        .@"terminal.ansiMagenta" = terminal.ansi_magenta,
+        .@"terminal.ansiCyan" = terminal.ansi_cyan,
+        .@"terminal.ansiWhite" = terminal.ansi_white,
+        .@"terminal.ansiBrightBlack" = terminal.ansi_bright_black,
+        .@"terminal.ansiBrightRed" = terminal.ansi_bright_red,
+        .@"terminal.ansiBrightGreen" = terminal.ansi_bright_green,
+        .@"terminal.ansiBrightYellow" = terminal.ansi_bright_yellow,
+        .@"terminal.ansiBrightBlue" = terminal.ansi_bright_blue,
+        .@"terminal.ansiBrightMagenta" = terminal.ansi_bright_magenta,
+        .@"terminal.ansiBrightCyan" = terminal.ansi_bright_cyan,
+        .@"terminal.ansiBrightWhite" = terminal.ansi_bright_white,
         .@"input.background" = bg_light,
         .@"input.border" = c1_40,
         .@"input.foreground" = foreground,
@@ -470,8 +486,8 @@ pub fn generateVSCodeTheme(
     };
 
     const base_overrides = ThemeOverrides{
-        .background = background,
-        .foreground = foreground,
+        .background = if (has_background_override) overrides.background else background,
+        .foreground = if (has_foreground_override) overrides.foreground else foreground,
         .c1 = c1,
         .c2 = c2,
         .c3 = c3,
@@ -484,13 +500,27 @@ pub fn generateVSCodeTheme(
         .constants = constants,
     };
 
-    return VSCodeThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .colors = backupColors };
+    const raw_overrides = ThemeOverrides{
+        .background = overrides.background,
+        .foreground = overrides.foreground,
+        .c1 = prepared.c1_raw,
+        .c2 = prepared.c2_raw,
+        .c3 = prepared.c3_raw,
+        .c4 = prepared.c4_raw,
+        .c5 = prepared.c5_raw,
+        .c6 = prepared.c6_raw,
+        .c7 = prepared.c7_raw,
+        .c8 = prepared.c8_raw,
+        .c9 = prepared.c9_raw,
+        .constants = constants_raw,
+    };
+
+    return VSCodeThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .rawThemeOverrides = raw_overrides, .colors = backupColors };
 }
 
 /// Re-generates a VSCode theme by extracting the color palette from an existing
 /// VSCode theme JSON value. Background/foreground/accent overrides from the
 /// request are respected, and the remaining colors are fed back into
-/// generateVSCodeTheme.
 pub fn generateOverridableFromVSCodeThemeValue(allocator: std.mem.Allocator, request: GenerateOverridableRequest) !VSCodeThemeResponse {
     const root_obj = switch (request.theme) {
         .object => |obj| obj,
@@ -657,6 +687,32 @@ test "generateOverridableFromVSCodeThemeValue builds overrides from colors" {
     try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#66ccff", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c7.?);
 }
 
+test "generateOverridableFromVSCodeThemeValue preserves explicit override exactly" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const json =
+        "{" ++
+        "\"name\":\"ExactOverride\"," ++
+        "\"type\":\"dark\"," ++
+        "\"colors\":{\"editor.background\":\"#111111\",\"editor.foreground\":\"#EEEEEE\"}," ++
+        "\"tokenColors\":[{\"scope\":[\"keyword\"],\"settings\":{\"foreground\":\"#CC99FF\"}}]" ++
+        "}";
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const req = GenerateOverridableRequest{
+        .theme = parsed.value,
+        .ThemeOverrides = ThemeOverrides{ .c6 = "#123456" },
+    };
+    const response = try generateOverridableFromVSCodeThemeValue(allocator, req);
+
+    try std.testing.expectEqualStrings("#123456", response.rawThemeOverrides.c6.?);
+    try std.testing.expect(!std.mem.eql(u8, response.themeOverrides.c6.?, response.rawThemeOverrides.c6.?));
+}
+
 test "generateOverridableFromVSCodeThemeValue handles string scope" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -686,4 +742,25 @@ test "generateOverridableFromVSCodeThemeValue handles string scope" {
 
     try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#00ff00", bg_very_dark, 3), response.themeOverrides.background.?), response.themeOverrides.c2.?);
     try std.testing.expectEqualStrings(color_utils.boostAccentColor(color_utils.adjustForContrast("#ff0000", response.themeOverrides.background.?, 3), response.themeOverrides.background.?), response.themeOverrides.c4.?);
+}
+
+test "generateVSCodeTheme preserves exact manual overrides" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const palette = [_][]const u8{ "#112233", "#445566", "#778899", "#AA5500", "#00AA55", "#5500AA", "#CC8844", "#44CC88", "#8844CC", "#EEDD88", "#88DDEE" };
+    const response = try generateVSCodeTheme(allocator, &palette, "Manual Overrides", ThemeOverrides{
+        .background = "#101010",
+        .foreground = "#F0F0F0",
+        .c6 = "#123456",
+        .constants = "#ABCDEF",
+    }, .dark);
+
+    try std.testing.expectEqualStrings("#101010", response.themeOverrides.background.?);
+    try std.testing.expectEqualStrings("#F0F0F0", response.themeOverrides.foreground.?);
+    try std.testing.expectEqualStrings("#123456", response.rawThemeOverrides.c6.?);
+    try std.testing.expectEqualStrings("#ABCDEF", response.rawThemeOverrides.constants.?);
+    try std.testing.expect(!std.mem.eql(u8, response.themeOverrides.c6.?, response.rawThemeOverrides.c6.?));
+    try std.testing.expectEqualStrings("#ABCDEF", response.themeOverrides.constants.?);
 }

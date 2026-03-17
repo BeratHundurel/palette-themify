@@ -8,6 +8,7 @@ pub const ColorHex = struct {
 pub const VSCodeThemeResponse = struct {
     theme: VSCodeTheme,
     themeOverrides: ThemeOverrides,
+    rawThemeOverrides: ThemeOverrides,
     colors: []const ColorHex,
 };
 
