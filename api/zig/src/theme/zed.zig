@@ -80,7 +80,6 @@ pub fn generateZedTheme(
     const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.info_color, background, 3), background);
 
     const c2_33 = color_utils.addAlpha(c2, "33");
-    const c2_40 = color_utils.addAlpha(c2, "40");
     const c2_66 = color_utils.addAlpha(c2, "66");
     const c2_88 = color_utils.addAlpha(c2, "88");
     const c2_99 = color_utils.addAlpha(c2, "99");
@@ -121,14 +120,14 @@ pub fn generateZedTheme(
     accents[7] = c8;
 
     const players = try allocator.alloc(Player, 8);
-    players[0] = .{ .cursor = foreground, .selection = if (dark_base) fg_40 else color_utils.addAlpha(foreground, "20"), .background = foreground };
-    players[1] = .{ .cursor = c2, .selection = if (dark_base) c2_40 else color_utils.addAlpha(c2, "20"), .background = c2 };
-    players[2] = .{ .cursor = c3, .selection = if (dark_base) color_utils.addAlpha(c3, "40") else color_utils.addAlpha(c3, "20"), .background = c3 };
-    players[3] = .{ .cursor = c4, .selection = if (dark_base) color_utils.addAlpha(c4, "40") else color_utils.addAlpha(c4, "20"), .background = c4 };
-    players[4] = .{ .cursor = c5, .selection = if (dark_base) color_utils.addAlpha(c5, "40") else color_utils.addAlpha(c5, "20"), .background = c5 };
-    players[5] = .{ .cursor = c6, .selection = if (dark_base) color_utils.addAlpha(c6, "40") else color_utils.addAlpha(c6, "20"), .background = c6 };
-    players[6] = .{ .cursor = c7, .selection = if (dark_base) color_utils.addAlpha(c7, "40") else color_utils.addAlpha(c7, "20"), .background = c7 };
-    players[7] = .{ .cursor = c8, .selection = if (dark_base) color_utils.addAlpha(c8, "40") else color_utils.addAlpha(c8, "20"), .background = c8 };
+    players[0] = .{ .cursor = c2, .selection = if (dark_base) color_utils.addAlpha(c2, "60") else color_utils.addAlpha(c2, "20"), .background = c2 };
+    players[1] = .{ .cursor = c3, .selection = if (dark_base) color_utils.addAlpha(c3, "60") else color_utils.addAlpha(c3, "40"), .background = c3 };
+    players[2] = .{ .cursor = c4, .selection = if (dark_base) color_utils.addAlpha(c4, "60") else color_utils.addAlpha(c4, "40"), .background = c4 };
+    players[3] = .{ .cursor = c5, .selection = if (dark_base) color_utils.addAlpha(c5, "60") else color_utils.addAlpha(c5, "40"), .background = c5 };
+    players[4] = .{ .cursor = c6, .selection = if (dark_base) color_utils.addAlpha(c6, "60") else color_utils.addAlpha(c6, "40"), .background = c6 };
+    players[5] = .{ .cursor = c7, .selection = if (dark_base) color_utils.addAlpha(c7, "60") else color_utils.addAlpha(c7, "40"), .background = c7 };
+    players[6] = .{ .cursor = c8, .selection = if (dark_base) color_utils.addAlpha(c8, "60") else color_utils.addAlpha(c8, "40"), .background = c8 };
+    players[7] = .{ .cursor = c9, .selection = if (dark_base) color_utils.addAlpha(c9, "60") else color_utils.addAlpha(c9, "40"), .background = c9 };
 
     const style = ZedThemeStyle{
         .accents = accents,

@@ -321,12 +321,12 @@ pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
     // - s_floor: below this, color is treated as muted and aims for the strongest boost.
     // - s_ceil:  by this point the interpolated target has tapered back to the source saturation.
     // Tune these to widen or narrow the soft-boost window.
-    const s_floor: f32 = if (dark_bg) 0.12 else 0.18;
-    const s_ceil: f32 = if (dark_bg) 0.26 else 0.42;
+    const s_floor: f32 = if (dark_bg) 0.12 else 0.24;
+    const s_ceil: f32 = if (dark_bg) 0.26 else 0.52;
 
     // Absolute saturation ceiling after interpolation and the additive nudge.
     // This can sit slightly above s_ceil to allow a final small boost for already-fairly-vivid accents.
-    const s_target_max: f32 = if (dark_bg) 0.30 else 0.46;
+    const s_target_max: f32 = if (dark_bg) 0.30 else 0.60;
 
     // Linear interpolation: as hsl.s approaches s_ceil, the target drops toward hsl.s (no boost).
     // t=0 → fully muted (apply max boost), t=1 → fully vivid (no boost).
