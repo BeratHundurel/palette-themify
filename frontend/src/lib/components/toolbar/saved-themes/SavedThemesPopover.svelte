@@ -209,10 +209,10 @@
 								<div class="mb-2 flex items-center justify-end gap-1">
 									<button
 										class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-									onclick={() => handleSavedThemeLoad(item)}
-									type="button"
-									title="Load into inspector"
-								>
+										onclick={() => handleSavedThemeLoad(item)}
+										type="button"
+										title="Load into inspector"
+									>
 										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 										</svg>

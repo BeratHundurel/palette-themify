@@ -6,7 +6,7 @@ export type ThemesResponse = {
 	themes: SavedThemeItem[];
 };
 
-export type ThemeResponse = {
+export type SavedThemeResponse = {
 	message: string;
 	theme: SavedThemeItem;
 };
@@ -21,7 +21,7 @@ export async function getThemes(): Promise<ThemesResponse> {
 	return response.json();
 }
 
-export async function saveTheme(theme: SavedThemeItem): Promise<ThemeResponse> {
+export async function saveTheme(theme: SavedThemeItem): Promise<SavedThemeResponse> {
 	const response = await fetch(buildURL('/themes'), {
 		method: 'POST',
 		headers: getAuthHeaders(),
@@ -32,7 +32,7 @@ export async function saveTheme(theme: SavedThemeItem): Promise<ThemeResponse> {
 	return response.json();
 }
 
-export async function updateTheme(themeId: string, theme: SavedThemeItem): Promise<ThemeResponse> {
+export async function updateTheme(themeId: string, theme: SavedThemeItem): Promise<SavedThemeResponse> {
 	const response = await fetch(buildURL(`/themes/${themeId}`), {
 		method: 'PUT',
 		headers: getAuthHeaders(),
