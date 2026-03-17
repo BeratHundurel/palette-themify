@@ -9,8 +9,8 @@
             .hash = "zigimg-0.1.0-8_eo2ix7FwDYaaUeexKLSrFdhhQ2AMrj9G4vMs4znbKg",
         },
         .tokamak = .{
-            .url = "git+https://github.com/cztomsik/tokamak#main",
-            .hash = "tokamak-2.0.0-FbnSecXvBgD2Lu1k2bzdRn3XJBeJX8FH1EiEBhiciWWy",
+            .url = "git+https://github.com/cztomsik/tokamak?ref=main#e949c484ceedc4a9ca1722a645cd7337d15f1a2c",
+            .hash = "tokamak-2.0.0-FbnSeY32BgDmT9QDg7EpuG7DjvghzpsjDM2fpd9f7nGa",
         },
     },
     .paths = .{
