@@ -7,13 +7,47 @@ export type ThemeExportPreferences = {
 	editorType: EditorThemeType;
 	appearance: ThemeAppearance;
 	saveOnCopy: boolean;
+	boostCoefficient: number;
 };
 
 export const DEFAULT_THEME_EXPORT_PREFERENCES: ThemeExportPreferences = {
 	editorType: 'vscode',
 	appearance: 'dark',
-	saveOnCopy: true
+	saveOnCopy: true,
+	boostCoefficient: 1
 };
+
+function asNonNegativeFiniteNumber(value: unknown, fallback: number): number {
+	return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function asEditorThemeType(value: unknown): EditorThemeType {
+	return value === 'vscode' || value === 'zed' ? value : DEFAULT_THEME_EXPORT_PREFERENCES.editorType;
+}
+
+function asThemeAppearance(value: unknown): ThemeAppearance {
+	return value === 'light' || value === 'dark' ? value : DEFAULT_THEME_EXPORT_PREFERENCES.appearance;
+}
+
+export function parseThemeExportPreferences(value: unknown): ThemeExportPreferences {
+	if (!value || typeof value !== 'object') {
+		return { ...DEFAULT_THEME_EXPORT_PREFERENCES };
+	}
+
+	const parsed = value as Partial<ThemeExportPreferences>;
+	return {
+		editorType: asEditorThemeType(parsed.editorType),
+		appearance: asThemeAppearance(parsed.appearance),
+		saveOnCopy:
+			typeof parsed.saveOnCopy === 'boolean'
+				? parsed.saveOnCopy
+				: DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy,
+		boostCoefficient: asNonNegativeFiniteNumber(
+			parsed.boostCoefficient,
+			DEFAULT_THEME_EXPORT_PREFERENCES.boostCoefficient
+		)
+	};
+}
 
 export function loadThemeExportPreferences(): ThemeExportPreferences {
 	if (!browser) {
@@ -21,12 +55,11 @@ export function loadThemeExportPreferences(): ThemeExportPreferences {
 	}
 	const stored = localStorage.getItem(THEME_EXPORT_STORAGE_KEY);
 	if (stored) {
-		const parsed = JSON.parse(stored);
-		return {
-			editorType: parsed.editorType || DEFAULT_THEME_EXPORT_PREFERENCES.editorType,
-			appearance: parsed.appearance || DEFAULT_THEME_EXPORT_PREFERENCES.appearance,
-			saveOnCopy: parsed.saveOnCopy ?? DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy
-		};
+		try {
+			return parseThemeExportPreferences(JSON.parse(stored));
+		} catch {
+			return { ...DEFAULT_THEME_EXPORT_PREFERENCES };
+		}
 	}
 	return { ...DEFAULT_THEME_EXPORT_PREFERENCES };
 }

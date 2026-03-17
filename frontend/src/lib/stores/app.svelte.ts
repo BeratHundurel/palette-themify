@@ -17,21 +17,21 @@ import { type SortMethod } from '$lib/colorUtils';
 
 import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/savedThemes';
 import {
-	DEFAULT_WALLHAVEN_SETTINGS,
 	loadWallhavenSettings,
+	parseWallhavenSettings,
 	saveWallhavenSettings,
 	clearWallhavenSettings
 } from '$lib/stores/app/wallhavenSettings';
 import {
-	DEFAULT_APPLY_PALETTE_SETTINGS,
 	loadApplyPaletteSettings,
+	parseApplyPaletteSettings,
 	saveApplyPaletteSettings,
 	clearApplyPaletteSettings
 } from '$lib/stores/app/applyPaletteSettings';
 import {
 	clearThemeExportPreferences,
-	DEFAULT_THEME_EXPORT_PREFERENCES,
 	loadThemeExportPreferences,
+	parseThemeExportPreferences,
 	saveThemeExportPreferences
 } from '$lib/stores/app/themeExport';
 import * as preferencesApi from '$lib/api/preferences';
@@ -113,21 +113,22 @@ function createAppStore() {
 		savedPalettes: [],
 		sortMethod: 'none',
 		applyPaletteSettings: loadApplyPaletteSettings(),
-			themeExport: {
-				themeResult: null,
-				themeColorsWithUsage: [],
-				themeName: 'Generated Theme',
-				lastGeneratedPaletteVersion: 0,
-				editorType: themeExportPreferences.editorType,
-				appearance: themeExportPreferences.appearance,
-				saveOnCopy: themeExportPreferences.saveOnCopy,
-				themeVersions: {},
-				rawThemeOverrides: {},
-				hasManualBackgroundOverride: false,
-				hasManualForegroundOverride: false,
-				loadedThemeOverridesReference: null,
-				backupColors: null
-			},
+		themeExport: {
+			themeResult: null,
+			themeColorsWithUsage: [],
+			themeName: 'Generated Theme',
+			lastGeneratedPaletteVersion: 0,
+			editorType: themeExportPreferences.editorType,
+			appearance: themeExportPreferences.appearance,
+			saveOnCopy: themeExportPreferences.saveOnCopy,
+			boostCoefficient: themeExportPreferences.boostCoefficient,
+			themeVersions: {},
+			rawThemeOverrides: {},
+			hasManualBackgroundOverride: false,
+			hasManualForegroundOverride: false,
+			loadedThemeOverridesReference: null,
+			backupColors: null
+		},
 		savedThemes: loadSavedThemes(),
 		paletteVersion: 0
 	});
@@ -277,7 +278,8 @@ function createAppStore() {
 			saveThemeExportPreferences({
 				editorType,
 				appearance: state.themeExport.appearance,
-				saveOnCopy: state.themeExport.saveOnCopy
+				saveOnCopy: state.themeExport.saveOnCopy,
+				boostCoefficient: state.themeExport.boostCoefficient
 			});
 			this.persistPreferencesLocal();
 		},
@@ -287,7 +289,8 @@ function createAppStore() {
 			saveThemeExportPreferences({
 				editorType: state.themeExport.editorType,
 				appearance,
-				saveOnCopy: state.themeExport.saveOnCopy
+				saveOnCopy: state.themeExport.saveOnCopy,
+				boostCoefficient: state.themeExport.boostCoefficient
 			});
 			this.persistPreferencesLocal();
 		},
@@ -297,7 +300,19 @@ function createAppStore() {
 			saveThemeExportPreferences({
 				editorType: state.themeExport.editorType,
 				appearance: state.themeExport.appearance,
-				saveOnCopy
+				saveOnCopy,
+				boostCoefficient: state.themeExport.boostCoefficient
+			});
+			this.persistPreferencesLocal();
+		},
+
+		setThemeExportBoostCoefficient(boostCoefficient: number) {
+			state.themeExport.boostCoefficient = boostCoefficient;
+			saveThemeExportPreferences({
+				editorType: state.themeExport.editorType,
+				appearance: state.themeExport.appearance,
+				saveOnCopy: state.themeExport.saveOnCopy,
+				boostCoefficient
 			});
 			this.persistPreferencesLocal();
 		},
@@ -371,7 +386,7 @@ function createAppStore() {
 				const stored = localStorage.getItem('savedThemes');
 				if (stored) {
 					try {
-						const localThemes = JSON.parse(stored) as SavedThemeItem[];
+						const localThemes = loadSavedThemes();
 						await Promise.all(
 							localThemes.map(async (theme) => {
 								try {
@@ -477,7 +492,8 @@ function createAppStore() {
 				themeExport: {
 					editorType: state.themeExport.editorType,
 					appearance: state.themeExport.appearance,
-					saveOnCopy: state.themeExport.saveOnCopy
+					saveOnCopy: state.themeExport.saveOnCopy,
+					boostCoefficient: state.themeExport.boostCoefficient
 				}
 			};
 		},
@@ -498,6 +514,7 @@ function createAppStore() {
 			state.themeExport.editorType = themeExport.editorType;
 			state.themeExport.appearance = themeExport.appearance;
 			state.themeExport.saveOnCopy = themeExport.saveOnCopy;
+			state.themeExport.boostCoefficient = themeExport.boostCoefficient;
 
 			clearApplyPaletteSettings();
 			clearWallhavenSettings();
@@ -510,48 +527,11 @@ function createAppStore() {
 			return this.buildPreferences();
 		},
 
-		parseApplyPaletteSettings(value: unknown): ApplyPaletteSettings {
-			if (!value || typeof value !== 'object') return { ...DEFAULT_APPLY_PALETTE_SETTINGS };
-			const settings = value as ApplyPaletteSettings;
-			return {
-				luminosity:
-					typeof settings.luminosity === 'number' ? settings.luminosity : DEFAULT_APPLY_PALETTE_SETTINGS.luminosity,
-				nearest: typeof settings.nearest === 'number' ? settings.nearest : DEFAULT_APPLY_PALETTE_SETTINGS.nearest,
-				power: typeof settings.power === 'number' ? settings.power : DEFAULT_APPLY_PALETTE_SETTINGS.power,
-				maxDistance:
-					typeof settings.maxDistance === 'number' ? settings.maxDistance : DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance
-			};
-		},
+		parseApplyPaletteSettings,
 
-		parseWallhavenSettings(value: unknown): WallhavenSettings {
-			if (!value || typeof value !== 'object') return { ...DEFAULT_WALLHAVEN_SETTINGS };
-			const settings = value as WallhavenSettings;
-			return {
-				categories:
-					typeof settings.categories === 'string' ? settings.categories : DEFAULT_WALLHAVEN_SETTINGS.categories,
-				purity: typeof settings.purity === 'string' ? settings.purity : DEFAULT_WALLHAVEN_SETTINGS.purity,
-				sorting: typeof settings.sorting === 'string' ? settings.sorting : DEFAULT_WALLHAVEN_SETTINGS.sorting,
-				order: typeof settings.order === 'string' ? settings.order : DEFAULT_WALLHAVEN_SETTINGS.order,
-				topRange: typeof settings.topRange === 'string' ? settings.topRange : DEFAULT_WALLHAVEN_SETTINGS.topRange,
-				ratios: Array.isArray(settings.ratios) ? settings.ratios.filter((ratio) => typeof ratio === 'string') : [],
-				apikey: typeof settings.apikey === 'string' ? settings.apikey : DEFAULT_WALLHAVEN_SETTINGS.apikey
-			};
-		},
+		parseWallhavenSettings,
 
-		parseThemeExportPreferences(value: unknown) {
-			if (!value || typeof value !== 'object') return { ...DEFAULT_THEME_EXPORT_PREFERENCES };
-			const prefs = value as { editorType?: EditorThemeType; appearance?: ThemeAppearance; saveOnCopy?: boolean };
-			const appearance =
-				prefs.appearance === 'light' || prefs.appearance === 'dark'
-					? prefs.appearance
-					: DEFAULT_THEME_EXPORT_PREFERENCES.appearance;
-			return {
-				editorType: prefs.editorType || DEFAULT_THEME_EXPORT_PREFERENCES.editorType,
-				appearance,
-				saveOnCopy:
-					typeof prefs.saveOnCopy === 'boolean' ? prefs.saveOnCopy : DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy
-			};
-		},
+		parseThemeExportPreferences,
 
 		async drawToCanvas(file: File) {
 			const reader = new FileReader();
@@ -836,6 +816,29 @@ function createAppStore() {
 			} finally {
 				state.isExtracting = false;
 			}
+		},
+
+		async syncPaletteWithSelections() {
+			if (state.isExtracting || !state.canvas || !state.image) return;
+
+			const hasValidSelection = state.selectors.some((selector) =>
+				selector.selection ? isValidSelection(selector.selection) : false
+			);
+
+			if (hasValidSelection) {
+				await this.extractPaletteFromSelection();
+				return;
+			}
+
+			const cleanCanvas = document.createElement('canvas');
+			cleanCanvas.width = state.canvas.width;
+			cleanCanvas.height = state.canvas.height;
+			const cleanContext = cleanCanvas.getContext('2d');
+			if (!cleanContext) return;
+
+			cleanContext.drawImage(state.image, 0, 0, state.canvas.width, state.canvas.height);
+			const blob = await new Promise<Blob>((resolve) => cleanCanvas.toBlob((b) => resolve(b!), IMAGE.OUTPUT_FORMAT));
+			await this.extractPalette(blob);
 		},
 
 		async savePalette() {

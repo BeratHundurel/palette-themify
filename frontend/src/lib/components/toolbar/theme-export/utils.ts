@@ -1,6 +1,6 @@
 import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
 import { COLOR_REGEX } from '$lib/constants';
-import type { SavedThemeItem, ThemeOverrides, ThemeResponse } from '$lib/types/theme';
+import type { SavedThemeItem, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 
 export const THEME_NAME_DEBOUNCE_MS = 300;
 
@@ -23,8 +23,8 @@ export function getThemeVersionKey(type: EditorThemeType, appearance: ThemeAppea
 	return `${type}:${appearance}`;
 }
 
-export function cloneThemeResponse(response: ThemeResponse): ThemeResponse {
-	return JSON.parse(JSON.stringify(response)) as ThemeResponse;
+export function cloneThemeResponse(response: ThemeGenerationResponse): ThemeGenerationResponse {
+	return JSON.parse(JSON.stringify(response)) as ThemeGenerationResponse;
 }
 
 export function validateThemeName(name: string): string | null {

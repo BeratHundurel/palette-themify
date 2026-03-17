@@ -144,6 +144,7 @@ pub const GenerateOverridableRequest = struct {
     ThemeOverrides: ?ThemeOverrides = null,
     themeType: ThemeType = .zed,
     appearance: ?ThemeAppearance = null,
+    boostCoefficient: ?f32 = null,
 };
 
 pub const PreparedThemeSelection = struct {
@@ -162,8 +163,8 @@ pub const PreparedThemeSelection = struct {
     c9_raw: []const u8,
 };
 
-pub fn resolveAccent(raw: []const u8, background: []const u8) []const u8 {
-    return color_utils.boostAccentColor(color_utils.adjustForContrast(raw, background, 3), background);
+pub fn resolveAccent(raw: []const u8, background: []const u8, boost_coefficient: f32) []const u8 {
+    return color_utils.boostAccentColor(color_utils.adjustForContrast(raw, background, 3), background, boost_coefficient);
 }
 
 pub fn prepareThemeSelection(

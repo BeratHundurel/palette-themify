@@ -12,22 +12,35 @@ export const DEFAULT_WALLHAVEN_SETTINGS: WallhavenSettings = {
 	apikey: ''
 };
 
+function asString(value: unknown, fallback: string): string {
+	return typeof value === 'string' ? value : fallback;
+}
+
+export function parseWallhavenSettings(value: unknown): WallhavenSettings {
+	if (!value || typeof value !== 'object') return { ...DEFAULT_WALLHAVEN_SETTINGS };
+	const parsed = value as Partial<WallhavenSettings>;
+	return {
+		categories: asString(parsed.categories, DEFAULT_WALLHAVEN_SETTINGS.categories),
+		purity: asString(parsed.purity, DEFAULT_WALLHAVEN_SETTINGS.purity),
+		sorting: asString(parsed.sorting, DEFAULT_WALLHAVEN_SETTINGS.sorting),
+		order: asString(parsed.order, DEFAULT_WALLHAVEN_SETTINGS.order),
+		topRange: asString(parsed.topRange, DEFAULT_WALLHAVEN_SETTINGS.topRange),
+		ratios: Array.isArray(parsed.ratios) ? parsed.ratios.filter((ratio) => typeof ratio === 'string') : [],
+		apikey: asString(parsed.apikey, DEFAULT_WALLHAVEN_SETTINGS.apikey ?? '')
+	};
+}
+
 export function loadWallhavenSettings(): WallhavenSettings {
-	if (!browser) return DEFAULT_WALLHAVEN_SETTINGS;
+	if (!browser) return { ...DEFAULT_WALLHAVEN_SETTINGS };
 	const stored = localStorage.getItem(WALLHAVEN_SETTINGS_KEY);
 	if (stored) {
-		const parsed = JSON.parse(stored);
-		return {
-			categories: parsed.categories ?? DEFAULT_WALLHAVEN_SETTINGS.categories,
-			purity: parsed.purity ?? DEFAULT_WALLHAVEN_SETTINGS.purity,
-			sorting: parsed.sorting ?? DEFAULT_WALLHAVEN_SETTINGS.sorting,
-			order: parsed.order ?? DEFAULT_WALLHAVEN_SETTINGS.order,
-			topRange: parsed.topRange ?? DEFAULT_WALLHAVEN_SETTINGS.topRange,
-			ratios: parsed.ratios ?? DEFAULT_WALLHAVEN_SETTINGS.ratios,
-			apikey: parsed.apikey ?? DEFAULT_WALLHAVEN_SETTINGS.apikey
-		};
+		try {
+			return parseWallhavenSettings(JSON.parse(stored));
+		} catch {
+			return { ...DEFAULT_WALLHAVEN_SETTINGS };
+		}
 	}
-	return DEFAULT_WALLHAVEN_SETTINGS;
+	return { ...DEFAULT_WALLHAVEN_SETTINGS };
 }
 
 export function saveWallhavenSettings(settings: WallhavenSettings) {

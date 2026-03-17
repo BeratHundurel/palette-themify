@@ -1,5 +1,5 @@
 import type { Color } from '$lib/types/color';
-import type { Theme, ThemeOverrides, ThemeResponse } from '$lib/types/theme';
+import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 
 import { buildURL, buildZigURL, ensureOk } from './base';
 
@@ -16,20 +16,22 @@ export type GenerateThemeRequest = {
 	name?: string;
 	overrides?: ThemeOverrides | null;
 	appearance?: ThemeAppearance | null;
+	boostCoefficient?: number | null;
 };
 
 export type ThemeAppearance = 'dark' | 'light';
-
 export type EditorThemeType = 'vscode' | 'zed';
+export type AccentBoostCoefficient = number;
 
 export async function generateTheme(
 	colors: Color[],
 	type: EditorThemeType,
 	name?: string,
 	overrides?: ThemeOverrides | null,
-	appearance?: ThemeAppearance | null
-): Promise<ThemeResponse> {
-	const payload: GenerateThemeRequest = { colors, type, name, overrides, appearance };
+	appearance?: ThemeAppearance | null,
+	boostCoefficient?: number | null
+): Promise<ThemeGenerationResponse> {
+	const payload: GenerateThemeRequest = { colors, type, name, overrides, appearance, boostCoefficient };
 
 	const res = await fetch(buildZigURL('/generate-theme'), {
 		method: 'POST',
@@ -44,12 +46,14 @@ export async function generateOverridable(
 	theme: Theme,
 	overrides?: ThemeOverrides | null,
 	themeType: EditorThemeType = 'zed',
-	appearance?: ThemeAppearance | null
-): Promise<ThemeResponse> {
+	appearance?: ThemeAppearance | null,
+	boostCoefficient?: number | null
+): Promise<ThemeGenerationResponse> {
 	const payload = {
 		theme,
 		themeType,
 		appearance,
+		boostCoefficient,
 		...(overrides ? { ThemeOverrides: overrides } : {})
 	};
 

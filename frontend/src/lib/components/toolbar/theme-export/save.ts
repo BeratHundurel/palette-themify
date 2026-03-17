@@ -1,7 +1,7 @@
 import type { EditorThemeType } from '$lib/api/theme';
 import { appStore } from '$lib/stores/app.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
-import type { SavedThemeItem, ThemeColorWithUsage, ThemeResponse } from '$lib/types/theme';
+import type { SavedThemeItem, ThemeColorWithUsage, ThemeGenerationResponse } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
 
 import { getThemeSignature, normalizeThemeName, validateThemeName } from './utils';
@@ -9,7 +9,7 @@ import { getThemeSignature, normalizeThemeName, validateThemeName } from './util
 type SaveThemeArgs = {
 	name: string;
 	editorType: EditorThemeType;
-	themeResult: ThemeResponse | null;
+	themeResult: ThemeGenerationResponse | null;
 	themeColorsWithUsage: ThemeColorWithUsage[];
 };
 
@@ -27,7 +27,7 @@ function buildSavedTheme({
 	id?: string;
 	name: string;
 	editorType: EditorThemeType;
-	themeResult: ThemeResponse;
+	themeResult: ThemeGenerationResponse;
 	themeColorsWithUsage: ThemeColorWithUsage[];
 }): SavedThemeItem {
 	return {

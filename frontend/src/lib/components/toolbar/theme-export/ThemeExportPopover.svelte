@@ -3,7 +3,7 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
-	import type { Theme, ThemeOverrides, ThemeResponse } from '$lib/types/theme';
+	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -16,8 +16,6 @@
 		setActiveThemeResponse,
 		setManualOverrideFlag
 	} from './session';
-
-	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
 	import {
 		getBaseColorLabel as getBaseColorLabelFromOverrides,
 		normalizeHex,
@@ -26,6 +24,8 @@
 		validateThemeName
 	} from './utils';
 	import { exportTheme as exportThemeToClipboard } from './save';
+
+	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
 
 	let expandedColorIndices = new SvelteSet<number>();
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -38,6 +38,8 @@
 	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
 	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
 	let saveOnCopy = $derived(appStore.state.themeExport.saveOnCopy);
+	let accentBoostCoefficient = $derived(appStore.state.themeExport.boostCoefficient);
+	let accentBoostInput = $state(appStore.state.themeExport.boostCoefficient.toFixed(2));
 
 	const baseOverrides = $derived(themeResult?.themeOverrides ?? {});
 
@@ -141,7 +143,7 @@
 
 		updateThemeNameInTheme(themeResult.theme, name);
 
-		for (const response of Object.values(appStore.state.themeExport.themeVersions) as ThemeResponse[]) {
+		for (const response of Object.values(appStore.state.themeExport.themeVersions) as ThemeGenerationResponse[]) {
 			updateThemeNameInTheme(response.theme, name);
 		}
 	}
@@ -151,6 +153,7 @@
 		appearance?: ThemeAppearance;
 		overrides?: ThemeOverrides;
 		bypassCache?: boolean;
+		accentBoostCoefficient?: number;
 	}) {
 		if (isGenerating) return;
 
@@ -164,6 +167,7 @@
 		const nextType = options?.type ?? editorType;
 		const nextAppearance = options?.appearance ?? themeAppearance;
 		const requestOverrides = options?.overrides ?? buildRequestOverrides(nextAppearance, themeAppearance);
+		const requestAccentBoostCoefficient = options?.accentBoostCoefficient ?? accentBoostCoefficient;
 
 		if (!options?.bypassCache) {
 			const cached = getCachedThemeVersion(nextType, nextAppearance);
@@ -175,7 +179,7 @@
 
 		try {
 			isGenerating = true;
-			let response: ThemeResponse;
+			let response: ThemeGenerationResponse;
 
 			if (hasPaletteColors) {
 				response = await generateTheme(
@@ -183,7 +187,8 @@
 					nextType,
 					themeName.trim(),
 					requestOverrides,
-					nextAppearance
+					nextAppearance,
+					requestAccentBoostCoefficient
 				);
 				appStore.state.themeExport.loadedThemeOverridesReference = null;
 				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
@@ -205,10 +210,17 @@
 						nextType,
 						themeName.trim(),
 						requestOverrides,
-						nextAppearance
+						nextAppearance,
+						requestAccentBoostCoefficient
 					);
 				} else {
-					response = await generateOverridable(themeResult.theme, requestOverrides, nextType, nextAppearance);
+					response = await generateOverridable(
+						themeResult.theme,
+						requestOverrides,
+						nextType,
+						nextAppearance,
+						requestAccentBoostCoefficient
+					);
 				}
 			}
 
@@ -329,6 +341,22 @@
 
 	function isExpanded(index: number): boolean {
 		return expandedColorIndices.has(index);
+	}
+
+	function handleAccentBoostInput(event: Event) {
+		const target = event.target as HTMLInputElement;
+		accentBoostInput = target.value;
+
+		const parsed = Number(target.value);
+		if (Number.isNaN(parsed)) return;
+
+		const clamped = Math.min(1, Math.max(0, parsed));
+		const normalized = Math.round(clamped * 100) / 100;
+
+		appStore.setThemeExportBoostCoefficient(normalized);
+		accentBoostInput = normalized.toFixed(2);
+
+		generateThemeFromApi({ bypassCache: true, accentBoostCoefficient: normalized });
 	}
 
 	async function copyUsagePath(path: string) {
@@ -581,21 +609,60 @@
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Save Behavior</h3>
 						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 					</div>
-					<label
-						class="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3"
-					>
-						<div>
-							<div class="text-sm font-medium text-zinc-200">Save on copy</div>
-							<p class="mt-1 text-xs text-zinc-500">Store the generated theme locally when copying JSON</p>
+					<div class="space-y-3">
+						<label
+							class="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3"
+						>
+							<div>
+								<div class="text-sm font-medium text-zinc-200">Save on copy</div>
+								<p class="mt-1 text-xs text-zinc-500">Store the generated theme locally when copying JSON</p>
+							</div>
+							<input
+								id="save-on-copy"
+								type="checkbox"
+								checked={saveOnCopy}
+								onchange={(e) => appStore.setThemeExportSaveOnCopy((e.target as HTMLInputElement).checked)}
+								class="text-brand focus:ring-brand h-4 w-4 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
+							/>
+						</label>
+
+						<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
+							<div class="flex items-start justify-between gap-4">
+								<div>
+									<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
+									<p class="mt-1 text-xs text-zinc-500">
+										1.00 keeps current boosting, 0.50 halves it, and 0 disables accent boosting.
+									</p>
+								</div>
+								<div class="text-right text-xs text-zinc-400">
+									<div>{Math.round(accentBoostCoefficient * 100)}%</div>
+									<div class="mt-0.5">0.00 – 1.00</div>
+								</div>
+							</div>
+
+							<div class="mt-3 flex items-center gap-3">
+								<input
+									type="range"
+									min="0"
+									max="1"
+									step="0.01"
+									value={accentBoostCoefficient}
+									oninput={handleAccentBoostInput}
+									class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
+								/>
+								<input
+									type="number"
+									min="0"
+									max="1"
+									step="0.01"
+									value={accentBoostInput}
+									oninput={handleAccentBoostInput}
+									onblur={() => (accentBoostInput = accentBoostCoefficient.toFixed(2))}
+									class="focus:border-brand/50 w-24 rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+								/>
+							</div>
 						</div>
-						<input
-							id="save-on-copy"
-							type="checkbox"
-							checked={saveOnCopy}
-							onchange={(e) => appStore.setThemeExportSaveOnCopy((e.target as HTMLInputElement).checked)}
-							class="text-brand focus:ring-brand h-4 w-4 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
-						/>
-					</label>
+					</div>
 				</div>
 
 				<div class="mb-8">

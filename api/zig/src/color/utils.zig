@@ -312,7 +312,14 @@ pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []co
 }
 
 /// Boosts saturation for muted accent colors while preserving overall lightness.
-pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
+/// `coefficient` controls boost strength:
+/// - 1.0 keeps current behavior
+/// - 0.5 halves the effective boost
+/// - 0.0 disables boosting entirely
+pub fn boostAccentColor(hex: []const u8, background: []const u8, coefficient: f32) []const u8 {
+    const clamped_coefficient = std.math.clamp(coefficient, 0.0, 1.0);
+    if (clamped_coefficient <= 0.0) return hex;
+
     const hsl = hexToHsl(hex);
     const dark_bg = isDarkColor(background);
     if (hsl.l < 0.12 or hsl.l > 0.88) return hex; // skip very dark/light tones (background-like).
@@ -334,9 +341,11 @@ pub fn boostAccentColor(hex: []const u8, background: []const u8) []const u8 {
     const target_s = std.math.lerp(s_target_max, hsl.s, t);
 
     // Small additive nudge on top of the interpolated target.
-    // Reduce for gentler boosts.
+    // Scale both the interpolated headroom and additive nudge by the user coefficient.
     const boost: f32 = if (dark_bg) 0.01 else 0.06;
-    const new_s = @min(target_s + boost, s_target_max);
+    const boosted_target_s = hsl.s + ((target_s - hsl.s) * clamped_coefficient);
+    const boosted_nudge = boost * clamped_coefficient;
+    const new_s = @min(boosted_target_s + boosted_nudge, s_target_max);
 
     if (new_s <= hsl.s) return hex;
 
@@ -833,10 +842,34 @@ test "boostAccentColor boosts mid-muted accents on dark backgrounds" {
     const background = "#080808";
     const input_rgb = hslToRgb(0.55, 0.22, 0.55);
     const input = rgbToHex(input_rgb.r, input_rgb.g, input_rgb.b);
-    const boosted = boostAccentColor(input, background);
+    const boosted = boostAccentColor(input, background, 1.0);
 
     try std.testing.expect(hexToHsl(boosted).s > hexToHsl(input).s);
     try std.testing.expect(contrastRatio(boosted, background) >= 3.0);
+}
+
+test "boostAccentColor with zero coefficient disables boosting" {
+    const background = "#080808";
+    const input_rgb = hslToRgb(0.55, 0.22, 0.55);
+    const input = rgbToHex(input_rgb.r, input_rgb.g, input_rgb.b);
+    const boosted = boostAccentColor(input, background, 0.0);
+
+    try std.testing.expectEqualStrings(input, boosted);
+}
+
+test "boostAccentColor with reduced coefficient applies a gentler boost" {
+    const background = "#080808";
+    const input_rgb = hslToRgb(0.55, 0.22, 0.55);
+    const input = rgbToHex(input_rgb.r, input_rgb.g, input_rgb.b);
+    const boosted_half = boostAccentColor(input, background, 0.5);
+    const boosted_full = boostAccentColor(input, background, 1.0);
+
+    const input_hsl = hexToHsl(input);
+    const half_hsl = hexToHsl(boosted_half);
+    const full_hsl = hexToHsl(boosted_full);
+
+    try std.testing.expect(half_hsl.s > input_hsl.s);
+    try std.testing.expect(full_hsl.s >= half_hsl.s);
 }
 
 test "selectDiverseColors returns requested count" {

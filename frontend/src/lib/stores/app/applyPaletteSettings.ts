@@ -9,19 +9,32 @@ export const DEFAULT_APPLY_PALETTE_SETTINGS: ApplyPaletteSettings = {
 	maxDistance: 0
 };
 
+function asNumber(value: unknown, fallback: number): number {
+	return typeof value === 'number' ? value : fallback;
+}
+
+export function parseApplyPaletteSettings(value: unknown): ApplyPaletteSettings {
+	if (!value || typeof value !== 'object') return { ...DEFAULT_APPLY_PALETTE_SETTINGS };
+	const parsed = value as Partial<ApplyPaletteSettings>;
+	return {
+		luminosity: asNumber(parsed.luminosity, DEFAULT_APPLY_PALETTE_SETTINGS.luminosity),
+		nearest: asNumber(parsed.nearest, DEFAULT_APPLY_PALETTE_SETTINGS.nearest),
+		power: asNumber(parsed.power, DEFAULT_APPLY_PALETTE_SETTINGS.power),
+		maxDistance: asNumber(parsed.maxDistance, DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance)
+	};
+}
+
 export function loadApplyPaletteSettings(): ApplyPaletteSettings {
-	if (!browser) return DEFAULT_APPLY_PALETTE_SETTINGS;
+	if (!browser) return { ...DEFAULT_APPLY_PALETTE_SETTINGS };
 	const stored = localStorage.getItem(APPLY_PALETTE_SETTINGS_KEY);
 	if (stored) {
-		const parsed = JSON.parse(stored);
-		return {
-			luminosity: parsed.luminosity ?? DEFAULT_APPLY_PALETTE_SETTINGS.luminosity,
-			nearest: parsed.nearest ?? DEFAULT_APPLY_PALETTE_SETTINGS.nearest,
-			power: parsed.power ?? DEFAULT_APPLY_PALETTE_SETTINGS.power,
-			maxDistance: parsed.maxDistance ?? DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance
-		};
+		try {
+			return parseApplyPaletteSettings(JSON.parse(stored));
+		} catch {
+			return { ...DEFAULT_APPLY_PALETTE_SETTINGS };
+		}
 	}
-	return DEFAULT_APPLY_PALETTE_SETTINGS;
+	return { ...DEFAULT_APPLY_PALETTE_SETTINGS };
 }
 
 export function saveApplyPaletteSettings(settings: ApplyPaletteSettings) {

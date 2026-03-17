@@ -9,6 +9,7 @@ pub const ZedThemeResponse = struct {
     themeOverrides: ThemeOverrides,
     rawThemeOverrides: ThemeOverrides,
     colors: []const ColorHex,
+    boostCoefficient: f32,
 };
 
 pub const FontStyle = enum {
@@ -54,7 +55,7 @@ pub const ZedThemeStyle = struct {
     @"vim.visual_line.foreground": []const u8,
     @"vim.visual_block.foreground": []const u8,
     @"vim.replace.foreground": []const u8,
-    
+
     @"vim.normal.background": []const u8,
     @"vim.helix_normal.background": []const u8,
     @"vim.visual.background": []const u8,

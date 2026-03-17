@@ -23,6 +23,7 @@ pub fn generateZedTheme(
     theme_name: []const u8,
     overrides: ThemeOverrides,
     appearance: ?ThemeAppearance,
+    boost_coefficient: f32,
 ) !ZedThemeResponse {
     const prepared = try theme_common.prepareThemeSelection(allocator, colors, overrides, appearance);
     const dark_base = prepared.dark_base;
@@ -55,15 +56,15 @@ pub fn generateZedTheme(
     const fg_80 = color_utils.addAlpha(foreground, "80");
     const fg_placeholder_30 = color_utils.addAlpha(fg_placeholder, "30");
 
-    const c1 = theme_common.resolveAccent(prepared.c1_raw, background);
-    const c2 = theme_common.resolveAccent(prepared.c2_raw, background);
-    const c3 = theme_common.resolveAccent(prepared.c3_raw, background);
-    const c4 = theme_common.resolveAccent(prepared.c4_raw, background);
-    const c5 = theme_common.resolveAccent(prepared.c5_raw, background);
-    const c6 = theme_common.resolveAccent(prepared.c6_raw, background);
-    const c7 = theme_common.resolveAccent(prepared.c7_raw, background);
-    const c8 = theme_common.resolveAccent(prepared.c8_raw, background);
-    const c9 = theme_common.resolveAccent(prepared.c9_raw, background);
+    const c1 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c1_raw, background, 3), background, boost_coefficient);
+    const c2 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c2_raw, background, 3), background, boost_coefficient);
+    const c3 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c3_raw, background, 3), background, boost_coefficient);
+    const c4 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c4_raw, background, 3), background, boost_coefficient);
+    const c5 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c5_raw, background, 3), background, boost_coefficient);
+    const c6 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c6_raw, background, 3), background, boost_coefficient);
+    const c7 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c7_raw, background, 3), background, boost_coefficient);
+    const c8 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c8_raw, background, 3), background, boost_coefficient);
+    const c9 = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.c9_raw, background, 3), background, boost_coefficient);
 
     const vim_normal_foreground = if (color_utils.contrastRatio(foreground, c2) >= color_utils.contrastRatio(bg_very_dark, c2)) foreground else bg_very_dark;
     const vim_visual_foreground = if (color_utils.contrastRatio(foreground, c6) >= color_utils.contrastRatio(bg_very_dark, c6)) foreground else bg_very_dark;
@@ -72,12 +73,12 @@ pub fn generateZedTheme(
     const vim_replace_foreground = if (color_utils.contrastRatio(foreground, c8) >= color_utils.contrastRatio(bg_very_dark, c8)) foreground else bg_very_dark;
 
     const constants_raw = overrides.constants orelse color_utils.getHarmonicColor(c2, .@"split-complementary");
-    const constants = theme_common.resolveAccent(constants_raw, background);
+    const constants = color_utils.boostAccentColor(color_utils.adjustForContrast(constants_raw, background, 3), background, boost_coefficient);
 
-    const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.error_color, background, 3), background);
-    const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.warning_color, background, 3), background);
-    const semantic_success = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.success_color, background, 3), background);
-    const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.info_color, background, 3), background);
+    const semantic_error = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.error_color, background, 3), background, boost_coefficient);
+    const semantic_warning = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.warning_color, background, 3), background, boost_coefficient);
+    const semantic_success = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.success_color, background, 3), background, boost_coefficient);
+    const semantic_info = color_utils.boostAccentColor(color_utils.adjustForContrast(prepared.semantic.info_color, background, 3), background, boost_coefficient);
 
     const c2_33 = color_utils.addAlpha(c2, "33");
     const c2_66 = color_utils.addAlpha(c2, "66");
@@ -451,7 +452,7 @@ pub fn generateZedTheme(
         .constants = constants_raw,
     };
 
-    return ZedThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .rawThemeOverrides = raw_overrides, .colors = backupColors };
+    return ZedThemeResponse{ .theme = theme, .themeOverrides = base_overrides, .rawThemeOverrides = raw_overrides, .colors = backupColors, .boostCoefficient = boost_coefficient };
 }
 
 pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, request: GenerateOverridableRequest) !ZedThemeResponse {
@@ -605,7 +606,7 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, reques
     const palette = try allocator.dupe([]const u8, colors.items);
     defer allocator.free(palette);
 
-    return try generateZedTheme(allocator, palette, theme_name, overrides, request.appearance);
+    return try generateZedTheme(allocator, palette, theme_name, overrides, request.appearance, request.boostCoefficient orelse 1.0);
 }
 
 test "generateOverridableFromZedThemeValue rejects invalid json" {
@@ -679,7 +680,7 @@ test "generateZedTheme preserves exact manual overrides" {
         .foreground = "#F0F0F0",
         .c6 = "#123456",
         .constants = "#ABCDEF",
-    }, .dark);
+    }, .dark, 1.0);
 
     try std.testing.expectEqualStrings("#101010", response.themeOverrides.background.?);
     try std.testing.expectEqualStrings("#F0F0F0", response.themeOverrides.foreground.?);

@@ -11,6 +11,7 @@ Session*.*vim
 commit_msg
 *.sw?
 /docs
+nul
 
 # npm/bun
 node_modules/

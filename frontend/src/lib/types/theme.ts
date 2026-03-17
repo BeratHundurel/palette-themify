@@ -21,14 +21,15 @@ export type ThemeOverrides = {
 	constants?: string;
 };
 
-export type ThemeResponse = {
+export type ThemeGenerationResponse = {
 	theme: Theme;
 	themeOverrides: ThemeOverrides;
 	rawThemeOverrides: ThemeOverrides;
 	colors: Color[];
+	boostCoefficient: number;
 };
 
-export type ThemeVersionMap = Record<string, ThemeResponse>;
+export type ThemeVersionMap = Record<string, ThemeGenerationResponse>;
 
 export interface ThemeColorWithUsage {
 	baseColor: string;
@@ -42,11 +43,12 @@ export interface ThemeColorWithUsage {
 
 export interface ThemeExportState {
 	themeName: string;
-	themeResult: ThemeResponse | null;
+	themeResult: ThemeGenerationResponse | null;
 	themeColorsWithUsage: ThemeColorWithUsage[];
 	saveOnCopy: boolean;
 	editorType: EditorThemeType;
 	appearance: ThemeAppearance;
+	boostCoefficient: number;
 	lastGeneratedPaletteVersion: number;
 	themeVersions: ThemeVersionMap;
 	rawThemeOverrides: ThemeOverrides;
@@ -60,7 +62,7 @@ export type SavedThemeItem = {
 	id: string;
 	name: string;
 	editorType: EditorThemeType;
-	themeResult: ThemeResponse;
+	themeResult: ThemeGenerationResponse;
 	themeColorsWithUsage: ThemeColorWithUsage[];
 	createdAt: string;
 	signature?: string;

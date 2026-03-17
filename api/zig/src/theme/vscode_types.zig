@@ -10,6 +10,7 @@ pub const VSCodeThemeResponse = struct {
     themeOverrides: ThemeOverrides,
     rawThemeOverrides: ThemeOverrides,
     colors: []const ColorHex,
+    boostCoefficient: f32,
 };
 
 pub const VSCodeTokenSettings = struct {
