@@ -113,17 +113,21 @@ function createAppStore() {
 		savedPalettes: [],
 		sortMethod: 'none',
 		applyPaletteSettings: loadApplyPaletteSettings(),
-		themeExport: {
-			themeResult: null,
-			themeColorsWithUsage: [],
-			themeName: 'Generated Theme',
-			lastGeneratedPaletteVersion: 0,
-			editorType: themeExportPreferences.editorType,
-			appearance: themeExportPreferences.appearance,
-			saveOnCopy: themeExportPreferences.saveOnCopy,
-			loadedThemeOverridesReference: null,
-			backupColors: null
-		},
+			themeExport: {
+				themeResult: null,
+				themeColorsWithUsage: [],
+				themeName: 'Generated Theme',
+				lastGeneratedPaletteVersion: 0,
+				editorType: themeExportPreferences.editorType,
+				appearance: themeExportPreferences.appearance,
+				saveOnCopy: themeExportPreferences.saveOnCopy,
+				themeVersions: {},
+				rawThemeOverrides: {},
+				hasManualBackgroundOverride: false,
+				hasManualForegroundOverride: false,
+				loadedThemeOverridesReference: null,
+				backupColors: null
+			},
 		savedThemes: loadSavedThemes(),
 		paletteVersion: 0
 	});
@@ -298,6 +302,19 @@ function createAppStore() {
 			this.persistPreferencesLocal();
 		},
 
+		resetThemeExportSession() {
+			state.themeExport.themeResult = null;
+			state.themeExport.themeColorsWithUsage = [];
+			state.themeExport.themeName = 'Generated Theme';
+			state.themeExport.lastGeneratedPaletteVersion = 0;
+			state.themeExport.themeVersions = {};
+			state.themeExport.rawThemeOverrides = {};
+			state.themeExport.hasManualBackgroundOverride = false;
+			state.themeExport.hasManualForegroundOverride = false;
+			state.themeExport.loadedThemeOverridesReference = null;
+			state.themeExport.backupColors = null;
+		},
+
 		saveThemeToLocal(theme: SavedThemeItem) {
 			const preparedTheme = this.ensureThemeSignature(theme);
 			state.savedThemes = [preparedTheme, ...state.savedThemes];
@@ -441,7 +458,7 @@ function createAppStore() {
 						}
 					}
 					const merged = { ...preferences, ...localPreferences };
-					const updated = await this.applyPreferences(merged);
+					const updated = this.applyPreferences(merged);
 					await preferencesApi.savePreferences(updated);
 					localStorage.removeItem('appPreferences');
 				} catch (error) {
@@ -806,6 +823,7 @@ function createAppStore() {
 			try {
 				const result = await paletteApi.extractPalette(file);
 				if (result.palette.length > 0) {
+					this.resetThemeExportSession();
 					state.colors = result.palette;
 					toast.success('Palette extracted', { id: toastId });
 				} else {
@@ -893,6 +911,7 @@ function createAppStore() {
 
 				const extracted = await paletteApi.extractPalette(outBlob);
 				if (extracted.palette.length > 0) {
+					this.resetThemeExportSession();
 					state.colors = extracted.palette;
 				} else {
 					toast.error('Palette applied, but no colors were detected. Try another image.', { id: toastId });

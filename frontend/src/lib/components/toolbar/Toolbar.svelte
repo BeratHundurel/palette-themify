@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import CopyOptions from './CopyOptions.svelte';
+	import CopyOptions from './copy-options/CopyOptions.svelte';
 	import SelectorButton from './SelectorButton.svelte';
-	import SavedPalettes from './SavedPalettes.svelte';
-	import ApplyPaletteSettings from './ApplyPaletteSettings.svelte';
-	import WallhavenSettings from './WallhavenSettings.svelte';
-	import ThemeExport from './ThemeExport.svelte';
-	import SavedThemes from './SavedThemes.svelte';
-	import ApplyPaletteSettingsPopover from './popovers/ApplyPaletteSettingsPopover.svelte';
-	import WallhavenSettingsPopover from './popovers/WallhavenSettingsPopover.svelte';
-	import CopyOptionsPopover from './popovers/CopyOptionsPopover.svelte';
-	import SavedPalettesPopover from './popovers/SavedPalettesPopover.svelte';
-	import SavedThemesPopover from './popovers/SavedThemesPopover.svelte';
-	import Download from './Download.svelte';
+	import SavedPalettes from './saved-palettes/SavedPalettes.svelte';
+	import ApplyPaletteSettings from './apply-palette-settings/ApplyPaletteSettings.svelte';
+	import WallhavenSettings from './wallhaven-settings/WallhavenSettings.svelte';
+	import ThemeExport from './theme-export/ThemeExport.svelte';
+	import SavedThemes from './saved-themes/SavedThemes.svelte';
+	import ApplyPaletteSettingsPopover from './apply-palette-settings/ApplyPaletteSettingsPopover.svelte';
+	import WallhavenSettingsPopover from './wallhaven-settings/WallhavenSettingsPopover.svelte';
+	import CopyOptionsPopover from './copy-options/CopyOptionsPopover.svelte';
+	import SavedPalettesPopover from './saved-palettes/SavedPalettesPopover.svelte';
+	import SavedThemesPopover from './saved-themes/SavedThemesPopover.svelte';
+	import Download from './download/Download.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 

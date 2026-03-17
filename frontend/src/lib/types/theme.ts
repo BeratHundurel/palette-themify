@@ -24,8 +24,11 @@ export type ThemeOverrides = {
 export type ThemeResponse = {
 	theme: Theme;
 	themeOverrides: ThemeOverrides;
+	rawThemeOverrides: ThemeOverrides;
 	colors: Color[];
 };
+
+export type ThemeVersionMap = Record<string, ThemeResponse>;
 
 export interface ThemeColorWithUsage {
 	baseColor: string;
@@ -45,6 +48,10 @@ export interface ThemeExportState {
 	editorType: EditorThemeType;
 	appearance: ThemeAppearance;
 	lastGeneratedPaletteVersion: number;
+	themeVersions: ThemeVersionMap;
+	rawThemeOverrides: ThemeOverrides;
+	hasManualBackgroundOverride: boolean;
+	hasManualForegroundOverride: boolean;
 	loadedThemeOverridesReference: ThemeOverrides | null;
 	backupColors: Color[] | null;
 }

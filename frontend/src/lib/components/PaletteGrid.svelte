@@ -27,6 +27,7 @@
 		if (appStore.state.sortMethod === method) return;
 		appStore.state.sortMethod = method;
 		const result = sortColorsByMethod(appStore.state.colors, method);
+		appStore.resetThemeExportSession();
 		appStore.state.colors = result.colors;
 
 		if (result.hadNoChange) {
@@ -55,6 +56,7 @@
 
 	async function returnToUpload() {
 		await tick();
+		appStore.resetThemeExportSession();
 		appStore.state.image = null;
 		appStore.state.imageLoaded = false;
 		appStore.state.colors = [];

@@ -2,10 +2,11 @@
 	import { cn } from '$lib/utils';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { detectThemeAppearance, detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
 	import type { SavedThemeItem, Theme } from '$lib/types/theme';
 	import { generateOverridable, type EditorThemeType } from '$lib/api/theme';
+	import { hydrateThemeExportResponse } from '../theme-export/session';
 
 	let isImportOpen = $state(false);
 	let importJson = $state('');
@@ -31,13 +32,7 @@
 			appStore.state.colors = [];
 			appStore.state.image = null;
 			appStore.state.imageLoaded = false;
-			appStore.setThemeExportEditorType(resolvedType);
-			appStore.state.themeExport.themeResult = response;
-			appStore.setThemeExportAppearance(resolvedAppearance);
-			appStore.state.themeExport.backupColors = response.colors;
-			appStore.state.themeExport.themeName = response.theme.name;
-			appStore.state.themeExport.loadedThemeOverridesReference = response.themeOverrides;
-			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
+			hydrateThemeExportResponse(response, resolvedType, resolvedAppearance);
 
 			importJson = '';
 			popoverStore.close('themes');
@@ -45,6 +40,33 @@
 		} catch {
 			toast.error('Could not load the theme. Please check your JSON.');
 		}
+	}
+
+	function hasStoredRawOverrides(item: SavedThemeItem): boolean {
+		return 'rawThemeOverrides' in item.themeResult && typeof item.themeResult.rawThemeOverrides === 'object';
+	}
+
+	function loadSavedThemeResult(item: SavedThemeItem) {
+		const resolvedAppearance = detectThemeAppearance(item.themeResult.theme);
+
+		appStore.resetThemeExportSession();
+		appStore.state.colors = [];
+		appStore.state.image = null;
+		appStore.state.imageLoaded = false;
+		hydrateThemeExportResponse(item.themeResult, item.editorType, resolvedAppearance);
+
+		importJson = '';
+		popoverStore.close('themes');
+		popoverStore.state.current = 'themeExport';
+	}
+
+	async function handleSavedThemeLoad(item: SavedThemeItem) {
+		if (hasStoredRawOverrides(item)) {
+			loadSavedThemeResult(item);
+			return;
+		}
+
+		await handleThemeLoad(item.themeResult.theme, item.editorType);
 	}
 
 	async function handleImportText(value: string) {
@@ -187,10 +209,10 @@
 								<div class="mb-2 flex items-center justify-end gap-1">
 									<button
 										class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-										onclick={() => handleThemeLoad(item.themeResult.theme, item.editorType)}
-										type="button"
-										title="Load into inspector"
-									>
+									onclick={() => handleSavedThemeLoad(item)}
+									type="button"
+									title="Load into inspector"
+								>
 										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 										</svg>

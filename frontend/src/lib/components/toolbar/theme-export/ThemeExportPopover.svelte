@@ -3,12 +3,27 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
-	import type { SavedThemeItem, ThemeOverrides } from '$lib/types/theme';
+	import type { Theme, ThemeOverrides, ThemeResponse } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import { cn } from '$lib/utils';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { COLOR_REGEX } from '$lib/constants';
-	const THEME_NAME_DEBOUNCE_MS = 300;
+	import {
+		buildRequestOverrides,
+		clearThemeVersions,
+		getCachedThemeVersion,
+		getCurrentOverrides,
+		resetThemeExportOverrideState,
+		setActiveThemeResponse,
+		setManualOverrideFlag
+	} from './session';
+	import {
+		getBaseColorLabel as getBaseColorLabelFromOverrides,
+		normalizeHex,
+		overrideFields,
+		THEME_NAME_DEBOUNCE_MS,
+		validateThemeName
+	} from './utils';
+	import { exportTheme as exportThemeToClipboard } from './save';
 
 	let expandedColorIndices = new SvelteSet<number>();
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -43,16 +58,16 @@
 			appStore.state.themeExport.lastGeneratedPaletteVersion === 0
 		) {
 			themeName = 'Generated Theme';
-			themeOverrides = {};
-			generateThemeFromApi();
+			resetThemeExportOverrideState();
+			generateThemeFromApi({ overrides: {}, bypassCache: true });
 		}
 	});
 
 	$effect(() => {
 		if (isOpen && themeResult === null && !isGenerating) {
 			themeName = 'Generated Theme';
-			themeOverrides = {};
-			generateThemeFromApi();
+			resetThemeExportOverrideState();
+			generateThemeFromApi({ overrides: {}, bypassCache: true });
 		}
 	});
 
@@ -66,25 +81,9 @@
 			return;
 
 		themeName = 'Generated Theme';
-		themeOverrides = {};
-		generateThemeFromApi();
+		resetThemeExportOverrideState();
+		generateThemeFromApi({ overrides: {}, bypassCache: true });
 	});
-
-	function validateThemeName(name: string): string | null {
-		const trimmedName = name.trim();
-
-		if (trimmedName.length === 0) {
-			return 'Theme name cannot be empty';
-		}
-
-		// Check for problematic filesystem characters
-		const invalidChars = /[<>:"/\\|?*]/;
-		if (invalidChars.test(trimmedName)) {
-			return 'Theme name contains invalid characters: < > : " / \\ | ? *';
-		}
-
-		return null;
-	}
 
 	function handleThemeNameChange(e: Event) {
 		const target = e.target as HTMLInputElement;
@@ -120,13 +119,8 @@
 		}
 	}
 
-	function updateThemeNameInThemeResult(name: string) {
-		if (!themeResult) return;
-
+	function updateThemeNameInTheme(theme: Theme, name: string) {
 		try {
-			const theme = themeResult.theme;
-			if (!theme) return;
-
 			if (editorType === 'zed' && 'themes' in theme) {
 				theme.name = name;
 				if (theme.themes && Array.isArray(theme.themes) && theme.themes[0]) {
@@ -140,7 +134,22 @@
 		}
 	}
 
-	async function generateThemeFromApi() {
+	function updateThemeNameInThemeResult(name: string) {
+		if (!themeResult) return;
+
+		updateThemeNameInTheme(themeResult.theme, name);
+
+		for (const response of Object.values(appStore.state.themeExport.themeVersions) as ThemeResponse[]) {
+			updateThemeNameInTheme(response.theme, name);
+		}
+	}
+
+	async function generateThemeFromApi(options?: {
+		type?: EditorThemeType;
+		appearance?: ThemeAppearance;
+		overrides?: ThemeOverrides;
+		bypassCache?: boolean;
+	}) {
 		if (isGenerating) return;
 
 		const validationError = validateThemeName(themeName);
@@ -150,194 +159,136 @@
 		}
 
 		const hasPaletteColors = appStore.state.colors && appStore.state.colors.length > 0;
+		const nextType = options?.type ?? editorType;
+		const nextAppearance = options?.appearance ?? themeAppearance;
+		const requestOverrides = options?.overrides ?? buildRequestOverrides(nextAppearance, themeAppearance);
+
+		if (!options?.bypassCache) {
+			const cached = getCachedThemeVersion(nextType, nextAppearance);
+			if (cached) {
+				setActiveThemeResponse(cached, nextType, nextAppearance);
+				return;
+			}
+		}
 
 		try {
 			isGenerating = true;
+			let response: ThemeResponse;
 
 			if (hasPaletteColors) {
-				const response = await generateTheme(
+				response = await generateTheme(
 					appStore.state.colors,
-					editorType,
+					nextType,
 					themeName.trim(),
-					themeOverrides,
-					themeAppearance
+					requestOverrides,
+					nextAppearance
 				);
-
-				appStore.state.themeExport.themeResult = response;
-				appStore.state.themeExport.themeName = response.theme.name;
 				appStore.state.themeExport.loadedThemeOverridesReference = null;
 				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
-				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
-				return;
+			} else {
+				if (!themeResult?.theme) {
+					return;
+				}
+
+				const hasBackupColors =
+					appStore.state.themeExport.backupColors && appStore.state.themeExport.backupColors.length > 0;
+
+				if (
+					(nextType !== detectThemeType(themeResult.theme) ||
+						nextAppearance !== detectThemeAppearance(themeResult.theme)) &&
+					hasBackupColors
+				) {
+					response = await generateTheme(
+						appStore.state.themeExport.backupColors!,
+						nextType,
+						themeName.trim(),
+						requestOverrides,
+						nextAppearance
+					);
+				} else {
+					response = await generateOverridable(themeResult.theme, requestOverrides, nextType, nextAppearance);
+				}
 			}
 
-			if (!themeResult?.theme) {
-				return;
-			}
-
-			const hasBackupColors =
-				appStore.state.themeExport.backupColors && appStore.state.themeExport.backupColors.length > 0;
-
-			if (
-				(editorType !== detectThemeType(themeResult.theme) ||
-					themeAppearance !== detectThemeAppearance(themeResult.theme)) &&
-				hasBackupColors
-			) {
-				const response = await generateTheme(
-					appStore.state.themeExport.backupColors!,
-					editorType,
-					themeName.trim(),
-					themeOverrides,
-					themeAppearance
-				);
-
-				appStore.state.themeExport.themeResult = response;
-				appStore.state.themeExport.themeName = response.theme.name;
-				appStore.state.themeExport.loadedThemeOverridesReference = null;
-				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
-				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
-				return;
-			}
-
-			const response = await generateOverridable(themeResult.theme, themeOverrides, editorType, themeAppearance);
-			appStore.state.themeExport.themeResult = response;
-			appStore.state.themeExport.themeName = response.theme.name;
-			appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(response.theme);
+			setActiveThemeResponse(response, nextType, nextAppearance);
 		} catch {
 			toast.error('Could not generate the theme. Please try again.');
 			appStore.state.themeExport.themeResult = null;
 			appStore.state.themeExport.themeColorsWithUsage = [];
+			clearThemeVersions();
 		} finally {
 			isGenerating = false;
 		}
 	}
 
 	function resetOverrides() {
-		if (appStore.state.themeExport.loadedThemeOverridesReference && appStore.state.colors.length === 0) {
-			themeOverrides = { ...appStore.state.themeExport.loadedThemeOverridesReference };
-		} else {
-			themeOverrides = {};
-		}
-		generateThemeFromApi();
+		const overrides =
+			appStore.state.themeExport.loadedThemeOverridesReference && appStore.state.colors.length === 0
+				? { ...appStore.state.themeExport.loadedThemeOverridesReference }
+				: {};
+
+		resetThemeExportOverrideState(overrides);
+
+		generateThemeFromApi({ overrides, bypassCache: true });
+	}
+
+	function getOverrideValue(key: keyof ThemeOverrides): string {
+		return themeOverrides[key] ?? baseOverrides[key] ?? '#000000';
 	}
 
 	function updateThemeOverride(key: keyof ThemeOverrides, value: string) {
 		const normalized = normalizeHex(value);
 		if (!normalized) return;
 
-		const overrides = appStore.state.themeExport.themeResult?.themeOverrides;
-		if (!overrides) return;
+		clearThemeVersions();
 
+		const overrides = getCurrentOverrides();
 		overrides[key] = normalized;
-		generateThemeFromApi();
+		appStore.state.themeExport.rawThemeOverrides = { ...overrides };
+		setManualOverrideFlag(key, true);
+
+		generateThemeFromApi({ overrides, bypassCache: true });
 	}
 
 	async function handleEditorTypeChange(type: EditorThemeType) {
 		if (editorType === type) return;
 
-		// Clear any pending theme name updates
 		if (themeNameDebounceTimer) {
 			clearTimeout(themeNameDebounceTimer);
 			themeNameDebounceTimer = null;
 		}
 
 		appStore.setThemeExportEditorType(type);
-		generateThemeFromApi();
+
+		const cached = getCachedThemeVersion(type, themeAppearance);
+		if (cached) {
+			setActiveThemeResponse(cached, type, themeAppearance);
+			return;
+		}
+
+		generateThemeFromApi({
+			type,
+			appearance: themeAppearance,
+			overrides: buildRequestOverrides(themeAppearance, themeAppearance)
+		});
 	}
 
 	async function handleThemeAppearanceChange(appearance: ThemeAppearance) {
 		if (themeAppearance === appearance) return;
 
+		const cached = getCachedThemeVersion(editorType, appearance);
+		const overrides = buildRequestOverrides(appearance, themeAppearance);
 		appStore.setThemeExportAppearance(appearance);
-		generateThemeFromApi();
-	}
-
-	async function exportTheme() {
-		if (!themeResult) return;
-
-		try {
-			const themeJson = JSON.stringify(themeResult.theme, null, 2);
-			await navigator.clipboard.writeText(themeJson);
-			if (saveOnCopy) {
-				saveTheme(themeName.trim());
-			}
-			toast.success('Theme JSON copied to clipboard!');
-			popoverStore.close('themeExport');
-		} catch {
-			toast.error('Could not copy the theme. Please try again.');
+		if (cached) {
+			setActiveThemeResponse(cached, editorType, appearance);
+			return;
 		}
-	}
 
-	function saveTheme(name: string) {
-		if (!themeResult || !name) return;
-		const trimmedName = name.trim();
-		if (!trimmedName) return;
-
-		const normalizedName = normalizeThemeName(trimmedName);
-		const signature = getThemeSignature(themeResult);
-		const existingThemes = appStore.state.savedThemes;
-
-		const identicalTheme = existingThemes.find((item) => {
-			const existingSignature = item.signature ?? getThemeSignature(item.themeResult);
-			return item.editorType === editorType && existingSignature === signature;
+		generateThemeFromApi({
+			type: editorType,
+			appearance,
+			overrides
 		});
-		if (identicalTheme) {
-			return;
-		}
-
-		const nameMatch = existingThemes.find((item) => normalizeThemeName(item.name) === normalizedName);
-		if (nameMatch) {
-			const replace = confirm(`A theme named "${trimmedName}" already exists. Replace it?`);
-			if (replace) {
-				const saved = buildSavedTheme({ id: nameMatch.id, name: trimmedName });
-				appStore.replaceSavedTheme(nameMatch.id, saved);
-				return;
-			}
-
-			const renamed = prompt('Enter a new name for the theme:', trimmedName);
-			if (renamed === null) return;
-			const renameError = validateThemeName(renamed);
-			if (renameError) {
-				toast.error(renameError);
-				return;
-			}
-			const normalizedRename = normalizeThemeName(renamed);
-			if (existingThemes.find((item) => normalizeThemeName(item.name) === normalizedRename)) {
-				toast.error('A theme with that name already exists.');
-				return;
-			}
-			const saved = buildSavedTheme({ name: renamed.trim() });
-			appStore.saveThemeToLocal(saved);
-			return;
-		}
-
-		const saved = buildSavedTheme({ name: trimmedName });
-		appStore.saveThemeToLocal(saved);
-	}
-
-	function normalizeThemeName(name: string): string {
-		return name.trim().toLowerCase();
-	}
-
-	function getThemeSignature(result: SavedThemeItem['themeResult'] | null): string {
-		if (!result) return '';
-		try {
-			return JSON.stringify(result);
-		} catch {
-			return '';
-		}
-	}
-
-	function buildSavedTheme({ id, name }: { id?: string; name: string }): SavedThemeItem {
-		return {
-			id: id ?? `local_${Date.now()}`,
-			name,
-			editorType,
-			themeResult: themeResult!,
-			themeColorsWithUsage,
-			createdAt: new Date().toISOString(),
-			signature: getThemeSignature(themeResult)
-		};
 	}
 
 	function isExpanded(index: number): boolean {
@@ -353,46 +304,18 @@
 		}
 	}
 
-	const overrideFields: Array<{ key: keyof ThemeOverrides; label: string; hint: string }> = [
-		{ key: 'background', label: 'Background', hint: 'Base background (c0)' },
-		{ key: 'foreground', label: 'Foreground', hint: 'Primary text color' },
-		{ key: 'c1', label: 'C1', hint: 'Properties/fields' },
-		{ key: 'c2', label: 'C2', hint: 'Functions' },
-		{ key: 'c3', label: 'C3', hint: 'Strings' },
-		{ key: 'c4', label: 'C4', hint: 'Special strings/punctuation' },
-		{ key: 'c5', label: 'C5', hint: 'Namespaces/types' },
-		{ key: 'c6', label: 'C6', hint: 'Keywords' },
-		{ key: 'c7', label: 'C7', hint: 'Parameters/enums' },
-		{ key: 'c8', label: 'C8', hint: 'Constructors' },
-		{ key: 'c9', label: 'C9', hint: 'Builtins/variants' },
-		{ key: 'constants', label: 'Constants', hint: 'Numbers/boolean/constants' }
-	];
-
-	function normalizeHex(value: string | null | undefined): string | null {
-		if (!value) return null;
-		if (!COLOR_REGEX.test(value)) return null;
-		return value.slice(0, 7).toUpperCase();
+	function getBaseColorLabel(color: string): string | null {
+		return getBaseColorLabelFromOverrides(color, baseOverrides);
 	}
 
-	function getBaseColorLabel(color: string): string | null {
-		const match = (
-			[
-				{ key: 'background', label: 'Background' },
-				{ key: 'foreground', label: 'Foreground' },
-				{ key: 'c1', label: 'C1' },
-				{ key: 'c2', label: 'C2' },
-				{ key: 'c3', label: 'C3' },
-				{ key: 'c4', label: 'C4' },
-				{ key: 'c5', label: 'C5' },
-				{ key: 'c6', label: 'C6' },
-				{ key: 'c7', label: 'C7' },
-				{ key: 'c8', label: 'C8' },
-				{ key: 'c9', label: 'C9' },
-				{ key: 'constants', label: 'Constants' }
-			] as const
-		).find((entry) => baseOverrides[entry.key] === color);
-
-		return match?.label ?? null;
+	async function handleExportTheme() {
+		await exportThemeToClipboard({
+			name: themeName,
+			editorType,
+			themeResult,
+			themeColorsWithUsage,
+			saveOnCopy
+		});
 	}
 </script>
 
@@ -668,13 +591,13 @@
 								<div class="flex items-center gap-2">
 									<input
 										type="color"
-										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
+										value={getOverrideValue(field.key)}
 										class="h-10 w-12 cursor-pointer"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
 									/>
 									<input
 										type="text"
-										value={themeOverrides[field.key] ?? baseOverrides[field.key]}
+										value={getOverrideValue(field.key)}
 										placeholder="#000000"
 										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
@@ -894,7 +817,7 @@
 					</button>
 					<button
 						type="button"
-						onclick={exportTheme}
+						onclick={handleExportTheme}
 						disabled={!themeResult || themeNameError !== null}
 						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 					>
