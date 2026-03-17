@@ -16,6 +16,8 @@
 		setActiveThemeResponse,
 		setManualOverrideFlag
 	} from './session';
+
+	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
 	import {
 		getBaseColorLabel as getBaseColorLabelFromOverrides,
 		normalizeHex,
@@ -228,6 +230,40 @@
 				: {};
 
 		resetThemeExportOverrideState(overrides);
+
+		generateThemeFromApi({ overrides, bypassCache: true });
+	}
+
+	function shuffleThemeDistribution() {
+		const currentOverrides = getCurrentOverrides();
+		const source = SHUFFLE_KEYS.map((key) => currentOverrides[key] ?? baseOverrides[key]).filter(
+			(value): value is string => Boolean(value)
+		);
+
+		if (source.length < SHUFFLE_KEYS.length) {
+			toast.error('Not enough generated theme colors to shuffle right now.');
+			return;
+		}
+
+		const shuffled = [...source];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+
+		const sameOrder = shuffled.every((value, index) => value === source[index]);
+		if (sameOrder && shuffled.length > 1) {
+			[shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+		}
+
+		clearThemeVersions();
+
+		const overrides = getCurrentOverrides();
+		for (const [index, key] of SHUFFLE_KEYS.entries()) {
+			overrides[key] = shuffled[index];
+		}
+
+		appStore.state.themeExport.rawThemeOverrides = { ...overrides };
 
 		generateThemeFromApi({ overrides, bypassCache: true });
 	}
@@ -569,15 +605,27 @@
 						<span class="text-xs text-zinc-400">Overrides regenerate derived variants</span>
 					</div>
 					<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<p class="text-xs text-zinc-500">Defaults come from the generated theme. Clearing restores them.</p>
-						<button
-							type="button"
-							onclick={resetOverrides}
-							disabled={Object.values(themeOverrides).every((value) => value == null)}
-							class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							Return to Defaults
-						</button>
+						<p class="text-xs text-zinc-500">
+							Defaults come from the generated theme. Shuffle remaps C1–C9 without changing the palette.
+						</p>
+						<div class="flex flex-wrap items-center gap-2">
+							<button
+								type="button"
+								onclick={shuffleThemeDistribution}
+								disabled={!themeResult}
+								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								Shuffle C1–C9
+							</button>
+							<button
+								type="button"
+								onclick={resetOverrides}
+								disabled={Object.values(themeOverrides).every((value) => value == null)}
+								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								Return to Defaults
+							</button>
+						</div>
 					</div>
 					<div class="grid gap-4 md:grid-cols-2">
 						{#each overrideFields as field (field.key)}
