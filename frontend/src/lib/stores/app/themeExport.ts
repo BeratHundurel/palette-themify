@@ -18,7 +18,8 @@ export const DEFAULT_THEME_EXPORT_PREFERENCES: ThemeExportPreferences = {
 };
 
 function asNonNegativeFiniteNumber(value: unknown, fallback: number): number {
-	return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return fallback;
+	return Math.min(3, value);
 }
 
 function asEditorThemeType(value: unknown): EditorThemeType {

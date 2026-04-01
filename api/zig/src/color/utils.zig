@@ -76,7 +76,7 @@ fn formatHexWithAlpha(hex: []const u8, alpha: []const u8) []const u8 {
 /// Picks semantic colors (error/warn/success/info) by proximity to target hues.
 /// Filters out very muted or extreme-light/dark candidates to avoid muddy accents.
 pub fn findSemanticColors(colors: []const []const u8) SemanticColors {
-    const target_red = RGB{ .r = 220, .g = 60, .b = 60 }; // shift these to steer hue targets.
+    const target_red = RGB{ .r = 220, .g = 60, .b = 60 };
     const target_orange = RGB{ .r = 230, .g = 160, .b = 50 };
     const target_green = RGB{ .r = 80, .g = 180, .b = 80 };
     const target_blue = RGB{ .r = 80, .g = 160, .b = 220 };
@@ -316,8 +316,9 @@ pub fn adjustForContrast(fg: []const u8, bg: []const u8, min_contrast: f32) []co
 /// - 1.0 keeps current behavior
 /// - 0.5 halves the effective boost
 /// - 0.0 disables boosting entirely
+/// - values above 1.0 increase boost strength up to 3.0
 pub fn boostAccentColor(hex: []const u8, background: []const u8, coefficient: f32) []const u8 {
-    const clamped_coefficient = std.math.clamp(coefficient, 0.0, 1.0);
+    const clamped_coefficient = std.math.clamp(coefficient, 0.0, 3.0);
     if (clamped_coefficient <= 0.0) return hex;
 
     const hsl = hexToHsl(hex);

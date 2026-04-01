@@ -350,7 +350,7 @@
 		const parsed = Number(target.value);
 		if (Number.isNaN(parsed)) return;
 
-		const clamped = Math.min(1, Math.max(0, parsed));
+		const clamped = Math.min(3, Math.max(0, parsed));
 		const normalized = Math.round(clamped * 100) / 100;
 
 		appStore.setThemeExportBoostCoefficient(normalized);
@@ -629,33 +629,30 @@
 						<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
 							<div class="flex items-start justify-between gap-4">
 								<div>
-									<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
-									<p class="mt-1 text-xs text-zinc-500">
-										1.00 keeps current boosting, 0.50 halves it, and 0 disables accent boosting.
-									</p>
-								</div>
-								<div class="text-right text-xs text-zinc-400">
-									<div>{Math.round(accentBoostCoefficient * 100)}%</div>
-									<div class="mt-0.5">0.00 – 1.00</div>
-								</div>
+								<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
+								<p class="mt-1 text-sm text-zinc-500">
+									Set between 0.00 and 3.00 (default 1.00). Boosting mainly affects muted mid-tone accents; very dark/light or already vivid colors may not change much.
+									Values above 1.00 push harder, but results can plateau once saturation/contrast safety limits are reached.
+								</p>
 							</div>
+						</div>
 
-							<div class="mt-3 flex items-center gap-3">
-								<input
-									type="range"
-									min="0"
-									max="1"
-									step="0.01"
-									value={accentBoostCoefficient}
-									oninput={handleAccentBoostInput}
-									class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
-								/>
-								<input
-									type="number"
-									min="0"
-									max="1"
-									step="0.01"
-									value={accentBoostInput}
+						<div class="mt-3 flex items-center gap-3">
+							<input
+								type="range"
+								min="0"
+								max="3"
+								step="0.01"
+								value={accentBoostCoefficient}
+								oninput={handleAccentBoostInput}
+								class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
+							/>
+							<input
+								type="number"
+								min="0"
+								max="3"
+								step="0.01"
+								value={accentBoostInput}
 									oninput={handleAccentBoostInput}
 									onblur={() => (accentBoostInput = accentBoostCoefficient.toFixed(2))}
 									class="focus:border-brand/50 w-24 rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
