@@ -1,6 +1,5 @@
 import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
 import type { Color } from './color';
-
 import type { VSCodeTheme } from './vscode';
 import type { ZedTheme } from './zed';
 
@@ -31,20 +30,9 @@ export type ThemeGenerationResponse = {
 
 export type ThemeVersionMap = Record<string, ThemeGenerationResponse>;
 
-export interface ThemeColorWithUsage {
-	baseColor: string;
-	label: string;
-	variants: Array<{
-		color: string;
-		usages: string[];
-	}>;
-	totalUsages: number;
-}
-
 export interface ThemeExportState {
 	themeName: string;
 	themeResult: ThemeGenerationResponse | null;
-	themeColorsWithUsage: ThemeColorWithUsage[];
 	saveOnCopy: boolean;
 	editorType: EditorThemeType;
 	appearance: ThemeAppearance;
@@ -63,7 +51,6 @@ export type SavedThemeItem = {
 	name: string;
 	editorType: EditorThemeType;
 	themeResult: ThemeGenerationResponse;
-	themeColorsWithUsage: ThemeColorWithUsage[];
 	createdAt: string;
 	signature?: string;
 };

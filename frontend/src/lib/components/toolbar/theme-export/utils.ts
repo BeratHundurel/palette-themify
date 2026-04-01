@@ -61,8 +61,3 @@ export function normalizeHex(value: string | null | undefined): string | null {
 	if (!COLOR_REGEX.test(value)) return null;
 	return value.slice(0, 7).toUpperCase();
 }
-
-export function getBaseColorLabel(color: string, baseOverrides: ThemeOverrides): string | null {
-	const match = overrideFields.find((entry) => baseOverrides[entry.key] === color);
-	return match?.label ?? null;
-}

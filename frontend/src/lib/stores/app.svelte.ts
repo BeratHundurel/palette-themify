@@ -131,7 +131,6 @@ function createAppStore() {
 		applyPaletteSettings: loadApplyPaletteSettings(),
 		themeExport: {
 			themeResult: null,
-			themeColorsWithUsage: [],
 			themeName: 'Generated Theme',
 			lastGeneratedPaletteVersion: 0,
 			editorType: themeExportPreferences.editorType,
@@ -384,7 +383,6 @@ function createAppStore() {
 
 		resetThemeExportSession() {
 			state.themeExport.themeResult = null;
-			state.themeExport.themeColorsWithUsage = [];
 			state.themeExport.themeName = 'Generated Theme';
 			state.themeExport.lastGeneratedPaletteVersion = 0;
 			state.themeExport.themeVersions = {};

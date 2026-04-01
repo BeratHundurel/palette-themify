@@ -1,5 +1,4 @@
 import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
-import { extractThemeColorsWithUsage } from '$lib/colorUtils';
 import { appStore } from '$lib/stores/app.svelte';
 import type { ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 
@@ -30,7 +29,6 @@ export function setActiveThemeResponse(
 	appStore.state.themeExport.themeName = nextResponse.theme.name;
 	appStore.state.themeExport.rawThemeOverrides = { ...nextResponse.rawThemeOverrides };
 	appStore.state.themeExport.boostCoefficient = nextResponse.boostCoefficient;
-	appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(nextResponse.theme);
 	cacheThemeVersion(nextResponse, type, appearance);
 }
 
@@ -105,5 +103,4 @@ export function hydrateThemeExportResponse(
 	appStore.state.themeExport.hasManualBackgroundOverride = false;
 	appStore.state.themeExport.hasManualForegroundOverride = false;
 	appStore.state.themeExport.loadedThemeOverridesReference = { ...activeResponse.rawThemeOverrides };
-	appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(activeResponse.theme);
 }

@@ -109,10 +109,8 @@
 	}
 
 	function getPreviewColors(item: SavedThemeItem): string[] {
-		const sorted = item.themeColorsWithUsage
-			? [...item.themeColorsWithUsage].sort((a, b) => b.totalUsages - a.totalUsages)
-			: [];
-		return sorted.slice(0, 6).map((entry) => entry.baseColor);
+		// Return the first 6 colors from the theme result
+		return item.themeResult.colors.slice(0, 6).map((color) => color.hex);
 	}
 </script>
 

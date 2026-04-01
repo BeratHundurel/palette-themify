@@ -1,7 +1,7 @@
 import type { EditorThemeType } from '$lib/api/theme';
 import { appStore } from '$lib/stores/app.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
-import type { SavedThemeItem, ThemeColorWithUsage, ThemeGenerationResponse } from '$lib/types/theme';
+import type { SavedThemeItem, ThemeGenerationResponse } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
 
 import { getThemeSignature, normalizeThemeName, validateThemeName } from './utils';
@@ -10,7 +10,6 @@ type SaveThemeArgs = {
 	name: string;
 	editorType: EditorThemeType;
 	themeResult: ThemeGenerationResponse | null;
-	themeColorsWithUsage: ThemeColorWithUsage[];
 };
 
 type ExportThemeArgs = SaveThemeArgs & {
@@ -21,27 +20,24 @@ function buildSavedTheme({
 	id,
 	name,
 	editorType,
-	themeResult,
-	themeColorsWithUsage
+	themeResult
 }: {
 	id?: string;
 	name: string;
 	editorType: EditorThemeType;
 	themeResult: ThemeGenerationResponse;
-	themeColorsWithUsage: ThemeColorWithUsage[];
 }): SavedThemeItem {
 	return {
 		id: id ?? `local_${Date.now()}`,
 		name,
 		editorType,
 		themeResult,
-		themeColorsWithUsage,
 		createdAt: new Date().toISOString(),
 		signature: getThemeSignature(themeResult)
 	};
 }
 
-export function saveTheme({ name, editorType, themeResult, themeColorsWithUsage }: SaveThemeArgs) {
+export function saveTheme({ name, editorType, themeResult }: SaveThemeArgs) {
 	if (!themeResult || !name) return;
 
 	const trimmedName = name.trim();
@@ -67,8 +63,7 @@ export function saveTheme({ name, editorType, themeResult, themeColorsWithUsage 
 				id: nameMatch.id,
 				name: trimmedName,
 				editorType,
-				themeResult,
-				themeColorsWithUsage
+				themeResult
 			});
 			appStore.replaceSavedTheme(nameMatch.id, saved);
 			return;
@@ -92,8 +87,7 @@ export function saveTheme({ name, editorType, themeResult, themeColorsWithUsage 
 		const saved = buildSavedTheme({
 			name: renamed.trim(),
 			editorType,
-			themeResult,
-			themeColorsWithUsage
+			themeResult
 		});
 		appStore.saveThemeToLocal(saved);
 		return;
@@ -102,19 +96,12 @@ export function saveTheme({ name, editorType, themeResult, themeColorsWithUsage 
 	const saved = buildSavedTheme({
 		name: trimmedName,
 		editorType,
-		themeResult,
-		themeColorsWithUsage
+		themeResult
 	});
 	appStore.saveThemeToLocal(saved);
 }
 
-export async function exportTheme({
-	name,
-	editorType,
-	themeResult,
-	themeColorsWithUsage,
-	saveOnCopy
-}: ExportThemeArgs) {
+export async function exportTheme({ name, editorType, themeResult, saveOnCopy }: ExportThemeArgs) {
 	if (!themeResult) return;
 
 	try {
@@ -125,8 +112,7 @@ export async function exportTheme({
 			saveTheme({
 				name: name.trim(),
 				editorType,
-				themeResult,
-				themeColorsWithUsage
+				themeResult
 			});
 		}
 

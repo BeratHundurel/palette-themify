@@ -16,7 +16,6 @@ function normalizeSavedThemeItem(value: unknown): SavedThemeItem | null {
 	const editorType = value.editorType === 'vscode' || value.editorType === 'zed' ? value.editorType : null;
 	const createdAt = typeof value.createdAt === 'string' ? value.createdAt : null;
 	const themeResult = isRecord(value.themeResult) ? value.themeResult : null;
-	const themeColorsWithUsage = Array.isArray(value.themeColorsWithUsage) ? value.themeColorsWithUsage : [];
 
 	if (!id || !name || !editorType || !createdAt || !themeResult || !isRecord(themeResult.theme)) {
 		return null;
@@ -42,7 +41,6 @@ function normalizeSavedThemeItem(value: unknown): SavedThemeItem | null {
 			colors,
 			boostCoefficient
 		},
-		themeColorsWithUsage,
 		createdAt,
 		signature: typeof value.signature === 'string' ? value.signature : undefined
 	};

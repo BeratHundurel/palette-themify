@@ -2,11 +2,9 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
-	import { detectThemeAppearance, detectThemeType, extractThemeColorsWithUsage } from '$lib/colorUtils';
+	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
-	import { cn } from '$lib/utils';
-	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		buildRequestOverrides,
 		clearThemeVersions,
@@ -16,18 +14,11 @@
 		setActiveThemeResponse,
 		setManualOverrideFlag
 	} from './session';
-	import {
-		getBaseColorLabel as getBaseColorLabelFromOverrides,
-		normalizeHex,
-		overrideFields,
-		THEME_NAME_DEBOUNCE_MS,
-		validateThemeName
-	} from './utils';
+	import { normalizeHex, overrideFields, THEME_NAME_DEBOUNCE_MS, validateThemeName } from './utils';
 	import { exportTheme as exportThemeToClipboard } from './save';
 
 	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
 
-	let expandedColorIndices = new SvelteSet<number>();
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	let paletteVersion = $derived(appStore.state.paletteVersion);
@@ -36,7 +27,6 @@
 	let themeAppearance = $derived(appStore.state.themeExport.appearance);
 	let themeResult = $derived(appStore.state.themeExport.themeResult);
 	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
-	let themeColorsWithUsage = $derived(appStore.state.themeExport.themeColorsWithUsage);
 	let saveOnCopy = $derived(appStore.state.themeExport.saveOnCopy);
 	let accentBoostCoefficient = $derived(appStore.state.themeExport.boostCoefficient);
 	let accentBoostInput = $state(appStore.state.themeExport.boostCoefficient.toFixed(2));
@@ -46,12 +36,6 @@
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
 	let themeNameError = $state<string | null>(null);
 	let isGenerating = $state(false);
-
-	const sortedThemeColors = $derived(
-		themeColorsWithUsage.length > 0
-			? [...themeColorsWithUsage].sort((a, b) => b.totalUsages - a.totalUsages)
-			: themeColorsWithUsage
-	);
 
 	$effect(() => {
 		if (
@@ -114,9 +98,6 @@
 
 		try {
 			updateThemeNameInThemeResult(trimmedName);
-			if (themeResult) {
-				appStore.state.themeExport.themeColorsWithUsage = extractThemeColorsWithUsage(themeResult.theme);
-			}
 		} catch {
 			toast.error('Could not update the theme name. Regenerating the theme...');
 			generateThemeFromApi();
@@ -228,7 +209,6 @@
 		} catch {
 			toast.error('Could not generate the theme. Please try again.');
 			appStore.state.themeExport.themeResult = null;
-			appStore.state.themeExport.themeColorsWithUsage = [];
 			clearThemeVersions();
 		} finally {
 			isGenerating = false;
@@ -339,10 +319,6 @@
 		});
 	}
 
-	function isExpanded(index: number): boolean {
-		return expandedColorIndices.has(index);
-	}
-
 	function handleAccentBoostInput(event: Event) {
 		const target = event.target as HTMLInputElement;
 		accentBoostInput = target.value;
@@ -359,25 +335,11 @@
 		generateThemeFromApi({ bypassCache: true, accentBoostCoefficient: normalized });
 	}
 
-	async function copyUsagePath(path: string) {
-		try {
-			await navigator.clipboard.writeText(path);
-			toast.success('Usage path copied to clipboard!');
-		} catch {
-			toast.error('Could not copy the usage path. Please try again.');
-		}
-	}
-
-	function getBaseColorLabel(color: string): string | null {
-		return getBaseColorLabelFromOverrides(color, baseOverrides);
-	}
-
 	async function handleExportTheme() {
 		await exportThemeToClipboard({
 			name: themeName,
 			editorType,
 			themeResult,
-			themeColorsWithUsage,
 			saveOnCopy
 		});
 	}
@@ -629,30 +591,31 @@
 						<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
 							<div class="flex items-start justify-between gap-4">
 								<div>
-								<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
-								<p class="mt-1 text-sm text-zinc-500">
-									Set between 0.00 and 3.00 (default 1.00). Boosting mainly affects muted mid-tone accents; very dark/light or already vivid colors may not change much.
-									Values above 1.00 push harder, but results can plateau once saturation/contrast safety limits are reached.
-								</p>
+									<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
+									<p class="mt-1 text-sm text-zinc-500">
+										Set between 0.00 and 3.00 (default 1.00). Boosting mainly affects muted mid-tone accents; very
+										dark/light or already vivid colors may not change much. Values above 1.00 push harder, but results
+										can plateau once saturation/contrast safety limits are reached.
+									</p>
+								</div>
 							</div>
-						</div>
 
-						<div class="mt-3 flex items-center gap-3">
-							<input
-								type="range"
-								min="0"
-								max="3"
-								step="0.01"
-								value={accentBoostCoefficient}
-								oninput={handleAccentBoostInput}
-								class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
-							/>
-							<input
-								type="number"
-								min="0"
-								max="3"
-								step="0.01"
-								value={accentBoostInput}
+							<div class="mt-3 flex items-center gap-3">
+								<input
+									type="range"
+									min="0"
+									max="3"
+									step="0.01"
+									value={accentBoostCoefficient}
+									oninput={handleAccentBoostInput}
+									class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
+								/>
+								<input
+									type="number"
+									min="0"
+									max="3"
+									step="0.01"
+									value={accentBoostInput}
 									oninput={handleAccentBoostInput}
 									onblur={() => (accentBoostInput = accentBoostCoefficient.toFixed(2))}
 									class="focus:border-brand/50 w-24 rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
@@ -663,235 +626,70 @@
 				</div>
 
 				<div class="mb-8">
-					<div class="mb-4 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
-						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
-						<span class="text-xs text-zinc-400">Overrides regenerate derived variants</span>
-					</div>
-					<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<p class="text-xs text-zinc-500">
-							Defaults come from the generated theme. Shuffle remaps C1–C9 without changing the palette.
-						</p>
-						<div class="flex flex-wrap items-center gap-2">
+					<div class="mb-3 flex items-center justify-between gap-4">
+						<div class="flex items-center gap-2">
+							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
+							<span class="text-xs text-zinc-500">Auto-regenerates variants</span>
+						</div>
+						<div class="flex items-center gap-2">
 							<button
 								type="button"
 								onclick={shuffleThemeDistribution}
 								disabled={!themeResult}
-								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+								class="hover:border-brand/50 rounded border border-zinc-700/50 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+								title="Shuffle C1–C9"
 							>
-								Shuffle C1–C9
+								Shuffle
 							</button>
 							<button
 								type="button"
 								onclick={resetOverrides}
 								disabled={Object.values(themeOverrides).every((value) => value == null)}
-								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-4 py-2 text-xs font-semibold text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+								class="hover:border-brand/50 rounded border border-zinc-700/50 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+								title="Return to defaults"
 							>
-								Return to Defaults
+								Reset
 							</button>
 						</div>
 					</div>
-					<div class="grid gap-4 md:grid-cols-2">
+
+					<div class="grid gap-2 md:grid-cols-2">
 						{#each overrideFields as field (field.key)}
-							<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/50 px-3 py-2">
-								<div class="mb-1">
-									<div>
-										<div class="mb-0.5 text-sm font-medium text-zinc-200">{field.label}</div>
-										<div class="text-xs text-zinc-500">{field.hint}</div>
-									</div>
-								</div>
-								<div class="flex items-center gap-2">
+							{@const isModified = themeOverrides[field.key] != null}
+							{@const currentValue = getOverrideValue(field.key)}
+							<div
+								class="group flex items-center gap-3 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2 transition-colors hover:border-zinc-700/80 hover:bg-zinc-900/60"
+							>
+								<div class="relative">
 									<input
 										type="color"
-										value={getOverrideValue(field.key)}
-										class="h-10 w-12 cursor-pointer"
+										value={currentValue}
+										class="h-8 w-8 cursor-pointer rounded border-0 outline-none"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
+										title="Click to pick color"
 									/>
+									{#if isModified}
+										<div class="bg-brand absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-zinc-900"></div>
+									{/if}
+								</div>
+
+								<div class="flex min-w-0 flex-1 items-center gap-2">
+									<div class="flex min-w-0 flex-1 flex-col">
+										<span class="text-sm font-medium text-zinc-200 {isModified ? 'text-brand' : ''}">{field.label}</span
+										>
+										<span class="truncate text-xs text-zinc-500">{field.hint}</span>
+									</div>
+
 									<input
 										type="text"
-										value={getOverrideValue(field.key)}
+										value={currentValue}
 										placeholder="#000000"
-										class="focus:border-brand/50 w-full rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 placeholder-zinc-500 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+										class="focus:border-brand/60 w-24 rounded border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-xs text-zinc-300 placeholder-zinc-600 transition-colors focus:bg-zinc-800 focus:outline-none {isModified
+											? 'border-brand/40 bg-zinc-800'
+											: ''}"
 										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
 									/>
 								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
-
-				<div class="mb-8">
-					<div class="mb-6 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">
-							Theme Colors ({sortedThemeColors.length})
-						</h3>
-						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
-						<span class="text-xs text-zinc-400">Colors used in {editorType === 'vscode' ? 'VS Code' : 'Zed'} theme</span
-						>
-					</div>
-					<div class="space-y-3">
-						{#each sortedThemeColors as item, index (item.baseColor)}
-							{@const baseLabel = getBaseColorLabel(item.baseColor)}
-							<div
-								class={cn(
-									'group hover:border-brand/50 hover:shadow-brand/10 overflow-hidden rounded-xl border-2 border-zinc-700/50 bg-zinc-800/30 transition-[background-color,box-shadow,border-color] duration-300',
-									isExpanded(index) && 'border-brand/50 shadow-brand/20 shadow-lg'
-								)}
-							>
-								<button
-									type="button"
-									onclick={() =>
-										expandedColorIndices.has(index)
-											? expandedColorIndices.delete(index)
-											: expandedColorIndices.add(index)}
-									class="flex w-full items-center gap-4 p-4 text-left transition-colors duration-300 hover:bg-zinc-800/50"
-								>
-									<div class="relative">
-										<div
-											class="h-12 w-12 rounded-lg border-2 border-zinc-600/50 shadow-lg transition-transform group-hover:scale-105"
-											style="background-color: {item.baseColor};"
-										></div>
-										<div
-											class="text-brand absolute -right-1 -bottom-1 rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-semibold shadow-lg"
-										>
-											{item.totalUsages}
-										</div>
-									</div>
-									<div class="min-w-0 flex-1">
-										<div class="flex items-center gap-4">
-											<div class="font-mono text-sm font-semibold text-zinc-100">
-												{item.baseColor}
-											</div>
-											<div class="flex gap-2">
-												<span class="rounded-full bg-zinc-700/50 px-2 py-0.5 text-xs font-medium text-zinc-300">
-													{item.variants.length} variant{item.variants.length !== 1 ? 's' : ''}
-												</span>
-												<span class="bg-brand/20 text-brand rounded-full px-2 py-0.5 text-xs font-medium">
-													{item.totalUsages} usage{item.totalUsages !== 1 ? 's' : ''}
-												</span>
-											</div>
-										</div>
-										<div class="mt-1 text-xs text-zinc-400">
-											Click to {isExpanded(index) ? 'hide' : 'show'} color variants and usage details
-										</div>
-										{#if baseLabel}
-											<div class="mt-0.5 text-xs text-zinc-500">Affected by {baseLabel} base color</div>
-										{/if}
-									</div>
-									<div class="flex items-center gap-2">
-										<div class="text-right">
-											<div class="text-xs font-medium text-zinc-500">Most used</div>
-											<div class="mt-0.5 font-mono text-xs text-zinc-400">{item.variants[0]?.color || 'N/A'}</div>
-										</div>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="20"
-											height="20"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											class="shrink-0 text-zinc-400 transition-transform duration-200 {isExpanded(index)
-												? 'rotate-180'
-												: ''}"
-										>
-											<polyline points="6 9 12 15 18 9"></polyline>
-										</svg>
-									</div>
-								</button>
-								{#if isExpanded(index)}
-									<div class="border-t border-zinc-700/50 bg-zinc-900/30 p-4">
-										<div class="mb-3">
-											<h4 class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Color Variants</h4>
-										</div>
-										<div class="space-y-3">
-											{#each item.variants as variant, variantIndex (variantIndex)}
-												<div class="rounded-lg border border-zinc-700/50 bg-zinc-800/30 p-3">
-													<div class="mb-3 flex items-center gap-3">
-														<div class="relative">
-															<div
-																class="h-8 w-8 rounded-md border border-zinc-600/50 shadow-sm"
-																style="background-color: {variant.color}"
-															></div>
-															{#if variantIndex === 0}
-																<div
-																	class="bg-brand absolute -top-2 -right-2 rounded px-1 py-0.5 text-[9px] font-bold text-zinc-900"
-																>
-																	MOST
-																</div>
-															{/if}
-														</div>
-														<div class="min-w-0 flex-1">
-															<div class="font-mono text-sm font-medium text-zinc-200">
-																{variant.color}
-															</div>
-															<div class="mt-0.5 text-xs text-zinc-400">
-																Used in {variant.usages.length} location{variant.usages.length !== 1 ? 's' : ''}
-															</div>
-														</div>
-														<div class="text-right">
-															<div class="text-xs text-zinc-500">Frequency</div>
-															<div class="text-brand mt-0.5 text-sm font-semibold">
-																{Math.round((variant.usages.length / item.totalUsages) * 100)}%
-															</div>
-														</div>
-													</div>
-													<div class="space-y-2">
-														<div class="flex items-center gap-2">
-															<div class="h-px flex-1 bg-zinc-700"></div>
-															<span class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Usage Paths</span>
-															<div class="h-px flex-1 bg-zinc-700"></div>
-														</div>
-														<div class="custom-scrollbar max-h-32 overflow-y-auto">
-															<div class="space-y-1">
-																{#each variant.usages as usage, usageIndex (usageIndex)}
-																	<div
-																		class="group flex items-center gap-2 rounded-md bg-zinc-900/50 px-3 py-1.5 transition-colors hover:bg-zinc-900/70"
-																	>
-																		<div
-																			class="flex h-4 w-4 items-center justify-center rounded-sm bg-zinc-800 font-mono text-xs text-zinc-500"
-																		>
-																			{usageIndex + 1}
-																		</div>
-																		<div class="min-w-0 flex-1">
-																			<div class="font-mono text-xs break-all text-zinc-300">
-																				{usage}
-																			</div>
-																		</div>
-																		<button
-																			type="button"
-																			onclick={() => copyUsagePath(usage)}
-																			class="hover:text-brand rounded p-1 text-zinc-500 opacity-0 transition-[opacity,background-color,color] duration-300 group-hover:opacity-100 hover:bg-zinc-800/50"
-																			title="Copy path"
-																		>
-																			<svg
-																				xmlns="http://www.w3.org/2000/svg"
-																				width="14"
-																				height="14"
-																				viewBox="0 0 24 24"
-																				fill="none"
-																				stroke="currentColor"
-																				stroke-width="2"
-																				stroke-linecap="round"
-																				stroke-linejoin="round"
-																				class="hover:text-brand text-zinc-500"
-																			>
-																				<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-																				<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-																			</svg>
-																		</button>
-																	</div>
-																{/each}
-															</div>
-														</div>
-													</div>
-												</div>
-											{/each}
-										</div>
-									</div>
-								{/if}
 							</div>
 						{/each}
 					</div>
