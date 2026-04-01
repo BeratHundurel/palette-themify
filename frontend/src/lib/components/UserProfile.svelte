@@ -8,6 +8,9 @@
 	async function handleLogout() {
 		try {
 			await authStore.logout();
+			await appStore.syncPalettesOnAuth();
+			await appStore.syncPreferencesOnAuth();
+			await appStore.syncSavedThemesOnAuth();
 			await appStore.loadSavedPalettes();
 
 			showDropdown = false;

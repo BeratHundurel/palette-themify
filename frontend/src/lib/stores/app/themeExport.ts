@@ -39,9 +39,7 @@ export function parseThemeExportPreferences(value: unknown): ThemeExportPreferen
 		editorType: asEditorThemeType(parsed.editorType),
 		appearance: asThemeAppearance(parsed.appearance),
 		saveOnCopy:
-			typeof parsed.saveOnCopy === 'boolean'
-				? parsed.saveOnCopy
-				: DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy,
+			typeof parsed.saveOnCopy === 'boolean' ? parsed.saveOnCopy : DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy,
 		boostCoefficient: asNonNegativeFiniteNumber(
 			parsed.boostCoefficient,
 			DEFAULT_THEME_EXPORT_PREFERENCES.boostCoefficient

@@ -25,9 +25,7 @@ function normalizeSavedThemeItem(value: unknown): SavedThemeItem | null {
 	const themeOverrides = isRecord(themeResult.themeOverrides) ? themeResult.themeOverrides : {};
 	const rawThemeOverrides = isRecord(themeResult.rawThemeOverrides) ? themeResult.rawThemeOverrides : {};
 	const colors = Array.isArray(themeResult.colors)
-		? themeResult.colors.filter(
-			(color): color is { hex: string } => isRecord(color) && typeof color.hex === 'string'
-		)
+		? themeResult.colors.filter((color): color is { hex: string } => isRecord(color) && typeof color.hex === 'string')
 		: [];
 
 	const boostCoefficient =
@@ -57,9 +55,7 @@ export function loadSavedThemes(): SavedThemeItem[] {
 		if (!stored) return [];
 		const parsed = JSON.parse(stored) as unknown;
 		if (!Array.isArray(parsed)) return [];
-		return parsed
-			.map((item) => normalizeSavedThemeItem(item))
-			.filter((item): item is SavedThemeItem => item !== null);
+		return parsed.map((item) => normalizeSavedThemeItem(item)).filter((item): item is SavedThemeItem => item !== null);
 	} catch {
 		return [];
 	}

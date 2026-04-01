@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -273,6 +274,47 @@ func TestSaveThemeHandler_CreatesAndDedupes(t *testing.T) {
 	router := setupThemeRouter()
 
 	payload := buildThemePayload("Theme", "vscode", "sig-1")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal theme: %v", err)
+	}
+
+	request := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", "/themes", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
+
+	first := request()
+	assert.Equal(t, http.StatusCreated, first.Code)
+
+	second := request()
+	assert.Equal(t, http.StatusOK, second.Code)
+
+	var count int64
+	if err := db.DB.Model(&model.Theme{}).Count(&count).Error; err != nil {
+		t.Fatalf("count themes: %v", err)
+	}
+	assert.Equal(t, int64(1), count)
+}
+
+func TestSaveThemeHandler_DedupesLongSignature(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	longSignature := strings.Repeat("sig-very-long-", 20)
+	payload := buildThemePayload("Theme", "vscode", longSignature)
 	body, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("marshal theme: %v", err)

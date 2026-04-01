@@ -116,7 +116,11 @@ function createAuthStore() {
 		},
 
 		setUser(user: User) {
-			state.user = user;
+			state = {
+				user,
+				isAuthenticated: true,
+				isLoading: false
+			};
 		}
 	};
 }

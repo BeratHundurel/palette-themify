@@ -18,21 +18,25 @@ import { type SortMethod } from '$lib/colorUtils';
 import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/savedThemes';
 import {
 	loadWallhavenSettings,
+	DEFAULT_WALLHAVEN_SETTINGS,
 	parseWallhavenSettings,
 	saveWallhavenSettings,
 	clearWallhavenSettings
 } from '$lib/stores/app/wallhavenSettings';
 import {
 	loadApplyPaletteSettings,
+	DEFAULT_APPLY_PALETTE_SETTINGS,
 	parseApplyPaletteSettings,
 	saveApplyPaletteSettings,
 	clearApplyPaletteSettings
 } from '$lib/stores/app/applyPaletteSettings';
 import {
 	clearThemeExportPreferences,
+	DEFAULT_THEME_EXPORT_PREFERENCES,
 	loadThemeExportPreferences,
 	parseThemeExportPreferences,
-	saveThemeExportPreferences
+	saveThemeExportPreferences,
+	type ThemeExportPreferences
 } from '$lib/stores/app/themeExport';
 import * as preferencesApi from '$lib/api/preferences';
 import * as themesApi from '$lib/api/themes';
@@ -76,6 +80,18 @@ interface AppState {
 	savedThemes: SavedThemeItem[];
 	paletteVersion: number;
 }
+
+type AppPreferencesPayload = Partial<{
+	applyPaletteSettings: Partial<ApplyPaletteSettings>;
+	wallhavenSettings: Partial<WallhavenSettings>;
+	themeExport: Partial<ThemeExportPreferences>;
+}>;
+
+type AppPreferences = {
+	applyPaletteSettings: ApplyPaletteSettings;
+	wallhavenSettings: WallhavenSettings;
+	themeExport: ThemeExportPreferences;
+};
 
 function createAppStore() {
 	const themeExportPreferences = loadThemeExportPreferences();
@@ -134,6 +150,55 @@ function createAppStore() {
 	});
 
 	let lastPaletteSignature = '';
+	let preferencesSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function isObjectRecord(value: unknown): value is Record<string, unknown> {
+		return typeof value === 'object' && value !== null && !Array.isArray(value);
+	}
+
+	function toPartialObject<T extends object>(value: unknown): Partial<T> | undefined {
+		if (!isObjectRecord(value)) return undefined;
+		return value as Partial<T>;
+	}
+
+	function toPreferencesPayload(value: unknown): AppPreferencesPayload {
+		if (!isObjectRecord(value)) return {};
+		return {
+			applyPaletteSettings: toPartialObject<ApplyPaletteSettings>(value.applyPaletteSettings),
+			wallhavenSettings: toPartialObject<WallhavenSettings>(value.wallhavenSettings),
+			themeExport: toPartialObject<ThemeExportPreferences>(value.themeExport)
+		};
+	}
+
+	function hasNonDefaultPreferences(preferences: AppPreferencesPayload): boolean {
+		const apply = parseApplyPaletteSettings(preferences.applyPaletteSettings);
+		const wallhaven = parseWallhavenSettings(preferences.wallhavenSettings);
+		const themeExport = parseThemeExportPreferences(preferences.themeExport);
+
+		const isApplyDefault =
+			apply.luminosity === DEFAULT_APPLY_PALETTE_SETTINGS.luminosity &&
+			apply.nearest === DEFAULT_APPLY_PALETTE_SETTINGS.nearest &&
+			apply.power === DEFAULT_APPLY_PALETTE_SETTINGS.power &&
+			apply.maxDistance === DEFAULT_APPLY_PALETTE_SETTINGS.maxDistance;
+
+		const isWallhavenDefault =
+			wallhaven.categories === DEFAULT_WALLHAVEN_SETTINGS.categories &&
+			wallhaven.purity === DEFAULT_WALLHAVEN_SETTINGS.purity &&
+			wallhaven.sorting === DEFAULT_WALLHAVEN_SETTINGS.sorting &&
+			wallhaven.order === DEFAULT_WALLHAVEN_SETTINGS.order &&
+			wallhaven.topRange === DEFAULT_WALLHAVEN_SETTINGS.topRange &&
+			wallhaven.apikey === DEFAULT_WALLHAVEN_SETTINGS.apikey &&
+			wallhaven.ratios.length === DEFAULT_WALLHAVEN_SETTINGS.ratios.length &&
+			wallhaven.ratios.every((ratio, index) => ratio === DEFAULT_WALLHAVEN_SETTINGS.ratios[index]);
+
+		const isThemeExportDefault =
+			themeExport.editorType === DEFAULT_THEME_EXPORT_PREFERENCES.editorType &&
+			themeExport.appearance === DEFAULT_THEME_EXPORT_PREFERENCES.appearance &&
+			themeExport.saveOnCopy === DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy &&
+			themeExport.boostCoefficient === DEFAULT_THEME_EXPORT_PREFERENCES.boostCoefficient;
+
+		return !(isApplyDefault && isWallhavenDefault && isThemeExportDefault);
+	}
 
 	$effect.root(() => {
 		$effect(() => {
@@ -365,7 +430,7 @@ function createAppStore() {
 			try {
 				if (action === 'create' && preparedTheme) {
 					const response = await themesApi.saveTheme(preparedTheme);
-					this.applyThemeResponse(response.theme);
+					this.applyThemeResponse(response.theme, preparedTheme.id);
 				}
 				if (action === 'update' && preparedTheme && themeId) {
 					const response = await themesApi.updateTheme(themeId, preparedTheme);
@@ -391,7 +456,7 @@ function createAppStore() {
 							localThemes.map(async (theme) => {
 								try {
 									const response = await themesApi.saveTheme(this.ensureThemeSignature(theme));
-									this.applyThemeResponse(response.theme);
+									this.applyThemeResponse(response.theme, theme.id);
 								} catch (error) {
 									console.error('Failed to sync theme:', theme.name, error);
 								}
@@ -421,12 +486,15 @@ function createAppStore() {
 			}
 		},
 
-		applyThemeResponse(theme: SavedThemeItem) {
+		applyThemeResponse(theme: SavedThemeItem, sourceThemeId?: string) {
 			const preparedTheme = this.ensureThemeSignature(theme);
+			const preparedResultSignature = this.getThemeSignature(preparedTheme.themeResult);
 			const existingIndex = state.savedThemes.findIndex(
 				(item) =>
+					(sourceThemeId ? item.id === sourceThemeId : false) ||
 					item.id === preparedTheme.id ||
-					(item.signature && preparedTheme.signature && item.signature === preparedTheme.signature)
+					(item.signature && preparedTheme.signature && item.signature === preparedTheme.signature) ||
+					this.getThemeSignature(item.themeResult) === preparedResultSignature
 			);
 			if (existingIndex === -1) {
 				state.savedThemes = [preparedTheme, ...state.savedThemes];
@@ -461,18 +529,26 @@ function createAppStore() {
 
 			if (authStore.state.isAuthenticated) {
 				try {
-					const response = await preferencesApi.getPreferences();
-					const preferences = response.preferences ?? {};
+					const response = await preferencesApi.getPreferences<AppPreferencesPayload>();
+					const preferences = toPreferencesPayload(response.preferences);
 					const stored = localStorage.getItem('appPreferences');
-					let localPreferences: Record<string, unknown> = {};
+					let localPreferences: AppPreferencesPayload = {};
 					if (stored) {
 						try {
-							localPreferences = JSON.parse(stored) as Record<string, unknown>;
+							localPreferences = toPreferencesPayload(JSON.parse(stored));
 						} catch {
 							localPreferences = {};
 						}
 					}
-					const merged = { ...preferences, ...localPreferences };
+
+					const hasLocalPreferences = Object.keys(localPreferences).length > 0;
+					if (hasNonDefaultPreferences(preferences) || !hasLocalPreferences) {
+						this.applyPreferences(preferences);
+						localStorage.removeItem('appPreferences');
+						return;
+					}
+
+					const merged: AppPreferencesPayload = { ...preferences, ...localPreferences };
 					const updated = this.applyPreferences(merged);
 					await preferencesApi.savePreferences(updated);
 					localStorage.removeItem('appPreferences');
@@ -485,7 +561,7 @@ function createAppStore() {
 			}
 		},
 
-		buildPreferences() {
+		buildPreferences(): AppPreferences {
 			return {
 				applyPaletteSettings: state.applyPaletteSettings,
 				wallhavenSettings: state.wallhavenSettings,
@@ -499,12 +575,28 @@ function createAppStore() {
 		},
 
 		persistPreferencesLocal() {
-			if (!browser || authStore.state.isAuthenticated) return;
+			if (!browser) return;
 			const preferences = this.buildPreferences();
 			localStorage.setItem('appPreferences', JSON.stringify(preferences));
+
+			if (!authStore.state.isAuthenticated) return;
+
+			if (preferencesSyncTimer) {
+				clearTimeout(preferencesSyncTimer);
+			}
+
+			preferencesSyncTimer = setTimeout(async () => {
+				if (!authStore.state.isAuthenticated) return;
+				try {
+					await preferencesApi.savePreferences(this.buildPreferences());
+					localStorage.removeItem('appPreferences');
+				} catch (error) {
+					console.error('Failed to persist preferences:', error);
+				}
+			}, 300);
 		},
 
-		applyPreferences(preferences: Record<string, unknown>) {
+		applyPreferences(preferences: AppPreferencesPayload): AppPreferences {
 			const applyPaletteSettings = this.parseApplyPaletteSettings(preferences.applyPaletteSettings);
 			const wallhavenSettings = this.parseWallhavenSettings(preferences.wallhavenSettings);
 			const themeExport = this.parseThemeExportPreferences(preferences.themeExport);
@@ -984,22 +1076,27 @@ function createAppStore() {
 				if (stored) {
 					try {
 						const localPalettes = JSON.parse(stored) as PaletteData[];
-						const toastId = toast.loading('Syncing your palettes...');
-						try {
-							await Promise.all(
-								localPalettes.map(async (palette) => {
-									try {
-										await paletteApi.savePalette(palette.name, palette.palette);
-									} catch (err) {
-										console.error('Failed to sync palette:', palette.name, err);
-									}
-								})
-							);
-							localStorage.removeItem('savedPalettes');
-							toast.success('Palettes synced successfully', { id: toastId });
-						} catch {
-							toast.error('Some palettes could not be synced. Try again later.', { id: toastId });
+						const palettesToSync = localPalettes.filter((palette) => !palette.id || palette.id.startsWith('local_'));
+
+						if (palettesToSync.length > 0) {
+							const toastId = toast.loading('Syncing your palettes...');
+							try {
+								await Promise.all(
+									palettesToSync.map(async (palette) => {
+										try {
+											await paletteApi.savePalette(palette.name, palette.palette);
+										} catch (err) {
+											console.error('Failed to sync palette:', palette.name, err);
+										}
+									})
+								);
+								toast.success('Palettes synced successfully', { id: toastId });
+							} catch {
+								toast.error('Some palettes could not be synced. Try again later.', { id: toastId });
+							}
 						}
+
+						localStorage.removeItem('savedPalettes');
 					} catch {
 						console.error('Failed to parse local palettes');
 					}

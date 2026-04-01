@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -285,6 +287,8 @@ func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
 		return nil, themePayload{}, fmt.Errorf("Theme signature is required")
 	}
 
+	signature = normalizeThemeSignature(signature)
+
 	info := themePayload{
 		Name:       name,
 		EditorType: editorType,
@@ -292,6 +296,15 @@ func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
 	}
 
 	return payload, info, nil
+}
+
+func normalizeThemeSignature(signature string) string {
+	if len(signature) <= 128 {
+		return signature
+	}
+
+	hash := sha256.Sum256([]byte(signature))
+	return hex.EncodeToString(hash[:])
 }
 
 func decodeThemePayload(raw string) (map[string]any, error) {
