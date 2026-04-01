@@ -38,39 +38,24 @@
 	let isGenerating = $state(false);
 
 	$effect(() => {
-		if (
-			isOpen &&
-			!isGenerating &&
-			themeResult !== null &&
-			appStore.state.colors.length > 0 &&
-			appStore.state.themeExport.lastGeneratedPaletteVersion === 0
-		) {
+		// effect handling scenarios:
+		// 1. Popover opened with existing theme but never generated (lastGeneratedPaletteVersion === 0)
+		// 2. Popover opened without any theme result (themeResult === null)
+		// 3. Popover is open and palette version changed (regeneration needed)
+
+		if (!isOpen || isGenerating) return;
+
+		const lastGenerated = appStore.state.themeExport.lastGeneratedPaletteVersion;
+		const shouldGenerate =
+			themeResult === null || // Scenario 2: No theme exists
+			(themeResult !== null && appStore.state.colors.length > 0 && lastGenerated === 0) || // Scenario 1: Theme exists but never generated
+			(lastGenerated !== 0 && lastGenerated !== paletteVersion); // Scenario 3: Palette version changed
+
+		if (shouldGenerate) {
 			themeName = 'Generated Theme';
 			resetThemeExportOverrideState();
 			generateThemeFromApi({ overrides: {}, bypassCache: true });
 		}
-	});
-
-	$effect(() => {
-		if (isOpen && themeResult === null && !isGenerating) {
-			themeName = 'Generated Theme';
-			resetThemeExportOverrideState();
-			generateThemeFromApi({ overrides: {}, bypassCache: true });
-		}
-	});
-
-	$effect(() => {
-		if (
-			!isOpen ||
-			isGenerating ||
-			appStore.state.themeExport.lastGeneratedPaletteVersion == 0 ||
-			appStore.state.themeExport.lastGeneratedPaletteVersion == paletteVersion
-		)
-			return;
-
-		themeName = 'Generated Theme';
-		resetThemeExportOverrideState();
-		generateThemeFromApi({ overrides: {}, bypassCache: true });
 	});
 
 	function handleThemeNameChange(e: Event) {
