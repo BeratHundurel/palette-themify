@@ -133,7 +133,7 @@ pub fn main() !void {
     std.log.info("Zig Palette API starting on http://localhost:{d}", .{PORT});
 
     var server = try tk.Server.init(allocator, routes, .{
-        .listen = .{ .port = PORT },
+        .listen = .{ .hostname = "0.0.0.0", .port = PORT },
         .request = .{ .max_body_size = MAX_BODY_SIZE },
     });
     defer server.deinit();

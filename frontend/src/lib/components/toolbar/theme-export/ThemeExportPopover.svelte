@@ -3,6 +3,7 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
+	import { isDesktopApp } from '$lib/platform';
 	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 	import toast from 'svelte-french-toast';
 	import {
@@ -15,7 +16,7 @@
 		setManualOverrideFlag
 	} from './session';
 	import { normalizeHex, overrideFields, THEME_NAME_DEBOUNCE_MS, validateThemeName } from './utils';
-	import { exportTheme as exportThemeToClipboard } from './save';
+	import { exportTheme as exportThemeToClipboard, exportThemeToEditorFolder } from './save';
 
 	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
 
@@ -328,6 +329,15 @@
 			saveOnCopy
 		});
 	}
+
+	async function handleSaveThemeToEditorFolder() {
+		await exportThemeToEditorFolder({
+			name: themeName,
+			editorType,
+			themeResult,
+			saveOnCopy
+		});
+	}
 </script>
 
 {#if popoverStore.isOpen('themeExport')}
@@ -338,7 +348,7 @@
 			role="dialog"
 			aria-labelledby="theme-inspector-title"
 			aria-modal="true"
-			class="share-modal-content border-brand/50 shadow-brand/20 animate-scale-in relative flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl"
+			class="share-modal-content border-brand/50 shadow-brand/20 animate-scale-in relative flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl"
 		>
 			<div class="flex items-center justify-between border-b border-zinc-700 bg-zinc-800/50 px-6 py-5">
 				<div>
@@ -577,7 +587,7 @@
 							<div class="flex items-start justify-between gap-4">
 								<div>
 									<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
-									<p class="mt-1 text-sm text-zinc-500">
+									<p class="mt-1 text-xs text-zinc-500">
 										Set between 0.00 and 3.00 (default 1.00). Boosting mainly affects muted mid-tone accents; very
 										dark/light or already vivid colors may not change much. Values above 1.00 push harder, but results
 										can plateau once saturation/contrast safety limits are reached.
@@ -702,7 +712,7 @@
 						>Theme generated from <span class="text-brand font-semibold">{appStore.state.colors.length}</span> palette colors</span
 					>
 				</div>
-				<div class="flex gap-4">
+				<div class="flex items-center gap-4">
 					<button
 						type="button"
 						onclick={() => popoverStore.close('themeExport')}
@@ -710,14 +720,26 @@
 					>
 						Cancel
 					</button>
-					<button
-						type="button"
-						onclick={handleExportTheme}
-						disabled={!themeResult || themeNameError !== null}
-						class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-					>
-						Copy Theme JSON
-					</button>
+					<div class="ml-auto flex items-center gap-3">
+						{#if isDesktopApp}
+							<button
+								type="button"
+								onclick={handleSaveThemeToEditorFolder}
+								disabled={!themeResult || themeNameError !== null}
+								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								Save To Editor Folder
+							</button>
+						{/if}
+						<button
+							type="button"
+							onclick={handleExportTheme}
+							disabled={!themeResult || themeNameError !== null}
+							class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+						>
+							Copy Theme JSON
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>

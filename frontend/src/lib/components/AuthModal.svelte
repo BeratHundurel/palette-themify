@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
+	import { isDesktopApp } from '$lib/platform';
 	import toast from 'svelte-french-toast';
 
 	let { isOpen = $bindable(false) } = $props();
@@ -276,7 +277,7 @@
 					</button>
 				</form>
 
-				{#if mode === 'login'}
+				{#if mode === 'login' && !isDesktopApp}
 					<div class="mt-4">
 						<div class="relative">
 							<div class="absolute inset-0 flex items-center">

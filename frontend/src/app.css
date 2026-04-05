@@ -7,6 +7,10 @@
 	--color-brand-hover: #e6a875;
 }
 
+body {
+	background-color: rgb(24, 24, 27);
+}
+
 .toolbar-button-base {
 	@apply relative flex h-11 w-11 cursor-pointer items-center justify-center overflow-hidden rounded-lg text-sm font-semibold text-zinc-300;
 	@apply border border-zinc-700/50 bg-zinc-800/50;
@@ -67,4 +71,10 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 	background: #ffbe9f;
+}
+
+.desktop-app-content {
+	padding-top: 36px;
+	height: calc(100vh - 36px);
+	overflow: hidden;
 }

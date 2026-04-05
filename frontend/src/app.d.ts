@@ -1,6 +1,24 @@
+import type { EditorThemeType } from '$lib/api/theme';
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
+	interface Window {
+		__IMAGE_TO_PALETTE_DESKTOP__?: {
+			saveThemeToEditorTarget(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string>;
+		};
+		go?: {
+			main?: {
+				ThemeExportService?: {
+					SaveThemeToEditorTarget(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string>;
+				};
+			};
+		};
+		_wails?: {
+			loadWailsJS?: () => Promise<void>;
+		};
+	}
+
 	namespace App {
 		// interface Error {}
 		// interface Locals {}

@@ -2,6 +2,7 @@
 	import { cn } from '$lib/utils';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
+	import { isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
 	import type { SavedThemeItem, Theme } from '$lib/types/theme';
@@ -20,6 +21,23 @@
 			popoverStore.close('themes');
 		} catch {
 			toast.error('Could not copy the theme. Please try again.');
+		}
+	}
+
+	async function handleThemeSave(item: SavedThemeItem) {
+		if (!isDesktopApp) return;
+
+		try {
+			const themeJson = JSON.stringify(item.themeResult.theme, null, 2);
+			const savedPath = await saveThemeToEditorTarget({
+				editorType: item.editorType,
+				themeName: item.name,
+				themeJSON: themeJson
+			});
+			toast.success(`Theme saved to ${savedPath}`);
+			popoverStore.close('themes');
+		} catch {
+			toast.error('Could not save the theme to editor folder.');
 		}
 	}
 
@@ -228,6 +246,24 @@
 										</svg>
 										Copy
 									</button>
+									{#if isDesktopApp}
+										<button
+											class="text-brand hover:bg-brand/10 flex cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
+											onclick={() => handleThemeSave(item)}
+											type="button"
+											title="Save to editor folder"
+										>
+											<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M12 16v-8m0 8l3-3m-3 3l-3-3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
+												></path>
+											</svg>
+											Save
+										</button>
+									{/if}
 									<button
 										class="flex cursor-pointer items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
 										onclick={() => handleThemeDelete(item.id, item.name)}

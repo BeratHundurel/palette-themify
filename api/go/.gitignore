@@ -3,9 +3,6 @@
 **/*.exe
 user_palettes
 
-.zig-cache/
-zig-cache/
-zig-out/
 *.log
 Session*.*vim
 commit_msg

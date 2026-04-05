@@ -15,6 +15,7 @@
 	import Search from '$lib/components/search/Search.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import ThemeExportPopover from '$lib/components/toolbar/theme-export/ThemeExportPopover.svelte';
+	import { isDesktopApp } from '$lib/platform';
 
 	let showAuthModal = $state(false);
 
@@ -28,7 +29,7 @@
 
 <Toaster />
 
-<div class="relative flex h-svh flex-col bg-black text-zinc-300">
+<div class={`relative flex flex-col bg-black text-zinc-300 ${isDesktopApp ? 'h-full' : 'h-svh'}`}>
 	<enhanced:img
 		src="../lib/assets/palette.jpg"
 		alt="Palette"

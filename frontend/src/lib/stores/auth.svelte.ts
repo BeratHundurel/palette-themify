@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import type { User } from '$lib/api/auth';
+import { isDesktopApp } from '$lib/platform';
 import * as authApi from '$lib/api/auth';
 
 interface AuthState {
@@ -85,6 +86,9 @@ function createAuthStore() {
 		},
 
 		async googleLogin() {
+			if (isDesktopApp) {
+				throw new Error('Google login is disabled in desktop app.');
+			}
 			const { url } = await authApi.getGoogleAuthUrl();
 			window.location.href = url;
 		},
