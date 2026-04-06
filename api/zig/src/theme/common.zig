@@ -51,8 +51,8 @@ pub fn buildTerminalPalette(
     semantic_success: []const u8,
     semantic_warning: []const u8,
     semantic_info: []const u8,
-    c6: []const u8,
-    c7: []const u8,
+    function_color: []const u8,
+    keyword_color: []const u8,
     dark_base: bool,
 ) TerminalPalette {
     const dim_foreground = color_utils.ensureReadableContrast(
@@ -77,8 +77,8 @@ pub fn buildTerminalPalette(
     const ansi_green = color_utils.ensureReadableContrast(semantic_success, background, 3.0);
     const ansi_yellow = color_utils.ensureReadableContrast(semantic_warning, background, 3.0);
     const ansi_blue = color_utils.ensureReadableContrast(semantic_info, background, 3.0);
-    const ansi_magenta = color_utils.ensureReadableContrast(c6, background, 3.0);
-    const ansi_cyan = color_utils.ensureReadableContrast(c7, background, 3.0);
+    const ansi_magenta = color_utils.ensureReadableContrast(function_color, background, 3.0);
+    const ansi_cyan = color_utils.ensureReadableContrast(keyword_color, background, 3.0);
 
     const ansi_bright_black = adjustTerminalVariant(ansi_black, background, if (dark_base) 0.28 else 0.20, dark_base, 3.0);
     const ansi_bright_white = bright_foreground;

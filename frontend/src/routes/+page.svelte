@@ -44,7 +44,7 @@
 				<TutorialButton />
 			</div>
 
-			<div class="flex min-w-0 flex-1 justify-center lg:min-w-[300px]">
+			<div class="flex min-w-0 flex-1 justify-center lg:min-w-75">
 				<Search />
 			</div>
 
