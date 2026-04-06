@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { isDesktopApp } from '$lib/platform';
 	import { onMount } from 'svelte';
+	import type * as WailsRuntime from '@wailsio/runtime';
 
 	let isMaximised = $state(false);
+	type RuntimeWindow = typeof WailsRuntime.Window;
 
-	async function withWindow<T>(callback: (windowApi: any) => Promise<T>) {
+	async function withWindow<T>(callback: (windowApi: RuntimeWindow) => Promise<T>) {
 		if (!isDesktopApp) return;
-		const runtime = (await import('@wailsio/runtime')) as any;
-		const Window = runtime.Window;
-		await callback(Window);
+		const runtimeModule = await import('@wailsio/runtime');
+		await callback(runtimeModule.Window);
 	}
 
 	async function syncWindowState() {

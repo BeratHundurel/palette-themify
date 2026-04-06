@@ -26,7 +26,7 @@
 
 <div
 	class={cn(
-		'palette-dropdown-base w-80',
+		'palette-dropdown-base w-80 max-w-[90vw]',
 		popoverStore.state.direction === 'right' ? 'left-full ml-2' : 'right-full mr-2'
 	)}
 	style={`min-width: 260px; ${popoverStore.state.direction === 'right' ? 'left: calc(100% + 0.5rem);' : 'right: calc(100% + 0.5rem);'}`}

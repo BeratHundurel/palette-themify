@@ -12,7 +12,7 @@ body {
 }
 
 .toolbar-button-base {
-	@apply relative flex h-11 w-11 cursor-pointer items-center justify-center overflow-hidden rounded-lg text-sm font-semibold text-zinc-300;
+	@apply relative flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-lg text-xs font-semibold text-zinc-300;
 	@apply border border-zinc-700/50 bg-zinc-800/50;
 	@apply focus:border-brand/50 focus:ring-brand focus:ring-1 focus:ring-offset-1 focus:ring-offset-zinc-900 focus:outline-none;
 	@apply transition-all duration-300;
@@ -75,6 +75,6 @@ body {
 
 .desktop-app-content {
 	padding-top: 36px;
-	height: calc(100vh - 36px);
+	height: 100vh;
 	overflow: hidden;
 }

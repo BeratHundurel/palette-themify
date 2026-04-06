@@ -348,7 +348,7 @@
 			role="dialog"
 			aria-labelledby="theme-inspector-title"
 			aria-modal="true"
-			class="share-modal-content border-brand/50 shadow-brand/20 animate-scale-in relative flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl"
+			class="share-modal-content border-brand/50 shadow-brand/20 animate-scale-in relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-6xl"
 		>
 			<div class="flex items-center justify-between border-b border-zinc-700 bg-zinc-800/50 px-6 py-5">
 				<div>

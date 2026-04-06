@@ -60,7 +60,7 @@
 
 <div
 	class={cn(
-		'palette-dropdown-base flex min-w-80 flex-col gap-4',
+		'palette-dropdown-base flex max-w-[90vw] min-w-80 flex-col gap-4',
 		popoverStore.state.direction === 'right' ? 'left-full ml-2' : 'right-full mr-2'
 	)}
 	style={popoverStore.state.direction === 'right' ? 'left: calc(100% + 0.5rem);' : 'right: calc(100% + 0.5rem);'}

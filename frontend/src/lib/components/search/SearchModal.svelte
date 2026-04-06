@@ -144,7 +144,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 flex items-start justify-center bg-black/80 p-6"
+		class="fixed inset-0 flex items-start justify-center bg-black/80 px-6 pt-20 pb-6"
 		role="button"
 		tabindex="0"
 		onclick={close}
@@ -153,7 +153,7 @@
 		}}
 	>
 		<div
-			class="animate-scale-in border-brand/50 shadow-brand/20 relative w-full max-w-4xl rounded-xl border bg-zinc-900 shadow-2xl"
+			class="animate-scale-in border-brand/50 shadow-brand/20 relative w-full max-w-2xl rounded-xl border bg-zinc-900 shadow-2xl md:max-w-3xl lg:max-w-4xl"
 			role="dialog"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
@@ -318,7 +318,13 @@
 		margin: 16px auto 0 auto;
 	}
 
-	@media (min-width: 1024px) {
+	@media (min-width: 768px) {
+		.masonry {
+			columns: 2;
+		}
+	}
+
+	@media (min-width: 1280px) {
 		.masonry {
 			columns: 3;
 		}

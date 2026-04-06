@@ -2,7 +2,7 @@
 	import { cn } from '$lib/utils';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
+	import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
 	import type { SavedThemeItem, Theme } from '$lib/types/theme';
@@ -36,8 +36,9 @@
 			});
 			toast.success(`Theme saved to ${savedPath}`);
 			popoverStore.close('themes');
-		} catch {
-			toast.error('Could not save the theme to editor folder.');
+		} catch (error) {
+			console.error('Error saving theme to editor folder:', error);
+			toast.error(getDesktopSaveErrorMessage(error));
 		}
 	}
 
@@ -134,7 +135,7 @@
 
 <div
 	class={cn(
-		'palette-dropdown-base w-80',
+		'palette-dropdown-base w-80 max-w-[90vw]',
 		popoverStore.state.direction === 'right' ? 'left-full ml-2' : 'right-full mr-2'
 	)}
 	style={`min-width: 260px; ${popoverStore.state.direction === 'right' ? 'left: calc(100% + 0.5rem);' : 'right: calc(100% + 0.5rem);'}`}

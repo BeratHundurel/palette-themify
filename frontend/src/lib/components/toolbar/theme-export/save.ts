@@ -1,5 +1,5 @@
 import type { EditorThemeType } from '$lib/api/theme';
-import { isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
+import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 import { appStore } from '$lib/stores/app.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
 import type { SavedThemeItem, ThemeGenerationResponse } from '$lib/types/theme';
@@ -155,7 +155,8 @@ export async function exportThemeToEditorFolder({ name, editorType, themeResult,
 
 		toast.success(`Theme saved to ${savedPath}`);
 		popoverStore.close('themeExport');
-	} catch {
-		toast.error('Could not save the theme to editor folder.');
+	} catch (error) {
+		console.error('Error saving theme to editor folder:', error);
+		toast.error(getDesktopSaveErrorMessage(error));
 	}
 }

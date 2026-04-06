@@ -21,6 +21,32 @@
 	let top = $state(100);
 	let moving = $state(false);
 	let dragHandle = $state<HTMLElement | undefined>(undefined);
+	let toolbarSection = $state<HTMLElement | undefined>(undefined);
+	let initialized = $state(false);
+
+	// Initialize toolbar position intelligently based on viewport
+	$effect(() => {
+		if (toolbarSection && !initialized) {
+			initialized = true;
+			const rect = toolbarSection.getBoundingClientRect();
+			const viewportWidth = window.innerWidth;
+			const viewportHeight = window.innerHeight;
+
+			// Position toolbar with smart defaults:
+			// - Horizontally: 20px from right edge (or centered if viewport is narrow)
+			// - Vertically: Centered vertically in viewport
+			if (viewportWidth < 768) {
+				// On narrow viewports, center horizontally with small margin
+				right = Math.max(10, (viewportWidth - rect.width) / 2);
+			} else {
+				// On wider viewports, position on the right with margin
+				right = 20;
+			}
+
+			// Center vertically, accounting for toolbar height
+			top = Math.max(80, (viewportHeight - rect.height) / 2);
+		}
+	});
 
 	function handleMouseDown(e: MouseEvent) {
 		if (dragHandle && dragHandle.contains(e.target as Node)) {
@@ -30,9 +56,20 @@
 	}
 
 	function handleMouseMove(e: MouseEvent) {
-		if (moving) {
-			right -= e.movementX;
-			top += e.movementY;
+		if (moving && toolbarSection) {
+			const rect = toolbarSection.getBoundingClientRect();
+			const newRight = right - e.movementX;
+			const newTop = top + e.movementY;
+
+			// Calculate boundaries (with 10px padding from edges)
+			const minRight = 10;
+			const maxRight = window.innerWidth - rect.width - 10;
+			const minTop = 10;
+			const maxTop = window.innerHeight - rect.height - 10;
+
+			// Constrain to viewport boundaries
+			right = Math.max(minRight, Math.min(newRight, maxRight));
+			top = Math.max(minTop, Math.min(newTop, maxTop));
 		}
 	}
 
@@ -51,47 +88,49 @@
 	onmousedown={handleMouseDown}
 	style="right: {right}px; top: {top}px;"
 	class={cn('fixed select-none', moving ? 'cursor-move **:pointer-events-none' : '')}
+	bind:this={toolbarSection}
 >
 	<div
 		class={cn(
 			'border-brand/50 shadow-brand/20 rounded-xl border bg-zinc-900 shadow-2xl',
 			'hover:shadow-brand/40 hover:border-brand/50 hover:has-[.palette-dropdown-base]:border-brand/50 hover:has-[.palette-dropdown-base]:shadow-none',
-			'transition-[border-color,box-shadow] duration-300 ease-out'
+			'transition-[border-color,box-shadow] duration-300 ease-out',
+			'max-w-[90vw] sm:max-w-md lg:max-w-lg'
 		)}
 	>
 		<div
 			bind:this={dragHandle}
 			class={cn(
-				'flex cursor-move items-center justify-center rounded-t-xl border-b border-zinc-700/50 bg-zinc-800/30 px-6 py-4',
+				'flex cursor-move items-center justify-center rounded-t-xl border-b border-zinc-700/50 bg-zinc-800/30 px-4 py-2.5',
 				'hover:border-brand/50 hover:bg-zinc-800/50',
 				'transition-[background-color,border-color] duration-300 ease-out'
 			)}
 		>
-			<div class="flex flex-col items-center gap-2">
+			<div class="flex flex-col items-center gap-1.5">
 				<div
 					class={cn(
-						'h-0.5 w-8 rounded-full transition-[background-color,box-shadow] duration-300 ease-out',
+						'h-0.5 w-7 rounded-full transition-[background-color,box-shadow] duration-300 ease-out',
 						moving ? 'bg-brand shadow-brand' : 'bg-zinc-500'
 					)}
 				></div>
 				<div
 					class={cn(
-						'h-0.5 w-6 rounded-full transition-[background-color] duration-300 ease-out',
+						'h-0.5 w-5 rounded-full transition-[background-color] duration-300 ease-out',
 						moving ? 'bg-brand/60' : 'bg-zinc-500/60'
 					)}
 				></div>
 			</div>
 		</div>
 
-		<div class="px-6 py-6">
-			<div class="flex flex-col space-y-8">
+		<div class="px-4 py-4">
+			<div class="flex flex-col space-y-5">
 				{#if appStore.state.selectors.length > 0}
-					<div class="space-y-3">
-						<div class="flex items-center gap-3">
-							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Selection Tools</h3>
+					<div class="space-y-2">
+						<div class="flex items-center gap-2">
+							<h3 class="text-brand text-xs font-semibold tracking-wide uppercase">Selection Tools</h3>
 							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
-						<div class="flex flex-wrap justify-start gap-3">
+						<div class="flex flex-wrap justify-start gap-2">
 							{#each appStore.state.selectors as selector, i (selector.id)}
 								<SelectorButton {selector} index={i} />
 							{/each}
@@ -99,37 +138,37 @@
 					</div>
 				{/if}
 
-				<div class="space-y-6">
-					<div class="space-y-3">
-						<div class="flex items-center gap-3">
-							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Themes & Processing</h3>
+				<div class="space-y-4">
+					<div class="space-y-2">
+						<div class="flex items-center gap-2">
+							<h3 class="text-brand text-xs font-semibold tracking-wide uppercase">Themes & Processing</h3>
 							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
-						<div class="flex gap-3">
+						<div class="flex gap-2">
 							<ThemeExport />
 							<SavedPalettes />
 							<SavedThemes />
 						</div>
 					</div>
 
-					<div class="space-y-3">
-						<div class="flex items-center gap-3">
-							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Settings</h3>
+					<div class="space-y-2">
+						<div class="flex items-center gap-2">
+							<h3 class="text-brand text-xs font-semibold tracking-wide uppercase">Settings</h3>
 							<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 						</div>
-						<div class="flex gap-3">
+						<div class="flex gap-2">
 							<WallhavenSettings />
 							<ApplyPaletteSettings />
 						</div>
 					</div>
 
-					<div class="space-y-6">
-						<div class="space-y-3">
-							<div class="flex items-center gap-3">
-								<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Copy & Export</h3>
+					<div class="space-y-4">
+						<div class="space-y-2">
+							<div class="flex items-center gap-2">
+								<h3 class="text-brand text-xs font-semibold tracking-wide uppercase">Copy & Export</h3>
 								<div class="from-brand/30 h-px flex-1 bg-linear-to-r to-transparent"></div>
 							</div>
-							<div class="flex gap-3">
+							<div class="flex gap-2">
 								<CopyOptions />
 								<Download />
 							</div>
