@@ -33,12 +33,13 @@ func main() {
 	})
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:     "image-to-palette",
-		Frameless: true,
-		MinWidth:  1200,
-		MinHeight: 760,
-		Width:     1440,
-		Height:    900,
+		Title:      "image-to-palette",
+		Frameless:  true,
+		StartState: application.WindowStateFullscreen,
+		MinWidth:   1200,
+		MinHeight:  760,
+		Width:      1440,
+		Height:     900,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
