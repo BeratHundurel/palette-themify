@@ -4,11 +4,12 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tick } from 'svelte';
-	import { fade, fly, scale } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
 
 	let highlightElement: HTMLElement | null = $state(null);
 	let tooltipElement: HTMLElement | null = $state(null);
+	let highlightKey = $state(0);
 
 	$effect(() => {
 		const currentStep = tutorialStore.getCurrentStep();
@@ -63,13 +64,27 @@
 	});
 
 	async function updateHighlight() {
-		await tick();
 		const currentStep = tutorialStore.getCurrentStep();
 
-		if (currentStep?.element) {
-			const element = document.querySelector(currentStep.element) as HTMLElement;
+		if (!currentStep?.element) {
+			highlightElement = null;
+			return;
+		}
+
+		const stepId = currentStep.id;
+		const stepElement = currentStep.element;
+		await tick();
+
+		const latestStep = tutorialStore.getCurrentStep();
+		if (!latestStep || latestStep.id !== stepId || latestStep.element !== stepElement) {
+			return;
+		}
+
+		if (stepElement) {
+			const element = document.querySelector(stepElement) as HTMLElement;
 			if (element) {
 				highlightElement = element;
+				highlightKey++;
 				return;
 			}
 		}
@@ -169,16 +184,17 @@
 	<div class="pointer-events-none fixed inset-0 z-30" transition:fade={{ duration: 300 }}>
 		{#if highlightElement && currentStep?.element}
 			{@const rect = highlightElement.getBoundingClientRect()}
-			<div
-				class="tutorial-highlight border-brand pointer-events-none absolute z-10001 rounded-md border-[3px]"
-				style={`
-					top: ${rect.top - 8}px;
-					left: ${rect.left - 8}px;
-					width: ${rect.width + 16}px;
-					height: ${rect.height + 16}px;
-				`}
-				transition:scale={{ duration: 300 }}
-			></div>
+			{#key highlightKey}
+				<div
+					class="tutorial-highlight border-brand pointer-events-none absolute z-10001 rounded-md border-[3px]"
+					style={`
+						top: ${rect.top - 8}px;
+						left: ${rect.left - 8}px;
+						width: ${rect.width + 16}px;
+						height: ${rect.height + 16}px;
+					`}
+				></div>
+			{/key}
 		{/if}
 
 		{#if currentStep}
