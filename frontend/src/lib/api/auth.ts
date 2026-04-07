@@ -15,13 +15,12 @@ export interface AuthResponse {
 }
 
 export interface RegisterRequest {
-	name: string;
-	email: string;
+	username: string;
 	password: string;
 }
 
 export interface LoginRequest {
-	email: string;
+	username: string;
 	password: string;
 }
 
@@ -29,6 +28,27 @@ export interface ChangePasswordRequest {
 	current_password: string;
 	new_password: string;
 }
+
+export type GoogleAuthMode = 'web' | 'desktop';
+
+export interface GoogleAuthUrlResponse {
+	url: string;
+	expires_at: string;
+	session_id?: string;
+}
+
+export type GoogleDesktopAuthStatusResponse =
+	| {
+			status: 'pending';
+	  }
+	| {
+			status: 'error';
+			error: string;
+	  }
+	| {
+			status: 'completed';
+			auth: AuthResponse;
+	  };
 
 export function getAuthToken(): string | null {
 	if (typeof window === 'undefined') return null;
@@ -117,8 +137,11 @@ export async function changePassword(passwordData: ChangePasswordRequest): Promi
 	return response.json();
 }
 
-export async function getGoogleAuthUrl(): Promise<{ url: string }> {
-	const response = await fetch(buildURL('/auth/google'), {
+export async function getGoogleAuthUrl(mode: GoogleAuthMode, origin?: string): Promise<GoogleAuthUrlResponse> {
+	const params: Record<string, string> = { mode };
+	if (origin) params.origin = origin;
+
+	const response = await fetch(buildURL('/auth/google', params), {
 		method: 'GET'
 	});
 
@@ -127,14 +150,12 @@ export async function getGoogleAuthUrl(): Promise<{ url: string }> {
 	return response.json();
 }
 
-export async function handleGoogleCallback(code: string): Promise<AuthResponse> {
-	const response = await fetch(`${buildURL('/auth/google/callback')}?code=${encodeURIComponent(code)}`, {
+export async function getGoogleDesktopAuthStatus(sessionId: string): Promise<GoogleDesktopAuthStatusResponse> {
+	const response = await fetch(buildURL('/auth/google/desktop/status', { session_id: sessionId }), {
 		method: 'GET'
 	});
 
 	await ensureOk(response);
-	const data = (await response.json()) as AuthResponse;
-	if (data.token) setAuthToken(data.token);
 
-	return data;
+	return response.json();
 }

@@ -9,7 +9,8 @@
 	let error = $state<string | null>(null);
 
 	onMount(async () => {
-		const token = page.url.searchParams.get('token');
+		const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+		const token = hashParams.get('token') || page.url.searchParams.get('token');
 		const errorParam = page.url.searchParams.get('error');
 
 		if (errorParam) {
@@ -23,6 +24,10 @@
 		}
 
 		try {
+			if (window.location.hash) {
+				window.history.replaceState(null, '', window.location.pathname + window.location.search);
+			}
+
 			setAuthToken(token);
 			const { user } = await getCurrentUser();
 			authStore.setUser(user);

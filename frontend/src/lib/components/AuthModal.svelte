@@ -11,8 +11,7 @@
 	let loadingType = $state<'email' | 'google' | null>(null);
 
 	let formData = $state({
-		name: '',
-		email: '',
+		username: '',
 		password: '',
 		confirmPassword: ''
 	});
@@ -23,14 +22,10 @@
 	function validate() {
 		const newErrors: Record<string, string> = {};
 
-		if (mode === 'register' && !formData.name.trim()) {
-			newErrors.name = 'Name is required';
-		}
-
-		if (!formData.email) {
-			newErrors.email = 'Email is required';
-		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-			newErrors.email = 'Invalid email format';
+		if (!formData.username.trim()) {
+			newErrors.username = 'Username is required';
+		} else if (formData.username.trim().length < 3) {
+			newErrors.username = 'Username must be at least 3 characters';
 		}
 
 		if (!formData.password) {
@@ -59,7 +54,7 @@
 	}
 
 	async function handleSubmit() {
-		touched = { email: true, password: true, name: true, confirmPassword: true };
+		touched = { username: true, password: true, confirmPassword: true };
 
 		if (!validate()) return;
 
@@ -68,10 +63,10 @@
 
 		try {
 			if (mode === 'login') {
-				await authStore.login(formData.email, formData.password);
+				await authStore.login(formData.username, formData.password);
 				toast.success('Login successful!');
 			} else {
-				await authStore.register(formData.name, formData.email, formData.password);
+				await authStore.register(formData.username, formData.password);
 				toast.success('Account created successfully!');
 			}
 
@@ -92,20 +87,35 @@
 	async function handleGoogleLogin() {
 		loading = true;
 		loadingType = 'google';
+		let shouldResetLoading = true;
 
 		try {
 			await authStore.googleLogin();
+
+			if (!isDesktopApp) {
+				shouldResetLoading = false;
+				return;
+			}
+
+			await appStore.syncPalettesOnAuth();
+			await appStore.syncPreferencesOnAuth();
+			await appStore.syncSavedThemesOnAuth();
+			toast.success('Successfully signed in with Google!');
+			resetForm();
+			isOpen = false;
 		} catch {
 			toast.error('Could not start Google login. Please try again.');
-			loading = false;
-			loadingType = null;
+		} finally {
+			if (shouldResetLoading) {
+				loading = false;
+				loadingType = null;
+			}
 		}
 	}
 
 	function resetForm() {
 		formData = {
-			name: '',
-			email: '',
+			username: '',
 			password: '',
 			confirmPassword: ''
 		};
@@ -171,41 +181,21 @@
 				</div>
 
 				<form onsubmit={handleSubmit} class="space-y-4">
-					{#if mode === 'register'}
-						<div>
-							<label for="name" class="mb-1 block text-sm font-medium text-zinc-300"> Name </label>
-							<input
-								type="text"
-								id="name"
-								bind:value={formData.name}
-								class="focus:border-brand w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-zinc-300 placeholder:text-zinc-400 focus:outline-none"
-								class:border-red-500={touched.name && errors.name}
-								placeholder="Enter your name"
-								disabled={loading}
-								onblur={() => handleBlur('name')}
-								oninput={() => handleInput('name')}
-							/>
-							{#if touched.name && errors.name}
-								<p class="mt-1 text-xs text-red-400">{errors.name}</p>
-							{/if}
-						</div>
-					{/if}
-
 					<div>
-						<label for="email" class="mb-1 block text-sm font-medium text-zinc-300"> Email </label>
+						<label for="username" class="mb-1 block text-sm font-medium text-zinc-300">Username</label>
 						<input
-							type="email"
-							id="email"
-							bind:value={formData.email}
+							type="text"
+							id="username"
+							bind:value={formData.username}
 							class="focus:border-brand w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-zinc-300 placeholder:text-zinc-400 focus:outline-none"
-							class:border-red-500={touched.email && errors.email}
-							placeholder="Enter your email"
+							class:border-red-500={touched.username && errors.username}
+							placeholder="Enter your username"
 							disabled={loading}
-							onblur={() => handleBlur('email')}
-							oninput={() => handleInput('email')}
+							onblur={() => handleBlur('username')}
+							oninput={() => handleInput('username')}
 						/>
-						{#if touched.email && errors.email}
-							<p class="mt-1 text-xs text-red-400">{errors.email}</p>
+						{#if touched.username && errors.username}
+							<p class="mt-1 text-xs text-red-400">{errors.username}</p>
 						{/if}
 					</div>
 
@@ -277,7 +267,7 @@
 					</button>
 				</form>
 
-				{#if mode === 'login' && !isDesktopApp}
+				{#if mode === 'login'}
 					<div class="mt-4">
 						<div class="relative">
 							<div class="absolute inset-0 flex items-center">
