@@ -35,9 +35,7 @@ func main() {
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:      "image-to-palette",
 		Frameless:  true,
-		StartState: application.WindowStateFullscreen,
-		MinWidth:   1200,
-		MinHeight:  760,
+		StartState: application.WindowStateMaximised,
 		Width:      1440,
 		Height:     900,
 		Mac: application.MacWindow{
