@@ -108,6 +108,7 @@
 	>
 		{#each appStore.state.colors as color, i (`${color.hex}-${i}`)}
 			<div
+				id={i === 0 ? 'tutorial-color-swatch' : undefined}
 				role="button"
 				tabindex="0"
 				onkeyup={(e) => (e.key === 'Enter' || e.key === ' ') && handleCopy(color.hex)}

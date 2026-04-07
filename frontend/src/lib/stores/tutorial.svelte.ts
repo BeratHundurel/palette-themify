@@ -1,6 +1,8 @@
 import { appStore } from './app.svelte';
 import { popoverStore } from './popovers.svelte';
 import { UI } from '$lib/constants';
+import { TUTORIAL_APPLY_PALETTE } from '$lib/constants/tutorialPalette';
+import type { Color } from '$lib/types/color';
 
 export interface TutorialStep {
 	id: string;
@@ -27,15 +29,14 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'welcome',
 		title: 'Welcome to Image to Palette! 🎨',
-		description: "Let's take a quick tour of the features. You can skip this tutorial at any time.",
+		description: "Let's do a quick tour. You can skip any step.",
 		position: 'center',
 		skipable: true
 	},
 	{
 		id: 'upload-image',
 		title: 'Upload Your First Image',
-		description:
-			'Click the upload area or drag and drop an image to get started. Try uploading a colorful image for the best results!',
+		description: 'Click or drag an image into the upload area to get started.',
 		element: 'button[aria-label="Upload an image or drag and drop it here"]',
 		position: 'bottom',
 		action: 'upload',
@@ -45,8 +46,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'canvas-interaction',
 		title: 'Select Areas of Interest',
-		description:
-			'Click and drag on the image to select areas you want to extract colors from. You can make multiple selections!',
+		description: 'Click and drag on the image to extract colors from a selected area.',
 		element: 'canvas',
 		position: 'top',
 		action: 'drag',
@@ -56,8 +56,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'selection-tools',
 		title: 'Use Different Selection Tools',
-		description:
-			'Notice the colored selection tools in the toolbar? Each color represents a different selection area. Click the red selector and make a selection similar to the previous step!',
+		description: 'Use another selector from the toolbar and make one more selection.',
 		element: '[role="toolbar"] button[aria-label="Selector 2"]',
 		position: 'left',
 		action: 'drag',
@@ -67,9 +66,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'extract-colors',
 		title: 'Copy Colors from Your Palette',
-		description:
-			'Perfect! Your palette has been extracted. Now click on any color below to copy its hex code to your clipboard.',
-		element: 'section.w-full.max-w-5xl .grid.min-h-12',
+		description: 'Great. Click the highlighted color to copy its hex code.',
+		element: '#tutorial-color-swatch',
 		position: 'top',
 		condition: () => tutorialStore.state.hasColorCopied,
 		skipable: true
@@ -77,8 +75,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'save-palette',
 		title: 'Save Your Current Palette',
-		description:
-			'Love this palette you just created? Click the "Save Palette" button below to save it for future projects!',
+		description: 'Click "Save Palette" to keep this palette for later use.',
 		element: '#save-palette',
 		position: 'top',
 		action: 'click',
@@ -88,8 +85,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'toolbar-features',
 		title: 'Explore the Toolbar',
-		description:
-			'The toolbar contains powerful features for processing and extraction. You can even drag it around! Try clicking the palette icon (🎨) to see your saved palettes.',
+		description: 'Open Saved Palettes from the toolbar (🎨). You can drag this toolbar anywhere.',
 		element: 'button[aria-label="Show saved palettes"]',
 		position: 'left',
 		action: 'click',
@@ -98,19 +94,41 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	},
 	{
 		id: 'apply-palette',
-		title: 'Apply Saved Palettes',
-		description:
-			'In the saved palettes popup, you can apply any saved palette to your current image. This is great for maintaining color consistency across projects!',
-		element: '.palette-dropdown-base',
+		title: 'Apply a Palette',
+		description: 'Apply the highlighted tutorial palette to recolor your current image.',
+		element: '.tutorial-palette-apply',
 		position: 'left',
 		condition: () => tutorialStore.state.hasSavedPaletteApplied,
 		skipable: true
 	},
 	{
+		id: 'toolbar-themes',
+		title: 'Saved Themes Panel',
+		description: 'This panel stores full editor themes you generate and save.',
+		element: 'button[aria-label="Show saved themes"]',
+		position: 'left',
+		skipable: true
+	},
+	{
+		id: 'toolbar-settings',
+		title: 'Settings Panels',
+		description: 'Use these panels for Wallhaven search and palette apply behavior.',
+		element: 'button[aria-label="Configure Wallhaven search settings"]',
+		position: 'left',
+		skipable: true
+	},
+	{
+		id: 'toolbar-copy-export',
+		title: 'Copy and Export',
+		description: 'Copy palette formats or download your current image from here.',
+		element: 'button[aria-label="Copy Palette"]',
+		position: 'left',
+		skipable: true
+	},
+	{
 		id: 'completion',
 		title: 'Tutorial Complete! 🎉',
-		description:
-			"You're all set! Feel free to explore more features like copying options, palette settings, and application settings. Happy color hunting!",
+		description: "You're all set. Explore the app and build palettes from any image.",
 		position: 'center',
 		skipable: false
 	}
@@ -348,6 +366,10 @@ function createTutorialStore() {
 			if (currentStep?.id === 'apply-palette') {
 				hasSavedPaletteApplied = applied;
 			}
+		},
+
+		getTutorialApplyPalette(): Color[] {
+			return TUTORIAL_APPLY_PALETTE;
 		},
 
 		shouldShowTutorial(): boolean {

@@ -3,8 +3,27 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
+	import { TUTORIAL_APPLY_PALETTE } from '$lib/constants/tutorialPalette';
 	import toast from 'svelte-french-toast';
 	import type { Color } from '$lib/types/color';
+
+	const TUTORIAL_PALETTE_NAME = 'Tutorial Palette';
+
+	const tutorialPaletteItem = {
+		id: 'tutorial_palette_preview',
+		name: TUTORIAL_PALETTE_NAME,
+		palette: TUTORIAL_APPLY_PALETTE,
+		createdAt: new Date(0).toISOString(),
+		isSystem: true
+	};
+
+	let displayPalettes = $derived.by(() => {
+		if (tutorialStore.state.isActive && tutorialStore.getCurrentStep()?.id === 'apply-palette') {
+			return [tutorialPaletteItem, ...appStore.state.savedPalettes];
+		}
+
+		return appStore.state.savedPalettes.filter((item) => item.id !== tutorialPaletteItem.id);
+	});
 
 	function handlePaletteLoad(palette: Color[]) {
 		if (!appStore.state.imageLoaded) {
@@ -13,7 +32,9 @@
 		}
 
 		appStore.applyPalette(palette);
-		popoverStore.close('saved');
+		if (!(tutorialStore.state.isActive && tutorialStore.getCurrentStep()?.id === 'apply-palette')) {
+			popoverStore.close('saved');
+		}
 		tutorialStore.setSavedPaletteApplied(true);
 	}
 
@@ -36,7 +57,7 @@
 >
 	<h3 id="saved-palettes-title" class="text-brand mb-3 text-xs font-medium">Saved Palettes</h3>
 	<div class="scrollable-content custom-scrollbar max-h-72 overflow-y-auto">
-		{#if appStore.state.savedPalettes.length === 0}
+		{#if displayPalettes.length === 0}
 			<div class="flex flex-col items-center justify-center py-12 text-center">
 				<svg class="mb-3 h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -51,9 +72,9 @@
 			</div>
 		{:else}
 			<ul class="flex flex-col gap-3">
-				{#each appStore.state.savedPalettes as item, i (i)}
+				{#each displayPalettes as item, i (item.id + '-' + i)}
 					<li
-						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
+						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5 {item.id === tutorialPaletteItem.id ? 'tutorial-palette-apply border-brand/60 bg-brand/10' : ''}"
 					>
 						<div class="p-3">
 							<!-- Header -->
