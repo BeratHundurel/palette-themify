@@ -28,6 +28,17 @@ export const UI = {
 
 export const COLOR_REGEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/i;
 
+export const TUTORIAL_PALETTE_NAME = 'Tutorial Palette';
+export const TUTORIAL_APPLY_PALETTE = [
+	{ hex: '#2c2d3c' },
+	{ hex: '#4e4e63' },
+	{ hex: '#73778f' },
+	{ hex: '#9497b3' },
+	{ hex: '#16141c' },
+	{ hex: '#b4aecc' },
+	{ hex: '#cad3d4' }
+];
+
 /**
  * Desktop viewport breakpoints (mobile not supported)
  * - SM: Small desktop (1024px) - tablets in landscape, small laptops

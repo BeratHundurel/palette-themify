@@ -1,7 +1,6 @@
 import { appStore } from './app.svelte';
 import { popoverStore } from './popovers.svelte';
-import { UI } from '$lib/constants';
-import { TUTORIAL_APPLY_PALETTE } from '$lib/constants/tutorialPalette';
+import { UI, TUTORIAL_APPLY_PALETTE } from '$lib/constants';
 import type { Color } from '$lib/types/color';
 
 export interface TutorialStep {

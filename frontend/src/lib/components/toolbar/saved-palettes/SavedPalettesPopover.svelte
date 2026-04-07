@@ -3,11 +3,9 @@
 	import { appStore } from '$lib/stores/app.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import { TUTORIAL_APPLY_PALETTE } from '$lib/constants/tutorialPalette';
+	import { TUTORIAL_APPLY_PALETTE, TUTORIAL_PALETTE_NAME } from '$lib/constants';
 	import toast from 'svelte-french-toast';
 	import type { Color } from '$lib/types/color';
-
-	const TUTORIAL_PALETTE_NAME = 'Tutorial Palette';
 
 	const tutorialPaletteItem = {
 		id: 'tutorial_palette_preview',
@@ -74,7 +72,10 @@
 			<ul class="flex flex-col gap-3">
 				{#each displayPalettes as item, i (item.id + '-' + i)}
 					<li
-						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5 {item.id === tutorialPaletteItem.id ? 'tutorial-palette-apply border-brand/60 bg-brand/10' : ''}"
+						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5 {item.id ===
+						tutorialPaletteItem.id
+							? 'tutorial-palette-apply border-brand/60 bg-brand/10'
+							: ''}"
 					>
 						<div class="p-3">
 							<!-- Header -->

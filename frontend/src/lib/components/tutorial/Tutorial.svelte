@@ -58,21 +58,22 @@
 	});
 
 	$effect(() => {
-		if (tutorialStore.state.isActive) {
-			updateHighlight();
-		}
-	});
-
-	async function updateHighlight() {
+		const isActive = tutorialStore.state.isActive;
 		const currentStep = tutorialStore.getCurrentStep();
 
-		if (!currentStep?.element) {
+		if (!isActive) {
 			highlightElement = null;
 			return;
 		}
 
-		const stepId = currentStep.id;
-		const stepElement = currentStep.element;
+		updateHighlight(currentStep?.id, currentStep?.element);
+	});
+
+	async function updateHighlight(stepId?: string, stepElement?: string) {
+		if (!stepElement) {
+			highlightElement = null;
+			return;
+		}
 		await tick();
 
 		const latestStep = tutorialStore.getCurrentStep();
@@ -115,6 +116,17 @@
 			};
 
 		const rect = highlightElement.getBoundingClientRect();
+		if (rect.width < 8 || rect.height < 8) {
+			return {
+				styles: {
+					top: '50%',
+					left: '50%',
+					transform: 'translate(-50%, -50%)'
+				},
+				actualPosition: 'center'
+			};
+		}
+
 		const tooltipRect = tooltipElement?.getBoundingClientRect();
 		const tooltipWidth = tooltipRect?.width || 320;
 		const tooltipHeight = tooltipRect?.height || 200;
@@ -184,17 +196,19 @@
 	<div class="pointer-events-none fixed inset-0 z-30" transition:fade={{ duration: 300 }}>
 		{#if highlightElement && currentStep?.element}
 			{@const rect = highlightElement.getBoundingClientRect()}
-			{#key highlightKey}
-				<div
-					class="tutorial-highlight border-brand pointer-events-none absolute z-10001 rounded-md border-[3px]"
-					style={`
-						top: ${rect.top - 8}px;
-						left: ${rect.left - 8}px;
-						width: ${rect.width + 16}px;
-						height: ${rect.height + 16}px;
-					`}
-				></div>
-			{/key}
+			{#if rect.width >= 8 && rect.height >= 8}
+				{#key highlightKey}
+					<div
+						class="tutorial-highlight border-brand pointer-events-none absolute z-10001 rounded-md border-[3px]"
+						style={`
+							top: ${rect.top - 8}px;
+							left: ${rect.left - 8}px;
+							width: ${rect.width + 16}px;
+							height: ${rect.height + 16}px;
+						`}
+					></div>
+				{/key}
+			{/if}
 		{/if}
 
 		{#if currentStep}
