@@ -43,7 +43,7 @@
 			<div class="bg-brand flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-zinc-300">
 				{authStore.state.user.name.charAt(0).toUpperCase()}
 			</div>
-			<div class="hidden sm:block">
+			<div class="block">
 				<span class="text-sm font-medium">{authStore.state.user.name}</span>
 			</div>
 			<svg

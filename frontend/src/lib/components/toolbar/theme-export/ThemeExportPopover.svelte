@@ -17,6 +17,7 @@
 	} from './session';
 	import { normalizeHex, overrideFields, THEME_NAME_DEBOUNCE_MS, validateThemeName } from './utils';
 	import { exportTheme as exportThemeToClipboard, exportThemeToEditorFolder } from './save';
+	import { cn } from '$lib/utils';
 
 	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
 
@@ -348,7 +349,10 @@
 			role="dialog"
 			aria-labelledby="theme-inspector-title"
 			aria-modal="true"
-			class="share-modal-content border-brand/50 shadow-brand/20 animate-scale-in relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-6xl"
+			class={cn(
+				'share-modal-content border-brand/50 shadow-brand/20 animate-scale-in relative flex w-full max-w-4xl flex-col overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl xl:max-w-6xl',
+				isDesktopApp ? 'mt-12 max-h-[90svh]' : 'max-h-[95svh]'
+			)}
 		>
 			<div class="flex items-center justify-between border-b border-zinc-700 bg-zinc-800/50 px-6 py-5">
 				<div>
@@ -412,7 +416,7 @@
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Appearance</h3>
 						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 					</div>
-					<div class="grid gap-4 md:grid-cols-2">
+					<div class="grid gap-4 grid-cols-2">
 						<button
 							type="button"
 							onclick={() => handleThemeAppearanceChange('dark')}
@@ -620,7 +624,7 @@
 					</div>
 				</div>
 
-				<div class="mb-8">
+				<div>
 					<div class="mb-3 flex items-center justify-between gap-4">
 						<div class="flex items-center gap-2">
 							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
@@ -648,7 +652,7 @@
 						</div>
 					</div>
 
-					<div class="grid gap-2 md:grid-cols-2">
+					<div class="grid gap-2 grid-cols-2">
 						{#each overrideFields as field (field.key)}
 							{@const isModified = themeOverrides[field.key] != null}
 							{@const currentValue = getOverrideValue(field.key)}

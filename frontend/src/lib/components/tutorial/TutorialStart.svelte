@@ -42,20 +42,18 @@
 		></div>
 		<div class="relative w-full max-w-120" transition:fly={{ y: 30, duration: 400 }}>
 			<div class="border-brand/50 rounded-xl border bg-zinc-900 p-6">
-				<div class="max-h-[90vh] px-4">
+				<div class="max-h-[90svh] px-4">
 					<div class="mb-8 text-center">
-						<div class="mb-4 text-5xl max-sm:text-4xl">🎨</div>
-						<h2 class="text-brand mb-2 text-2xl leading-tight font-bold max-sm:text-xl">
-							Welcome to Image to Palette!
-						</h2>
+						<div class="mb-4 text-5xl">🎨</div>
+						<h2 class="text-brand mb-2 text-2xl leading-tight font-bold">Welcome to Image to Palette!</h2>
 						<p class="m-0 text-base leading-relaxed text-zinc-400">Extract beautiful color palettes from any image</p>
 					</div>
 
 					<div class="mb-8 flex flex-col gap-4">
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5"
 						>
-							<div class="shrink-0 text-2xl max-sm:text-xl">📸</div>
+							<div class="shrink-0 text-2xl">📸</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Upload Images</strong>
 								<span class="text-xs leading-tight text-zinc-400">Drag & drop or click to upload</span>
@@ -63,9 +61,9 @@
 						</div>
 
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5"
 						>
-							<div class="shrink-0 text-2xl max-sm:text-xl">🎯</div>
+							<div class="shrink-0 text-2xl">🎯</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Select Areas</strong>
 								<span class="text-xs leading-tight text-zinc-400">Choose specific regions for color extraction</span>
@@ -73,9 +71,9 @@
 						</div>
 
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5"
 						>
-							<div class="shrink-0 text-2xl max-sm:text-xl">🎨</div>
+							<div class="shrink-0 text-2xl">🎨</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Extract Colors</strong>
 								<span class="text-xs leading-tight text-zinc-400">Get perfect palettes instantly</span>
@@ -83,9 +81,9 @@
 						</div>
 
 						<div
-							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5 max-sm:gap-3 max-sm:p-3"
+							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5"
 						>
-							<div class="shrink-0 text-2xl max-sm:text-xl">💾</div>
+							<div class="shrink-0 text-2xl">💾</div>
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Save & Apply</strong>
 								<span class="text-xs leading-tight text-zinc-400">Save palettes and apply to new images</span>

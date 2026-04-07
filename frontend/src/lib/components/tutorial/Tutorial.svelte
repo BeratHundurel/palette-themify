@@ -214,16 +214,13 @@
 		{#if currentStep}
 			<div
 				bind:this={tooltipElement}
-				class={cn(
-					'pointer-events-auto absolute z-10002 max-w-90 min-w-75',
-					'max-md:right-[5vw]! max-md:left-[5vw]! max-md:max-w-[90vw] max-md:min-w-70'
-				)}
+				class="pointer-events-auto absolute z-10002 max-w-90 min-w-75"
 				style={Object.entries(tooltipStyles)
 					.map(([key, value]) => `${key}: ${value}`)
 					.join('; ')}
 				transition:fly={{ y: 20, duration: 300 }}
 			>
-				<div class="border-brand/50 rounded-xl border bg-zinc-900 p-6 max-md:p-5">
+				<div class="border-brand/50 rounded-xl border bg-zinc-900 p-6">
 					<div class="mb-4 flex items-center justify-between border-b border-zinc-600 pb-4">
 						<div class="flex gap-2">
 							{#each tutorialStore.state.steps as step, index (step.id)}
@@ -264,7 +261,7 @@
 					</div>
 
 					<div class="flex flex-col gap-4">
-						<div class="flex justify-between gap-3 max-md:flex-col">
+						<div class="flex justify-between gap-3">
 							{#if !isFirstStep}
 								<button
 									class={cn(

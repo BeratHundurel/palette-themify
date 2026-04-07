@@ -746,7 +746,7 @@ func renderGoogleAuthResultPage(c *gin.Context, title string, message string) {
     }
     body {
       margin: 0;
-      min-height: 100vh;
+      min-height: 100svh;
       display: grid;
       place-items: center;
       background: radial-gradient(circle at top, #1f2937, #0b1020 60%%);

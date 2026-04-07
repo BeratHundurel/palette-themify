@@ -91,20 +91,15 @@
 	bind:this={toolbarSection}
 >
 	<div
-		class={cn(
-			'border-brand/50 shadow-brand/20 rounded-xl border bg-zinc-900 shadow-2xl',
-			'hover:shadow-brand/40 hover:border-brand/50 hover:has-[.palette-dropdown-base]:border-brand/50 hover:has-[.palette-dropdown-base]:shadow-none',
-			'transition-[border-color,box-shadow] duration-300 ease-out',
-			'max-w-[90vw] sm:max-w-md lg:max-w-lg'
-		)}
+		class="border-brand/50 shadow-brand/20 hover:shadow-brand/40 hover:border-brand/50 hover:has-[.palette-dropdown-base]:border-brand/50 max-w-lg rounded-xl
+			border bg-zinc-900 shadow-2xl transition-[border-color,box-shadow]
+			duration-300 ease-out hover:has-[.palette-dropdown-base]:shadow-none"
 	>
 		<div
 			bind:this={dragHandle}
-			class={cn(
-				'flex cursor-move items-center justify-center rounded-t-xl border-b border-zinc-700/50 bg-zinc-800/30 px-4 py-2.5',
-				'hover:border-brand/50 hover:bg-zinc-800/50',
-				'transition-[background-color,border-color] duration-300 ease-out'
-			)}
+			class="hover:border-brand/50 flex cursor-move items-center justify-center rounded-t-xl border-b border-zinc-700/50 bg-zinc-800/30 px-4
+				py-2.5 transition-[background-color,border-color]
+				duration-300 ease-out hover:bg-zinc-800/50"
 		>
 			<div class="flex flex-col items-center gap-1.5">
 				<div

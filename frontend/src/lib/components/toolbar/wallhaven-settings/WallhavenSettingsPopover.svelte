@@ -33,7 +33,7 @@
 
 <div
 	class={cn(
-		'palette-dropdown-base animate-scale-in border-brand/50 shadow-brand/20 z-50 max-h-[80vh] w-80 max-w-[90vw] overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl',
+		'palette-dropdown-base animate-scale-in border-brand/50 shadow-brand/20 z-50 max-h-[80svh] w-80 max-w-[90vw] overflow-hidden rounded-xl border bg-zinc-900 shadow-2xl',
 		popoverStore.state.direction === 'right' ? 'left-full ml-2' : 'right-full mr-2'
 	)}
 	style={popoverStore.state.direction === 'right' ? 'left: calc(100% + 0.5rem);' : 'right: calc(100% + 0.5rem);'}

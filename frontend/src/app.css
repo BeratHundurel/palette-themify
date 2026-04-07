@@ -75,6 +75,6 @@ body {
 
 .desktop-app-content {
 	padding-top: 46px;
-	height: 100vh;
+	height: 100svh;
 	overflow: hidden;
 }

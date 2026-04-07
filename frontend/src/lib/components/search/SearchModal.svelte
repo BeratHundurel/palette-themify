@@ -153,7 +153,7 @@
 		}}
 	>
 		<div
-			class="animate-scale-in border-brand/50 shadow-brand/20 relative w-full max-w-2xl rounded-xl border bg-zinc-900 shadow-2xl md:max-w-3xl lg:max-w-4xl"
+			class="animate-scale-in border-brand/50 shadow-brand/20 relative w-full max-w-4xl rounded-xl border bg-zinc-900 shadow-2xl xl:max-w-5xl"
 			role="dialog"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
@@ -200,7 +200,7 @@
 				</div>
 			</div>
 
-			<div class="custom-scrollbar max-h-[75vh] overflow-auto px-6 py-6" bind:this={scrollEl} onscroll={handleScroll}>
+			<div class="custom-scrollbar max-h-[75svh] overflow-auto px-6 py-6" bind:this={scrollEl} onscroll={handleScroll}>
 				{#if isSearching}
 					<div class="flex flex-col items-center py-12">
 						<div

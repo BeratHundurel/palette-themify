@@ -39,8 +39,8 @@
 	<div class="absolute top-0 left-0 z-10 h-full w-full bg-black/60"></div>
 
 	<div class="z-40 h-max w-full p-4">
-		<div class="flex flex-row items-center justify-between gap-2 sm:gap-4">
-			<div class="flex shrink-0 items-center gap-2 sm:gap-4">
+		<div class="flex flex-row items-center justify-between gap-4">
+			<div class="flex shrink-0 items-center gap-4">
 				<TutorialButton />
 			</div>
 
@@ -48,13 +48,13 @@
 				<Search />
 			</div>
 
-			<div class="flex shrink-0 items-center gap-2 sm:gap-4">
+			<div class="flex shrink-0 items-center gap-4">
 				{#if authStore.state.isAuthenticated}
 					<UserProfile />
 				{:else}
 					<button
 						onclick={() => (showAuthModal = true)}
-						class="border-brand/50 hover:shadow-brand-lg flex w-28 cursor-pointer items-center justify-center gap-2 rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow,color] duration-300 sm:w-32"
+						class="border-brand/50 hover:shadow-brand-lg flex w-32 cursor-pointer items-center justify-center gap-2 rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow,color] duration-300"
 					>
 						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
