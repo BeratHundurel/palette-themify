@@ -123,6 +123,16 @@ func setupThemeRouter() *gin.Engine {
 	return router
 }
 
+func setupPreferencesRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	authGroup := router.Group("/auth")
+	authGroup.Use(authpkg.AuthMiddleware())
+	authGroup.GET("/preferences", GetPreferencesHandler)
+	authGroup.PUT("/preferences", SavePreferencesHandler)
+	return router
+}
+
 func buildThemePayload(name string, editorType string, signature string) map[string]any {
 	return map[string]any{
 		"id":                   "local_123",
@@ -443,4 +453,422 @@ func TestDeleteThemeHandler_RemovesTheme(t *testing.T) {
 		t.Fatalf("count themes: %v", err)
 	}
 	assert.Equal(t, int64(0), count)
+}
+
+func TestDeletePaletteHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupPaletteRouter()
+	router.DELETE("/palettes/:id", DeletePaletteHandler)
+
+	req := httptest.NewRequest("DELETE", "/palettes/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestDeletePaletteHandler_Success(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	if err := saveUserPalette(user.ID, "To Delete", []model.Color{{Hex: "#FF0000"}}); err != nil {
+		t.Fatalf("save palette: %v", err)
+	}
+
+	var saved model.Palette
+	if err := db.DB.Where("user_id = ?", user.ID).First(&saved).Error; err != nil {
+		t.Fatalf("load saved palette: %v", err)
+	}
+
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	router.DELETE("/palettes/:id", DeletePaletteHandler)
+
+	req := httptest.NewRequest("DELETE", "/palettes/"+fmt.Sprintf("%d", saved.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var count int64
+	if err := db.DB.Model(&model.Palette{}).Count(&count).Error; err != nil {
+		t.Fatalf("count palettes: %v", err)
+	}
+	assert.Equal(t, int64(0), count)
+}
+
+func TestDeletePaletteHandler_InvalidID(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	router.DELETE("/palettes/:id", DeletePaletteHandler)
+
+	req := httptest.NewRequest("DELETE", "/palettes/99999", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestDeletePaletteHandler_CannotDeleteOtherUsersPalette(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user1 := createTestUser(t)
+	if err := saveUserPalette(user1.ID, "User1 Palette", []model.Color{{Hex: "#FF0000"}}); err != nil {
+		t.Fatalf("save palette: %v", err)
+	}
+
+	var palette model.Palette
+	if err := db.DB.Where("user_id = ?", user1.ID).First(&palette).Error; err != nil {
+		t.Fatalf("load palette: %v", err)
+	}
+
+	user2 := model.User{
+		Name:         "User 2",
+		Email:        "user2@example.com",
+		PasswordHash: "hash",
+	}
+	if err := db.DB.Create(&user2).Error; err != nil {
+		t.Fatalf("create user2: %v", err)
+	}
+
+	token2, err := authpkg.GenerateJWTToken(user2)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	router.DELETE("/palettes/:id", DeletePaletteHandler)
+
+	req := httptest.NewRequest("DELETE", "/palettes/"+fmt.Sprintf("%d", palette.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+token2)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	var count int64
+	if err := db.DB.Model(&model.Palette{}).Count(&count).Error; err != nil {
+		t.Fatalf("count palettes: %v", err)
+	}
+	assert.Equal(t, int64(1), count, "Palette should not be deleted")
+}
+
+func TestDeleteThemeHandler_CannotDeleteOtherUsersTheme(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user1 := createTestUser(t)
+	theme1, _, err := saveUserTheme(user1.ID, "User1 Theme", "vscode", "sig-1", `{"name":"Theme"}`)
+	if err != nil {
+		t.Fatalf("save theme: %v", err)
+	}
+
+	user2 := model.User{
+		Name:         "User 2",
+		Email:        "user2@example.com",
+		PasswordHash: "hash",
+	}
+	if err := db.DB.Create(&user2).Error; err != nil {
+		t.Fatalf("create user2: %v", err)
+	}
+
+	token2, err := authpkg.GenerateJWTToken(user2)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	req := httptest.NewRequest("DELETE", "/themes/"+fmt.Sprintf("%d", theme1.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+token2)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	var count int64
+	if err := db.DB.Model(&model.Theme{}).Count(&count).Error; err != nil {
+		t.Fatalf("count themes: %v", err)
+	}
+	assert.Equal(t, int64(1), count, "Theme should not be deleted")
+}
+
+func TestGetPreferencesHandler_NoPreferences(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPreferencesRouter()
+
+	req := httptest.NewRequest("GET", "/auth/preferences", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	assert.Nil(t, resp["preferences"])
+}
+
+func TestSavePreferencesHandler_CreateNew(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPreferencesRouter()
+
+	prefsPayload := map[string]any{
+		"theme":    "dark",
+		"language": "en",
+	}
+	body, err := json.Marshal(prefsPayload)
+	if err != nil {
+		t.Fatalf("marshal preferences: %v", err)
+	}
+
+	req := httptest.NewRequest("PUT", "/auth/preferences", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp PreferencesResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	var savedPrefs map[string]any
+	if err := json.Unmarshal(resp.Preferences, &savedPrefs); err != nil {
+		t.Fatalf("decode preferences: %v", err)
+	}
+	assert.Equal(t, "dark", savedPrefs["theme"])
+	assert.Equal(t, "en", savedPrefs["language"])
+}
+
+func TestSavePreferencesHandler_UpdateExisting(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	initialPrefs := model.UserPreferences{
+		UserID:   user.ID,
+		JsonData: `{"theme":"light"}`,
+	}
+	if err := db.DB.Create(&initialPrefs).Error; err != nil {
+		t.Fatalf("create initial preferences: %v", err)
+	}
+
+	router := setupPreferencesRouter()
+
+	updatedPayload := map[string]any{
+		"theme":    "dark",
+		"language": "es",
+	}
+	body, err := json.Marshal(updatedPayload)
+	if err != nil {
+		t.Fatalf("marshal preferences: %v", err)
+	}
+
+	req := httptest.NewRequest("PUT", "/auth/preferences", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp PreferencesResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	var savedPrefs map[string]any
+	if err := json.Unmarshal(resp.Preferences, &savedPrefs); err != nil {
+		t.Fatalf("decode preferences: %v", err)
+	}
+	assert.Equal(t, "dark", savedPrefs["theme"])
+	assert.Equal(t, "es", savedPrefs["language"])
+}
+
+func TestGetPreferencesHandler_ReturnsExisting(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	prefs := model.UserPreferences{
+		UserID:   user.ID,
+		JsonData: `{"theme":"dark","language":"fr"}`,
+	}
+	if err := db.DB.Create(&prefs).Error; err != nil {
+		t.Fatalf("create preferences: %v", err)
+	}
+
+	router := setupPreferencesRouter()
+
+	req := httptest.NewRequest("GET", "/auth/preferences", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp PreferencesResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	var savedPrefs map[string]any
+	if err := json.Unmarshal(resp.Preferences, &savedPrefs); err != nil {
+		t.Fatalf("decode preferences: %v", err)
+	}
+	assert.Equal(t, "dark", savedPrefs["theme"])
+	assert.Equal(t, "fr", savedPrefs["language"])
+}
+
+func TestPreferencesHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupPreferencesRouter()
+
+	t.Run("GetRequiresAuth", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/preferences", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("SaveRequiresAuth", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"theme": "dark"})
+		req := httptest.NewRequest("PUT", "/auth/preferences", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+}
+
+func TestSavePaletteHandler_InvalidJSON(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+
+	req := httptest.NewRequest("POST", "/palettes", strings.NewReader("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSaveThemeHandler_InvalidJSON(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	req := httptest.NewRequest("POST", "/themes", strings.NewReader("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdateThemeHandler_NotFound(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	payload := buildThemePayload("Theme", "vscode", "sig-1")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal theme: %v", err)
+	}
+
+	req := httptest.NewRequest("PUT", "/themes/99999", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

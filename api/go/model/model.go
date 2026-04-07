@@ -8,7 +8,7 @@ type Color struct {
 
 type User struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
-	Name         string    `json:"name" gorm:"size:255;not null"`
+	Name         string    `json:"name" gorm:"size:255;not null;uniqueIndex"`
 	Email        string    `json:"email" gorm:"size:255;uniqueIndex;not null"`
 	PasswordHash string    `json:"-" gorm:"size:255;not null"`
 	GoogleID     string    `json:"googleId" gorm:"size:255;index"`

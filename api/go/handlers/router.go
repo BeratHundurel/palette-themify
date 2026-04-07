@@ -25,6 +25,7 @@ func NewRouter() *gin.Engine {
 	router.POST("/auth/login", auth.LoginHandler)
 	router.GET("/auth/google", auth.GoogleLoginHandler)
 	router.GET("/auth/google/callback", auth.GoogleCallbackHandler)
+	router.GET("/auth/google/desktop/status", auth.GoogleDesktopStatusHandler)
 
 	authGroup := router.Group("/auth")
 	authGroup.Use(auth.AuthMiddleware())

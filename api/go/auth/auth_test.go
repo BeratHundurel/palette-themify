@@ -91,7 +91,7 @@ func createTestUser(t *testing.T) model.User {
 
 	user := model.User{
 		Name:         "Test User",
-		Email:        "test@example.com",
+		Email:        "test-user@local.image-to-palette",
 		PasswordHash: hash,
 	}
 
@@ -110,6 +110,7 @@ func setupAuthRouter() *gin.Engine {
 	authGroup := router.Group("/auth")
 	authGroup.Use(AuthMiddleware())
 	authGroup.GET("/me", GetMeHandler)
+	authGroup.POST("/change-password", ChangePasswordHandler)
 	return router
 }
 
@@ -128,8 +129,7 @@ func TestAuthRegisterLoginMeFlow(t *testing.T) {
 	router := setupAuthRouter()
 
 	registerBody, err := json.Marshal(RegisterRequest{
-		Name:     "Test User",
-		Email:    "auth@example.com",
+		Username: "auth-user",
 		Password: "password123",
 	})
 	if err != nil {
@@ -162,11 +162,11 @@ func TestAuthRegisterLoginMeFlow(t *testing.T) {
 		t.Fatalf("decode me response: %v", err)
 	}
 	if user, ok := meBody["user"]; ok {
-		assert.Equal(t, "auth@example.com", user.Email)
+		assert.Equal(t, "auth-user", user.Name)
 	}
 
 	loginBody, err := json.Marshal(LoginRequest{
-		Email:    "auth@example.com",
+		Username: "auth-user",
 		Password: "password123",
 	})
 	if err != nil {
@@ -193,13 +193,13 @@ func TestAuthLoginInvalidPassword(t *testing.T) {
 	resetTestDB(t)
 
 	user := createTestUser(t)
-	if err := db.DB.Model(&user).Update("email", "wrongpass@example.com").Error; err != nil {
-		t.Fatalf("update user email: %v", err)
+	if err := db.DB.Model(&user).Update("name", "wrongpassuser").Error; err != nil {
+		t.Fatalf("update user username: %v", err)
 	}
 
 	router := setupAuthRouter()
 	loginBody, err := json.Marshal(LoginRequest{
-		Email:    "wrongpass@example.com",
+		Username: "wrongpassuser",
 		Password: "not-the-right-password",
 	})
 	if err != nil {
@@ -212,4 +212,191 @@ func TestAuthLoginInvalidPassword(t *testing.T) {
 	router.ServeHTTP(loginResp, loginReq)
 
 	assert.Equal(t, http.StatusUnauthorized, loginResp.Code)
+}
+
+func TestChangePasswordHandler_Success(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupAuthRouter()
+
+	changePassBody, err := json.Marshal(map[string]string{
+		"current_password": "password123",
+		"new_password":     "newpassword456",
+	})
+	if err != nil {
+		t.Fatalf("marshal change password request: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/auth/change-password", bytes.NewReader(changePassBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var updatedUser model.User
+	if err := db.DB.First(&updatedUser, user.ID).Error; err != nil {
+		t.Fatalf("load updated user: %v", err)
+	}
+
+	assert.True(t, CheckPasswordHash("newpassword456", updatedUser.PasswordHash))
+}
+
+func TestChangePasswordHandler_WrongCurrentPassword(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupAuthRouter()
+
+	changePassBody, err := json.Marshal(map[string]string{
+		"current_password": "wrongpassword",
+		"new_password":     "newpassword456",
+	})
+	if err != nil {
+		t.Fatalf("marshal change password request: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/auth/change-password", bytes.NewReader(changePassBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestChangePasswordHandler_InvalidPayload(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupAuthRouter()
+
+	t.Run("MissingNewPassword", func(t *testing.T) {
+		changePassBody, _ := json.Marshal(map[string]string{
+			"current_password": "password123",
+		})
+
+		req := httptest.NewRequest("POST", "/auth/change-password", bytes.NewReader(changePassBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("TooShortNewPassword", func(t *testing.T) {
+		changePassBody, _ := json.Marshal(map[string]string{
+			"current_password": "password123",
+			"new_password":     "short",
+		})
+
+		req := httptest.NewRequest("POST", "/auth/change-password", bytes.NewReader(changePassBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func TestChangePasswordHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupAuthRouter()
+
+	changePassBody, _ := json.Marshal(map[string]string{
+		"current_password": "password123",
+		"new_password":     "newpassword456",
+	})
+
+	req := httptest.NewRequest("POST", "/auth/change-password", bytes.NewReader(changePassBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestAuthMiddleware_InvalidToken(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupAuthRouter()
+
+	t.Run("MalformedToken", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/me", nil)
+		req.Header.Set("Authorization", "Bearer invalid-token-format")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("MissingBearerPrefix", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/me", nil)
+		req.Header.Set("Authorization", "some-token")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("EmptyToken", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/me", nil)
+		req.Header.Set("Authorization", "Bearer ")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("NoAuthorizationHeader", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/me", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("TokenForNonexistentUser", func(t *testing.T) {
+		nonExistentUser := model.User{
+			ID:    99999,
+			Name:  "Nonexistent",
+			Email: "nonexistent@example.com",
+		}
+		token, err := GenerateJWTToken(nonExistentUser)
+		if err != nil {
+			t.Fatalf("generate token: %v", err)
+		}
+
+		req := httptest.NewRequest("GET", "/auth/me", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
 }
