@@ -416,7 +416,7 @@
 						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Appearance</h3>
 						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 					</div>
-					<div class="grid gap-4 grid-cols-2">
+					<div class="grid grid-cols-2 gap-4">
 						<button
 							type="button"
 							onclick={() => handleThemeAppearanceChange('dark')}
@@ -652,7 +652,7 @@
 						</div>
 					</div>
 
-					<div class="grid gap-2 grid-cols-2">
+					<div class="grid grid-cols-2 gap-2">
 						{#each overrideFields as field (field.key)}
 							{@const isModified = themeOverrides[field.key] != null}
 							{@const currentValue = getOverrideValue(field.key)}
