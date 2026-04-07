@@ -48,7 +48,7 @@ func TestParseThemePayload(t *testing.T) {
 
 	t.Run("rejects invalid json", func(t *testing.T) {
 		_, _, err := parseThemePayload([]byte("not-json"))
-		if err == nil || err.Error() != "Invalid theme payload" {
+		if err == nil || err.Error() != "invalid theme payload" {
 			t.Fatalf("expected invalid payload error, got %v", err)
 		}
 	})
@@ -62,17 +62,17 @@ func TestParseThemePayload(t *testing.T) {
 			{
 				name:        "missing name",
 				body:        `{"editorType":"vscode","signature":"sig"}`,
-				expectedErr: "Theme name is required",
+				expectedErr: "theme name is required",
 			},
 			{
 				name:        "missing editorType",
 				body:        `{"name":"Theme","signature":"sig"}`,
-				expectedErr: "Theme editor type is required",
+				expectedErr: "theme editor type is required",
 			},
 			{
 				name:        "missing signature",
 				body:        `{"name":"Theme","editorType":"vscode"}`,
-				expectedErr: "Theme signature is required",
+				expectedErr: "theme signature is required",
 			},
 		}
 
