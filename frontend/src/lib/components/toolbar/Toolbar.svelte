@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { cn } from '$lib/utils';
 	import CopyOptions from './copy-options/CopyOptions.svelte';
 	import SelectorButton from './SelectorButton.svelte';
@@ -17,35 +18,34 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 
 	// === Drag State ===
-	let right = $state(25);
-	let top = $state(100);
+	let right = $state(20);
+	let top = $state(80);
 	let moving = $state(false);
 	let dragHandle = $state<HTMLElement | undefined>(undefined);
 	let toolbarSection = $state<HTMLElement | undefined>(undefined);
-	let initialized = $state(false);
+	let isPositioned = $state(false);
 
-	// Initialize toolbar position intelligently based on viewport
-	$effect(() => {
-		if (toolbarSection && !initialized) {
-			initialized = true;
-			const rect = toolbarSection.getBoundingClientRect();
-			const viewportWidth = window.innerWidth;
-			const viewportHeight = window.innerHeight;
-
-			// Position toolbar with smart defaults:
-			// - Horizontally: 20px from right edge (or centered if viewport is narrow)
-			// - Vertically: Centered vertically in viewport
-			if (viewportWidth < 768) {
-				// On narrow viewports, center horizontally with small margin
-				right = Math.max(10, (viewportWidth - rect.width) / 2);
-			} else {
-				// On wider viewports, position on the right with margin
-				right = 20;
-			}
-
-			// Center vertically, accounting for toolbar height
-			top = Math.max(80, (viewportHeight - rect.height) / 2);
+	function setInitialPosition() {
+		if (!toolbarSection || isPositioned) {
+			return;
 		}
+
+		const rect = toolbarSection.getBoundingClientRect();
+		const viewportWidth = window.innerWidth;
+		const viewportHeight = window.innerHeight;
+
+		if (viewportWidth < 768) {
+			right = Math.max(10, (viewportWidth - rect.width) / 2);
+		} else {
+			right = 20;
+		}
+
+		top = Math.max(80, (viewportHeight - rect.height) / 2);
+		isPositioned = true;
+	}
+
+	onMount(() => {
+		setInitialPosition();
 	});
 
 	function handleMouseDown(e: MouseEvent) {
@@ -86,7 +86,7 @@
 	role="toolbar"
 	tabindex="0"
 	onmousedown={handleMouseDown}
-	style="right: {right}px; top: {top}px;"
+	style="right: {right}px; top: {top}px; visibility: {isPositioned ? 'visible' : 'hidden'};"
 	class={cn('fixed select-none', moving ? 'cursor-move **:pointer-events-none' : '')}
 	bind:this={toolbarSection}
 >
