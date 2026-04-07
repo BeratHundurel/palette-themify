@@ -144,7 +144,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 flex items-start justify-center bg-black/80 px-6 pt-20 pb-6"
+		class="fixed inset-0 flex items-start justify-center bg-black/80 px-6 pt-16 pb-6"
 		role="button"
 		tabindex="0"
 		onclick={close}
