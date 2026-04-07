@@ -23,12 +23,20 @@ function resolveAppTarget(): AppTarget {
 		return 'desktop';
 	}
 
+	if (import.meta.env.VITE_APP_TARGET === 'web') {
+		return 'web';
+	}
+
 	if (typeof window !== 'undefined') {
 		if (window.__IMAGE_TO_PALETTE_DESKTOP__) {
 			return 'desktop';
 		}
 
-		if (window.go || window['image-to-palette']) {
+		if (window._wails?.loadWailsJS) {
+			return 'desktop';
+		}
+
+		if (resolveWindowWailsBridge()) {
 			return 'desktop';
 		}
 	}
