@@ -121,14 +121,7 @@ fn generateOverridable(ctx: *tk.Context, allocator: std.mem.Allocator) anyerror!
 }
 
 pub fn main() !void {
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    defer {
-        const deinit_status = gpa.deinit();
-        if (deinit_status == .leak) {
-            std.log.err("memory leak", .{});
-        }
-    }
-    const allocator = gpa.allocator();
+    const allocator = std.heap.smp_allocator;
 
     std.log.info("Zig Palette API starting on http://localhost:{d}", .{PORT});
 

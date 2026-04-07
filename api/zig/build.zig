@@ -3,7 +3,7 @@ const tokamak = @import("tokamak");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    const optimize: std.builtin.OptimizeMode = .ReleaseFast;
 
     const mod = b.addModule("palette_themify_api", .{
         .root_source_file = b.path("src/root.zig"),

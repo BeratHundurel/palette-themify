@@ -35,6 +35,27 @@ pub const ColorAndCount = struct {
     }
 };
 
+const QuantizedColorAndCount = struct {
+    r: u8,
+    g: u8,
+    b: u8,
+    count: usize,
+
+    fn similar(self: QuantizedColorAndCount, r: u8, g: u8, b: u8) bool {
+        return absDiffU8(self.r, r) <= 25 and
+            absDiffU8(self.g, g) <= 25 and
+            absDiffU8(self.b, b) <= 25;
+    }
+
+    fn lessThan(_: void, a: QuantizedColorAndCount, b: QuantizedColorAndCount) bool {
+        return a.count > b.count;
+    }
+};
+
+inline fn absDiffU8(a: u8, b: u8) u8 {
+    return if (a >= b) a - b else b - a;
+}
+
 pub const PaletteResult = struct {
     colors: [][]const u8,
     allocator: std.mem.Allocator,
@@ -60,6 +81,121 @@ pub fn extractPaletteFromBytes(
 }
 
 fn processImage(
+    allocator: std.mem.Allocator,
+    img: *zigimg.Image,
+) ExtractError!PaletteResult {
+    return switch (img.pixels) {
+        .rgb24 => |pixels| processRgb24Pixels(allocator, pixels),
+        .rgba32 => |pixels| processRgba32Pixels(allocator, pixels),
+        else => processImageGeneric(allocator, img),
+    };
+}
+
+fn processRgb24Pixels(
+    allocator: std.mem.Allocator,
+    pixels: []const zigimg.color.Rgb24,
+) ExtractError!PaletteResult {
+    var color_map = std.ArrayList(QuantizedColorAndCount){};
+    defer color_map.deinit(allocator);
+    color_map.ensureTotalCapacity(allocator, 512) catch return ExtractError.OutOfMemory;
+
+    for (pixels) |pixel| {
+        var found = false;
+        for (color_map.items) |*item| {
+            if (item.similar(pixel.r, pixel.g, pixel.b)) {
+                item.count += 1;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            color_map.append(allocator, .{
+                .r = pixel.r,
+                .g = pixel.g,
+                .b = pixel.b,
+                .count = 1,
+            }) catch return ExtractError.OutOfMemory;
+        }
+    }
+
+    if (color_map.items.len == 0) {
+        return ExtractError.NoColors;
+    }
+
+    std.mem.sort(QuantizedColorAndCount, color_map.items, {}, QuantizedColorAndCount.lessThan);
+
+    const num_colors = @min(20, color_map.items.len);
+    const colors = allocator.alloc([]const u8, num_colors) catch return ExtractError.OutOfMemory;
+    errdefer {
+        for (colors) |c| {
+            allocator.free(c);
+        }
+        allocator.free(colors);
+    }
+
+    for (0..num_colors) |i| {
+        const c = color_map.items[i];
+        colors[i] = color_utils.rgbToHexAlloc(allocator, c.r, c.g, c.b) catch return ExtractError.OutOfMemory;
+    }
+
+    return PaletteResult{ .colors = colors, .allocator = allocator };
+}
+
+fn processRgba32Pixels(
+    allocator: std.mem.Allocator,
+    pixels: []const zigimg.color.Rgba32,
+) ExtractError!PaletteResult {
+    var color_map = std.ArrayList(QuantizedColorAndCount){};
+    defer color_map.deinit(allocator);
+    color_map.ensureTotalCapacity(allocator, 512) catch return ExtractError.OutOfMemory;
+
+    for (pixels) |pixel| {
+        if (pixel.a <= 2) continue;
+
+        var found = false;
+        for (color_map.items) |*item| {
+            if (item.similar(pixel.r, pixel.g, pixel.b)) {
+                item.count += 1;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            color_map.append(allocator, .{
+                .r = pixel.r,
+                .g = pixel.g,
+                .b = pixel.b,
+                .count = 1,
+            }) catch return ExtractError.OutOfMemory;
+        }
+    }
+
+    if (color_map.items.len == 0) {
+        return ExtractError.NoColors;
+    }
+
+    std.mem.sort(QuantizedColorAndCount, color_map.items, {}, QuantizedColorAndCount.lessThan);
+
+    const num_colors = @min(20, color_map.items.len);
+    const colors = allocator.alloc([]const u8, num_colors) catch return ExtractError.OutOfMemory;
+    errdefer {
+        for (colors) |c| {
+            allocator.free(c);
+        }
+        allocator.free(colors);
+    }
+
+    for (0..num_colors) |i| {
+        const c = color_map.items[i];
+        colors[i] = color_utils.rgbToHexAlloc(allocator, c.r, c.g, c.b) catch return ExtractError.OutOfMemory;
+    }
+
+    return PaletteResult{ .colors = colors, .allocator = allocator };
+}
+
+fn processImageGeneric(
     allocator: std.mem.Allocator,
     img: *zigimg.Image,
 ) ExtractError!PaletteResult {
@@ -115,7 +251,6 @@ fn processImage(
 }
 
 pub const ThemeType = theme_common.ThemeType;
-
 pub const ThemeAppearance = theme_common.ThemeAppearance;
 
 pub fn returnThemeJson(
