@@ -20,10 +20,6 @@ type GetThemesResponse struct {
 	Themes []json.RawMessage `json:"themes"`
 }
 
-type saveThemeRequest struct {
-	Name string `json:"name"`
-}
-
 type themePayload struct {
 	Name       string
 	EditorType string
@@ -270,7 +266,7 @@ func deleteUserTheme(userID uint, themeID string) error {
 func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
 	var payload map[string]any
 	if err := json.Unmarshal(body, &payload); err != nil {
-		return nil, themePayload{}, fmt.Errorf("Invalid theme payload")
+		return nil, themePayload{}, fmt.Errorf("invalid theme payload")
 	}
 
 	name, _ := payload["name"].(string)
@@ -278,13 +274,13 @@ func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
 	signature, _ := payload["signature"].(string)
 
 	if name == "" {
-		return nil, themePayload{}, fmt.Errorf("Theme name is required")
+		return nil, themePayload{}, fmt.Errorf("theme name is required")
 	}
 	if editorType == "" {
-		return nil, themePayload{}, fmt.Errorf("Theme editor type is required")
+		return nil, themePayload{}, fmt.Errorf("theme editor type is required")
 	}
 	if signature == "" {
-		return nil, themePayload{}, fmt.Errorf("Theme signature is required")
+		return nil, themePayload{}, fmt.Errorf("theme signature is required")
 	}
 
 	signature = normalizeThemeSignature(signature)

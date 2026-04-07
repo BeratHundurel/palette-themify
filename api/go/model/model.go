@@ -32,8 +32,8 @@ type Palette struct {
 
 type Theme struct {
 	ID         uint      `json:"id" gorm:"primaryKey"`
-	UserID     *uint     `json:"userId" gorm:"index;uniqueIndex:idx_user_theme_signature"`
 	User       *User     `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	UserID     *uint     `json:"userId" gorm:"index;uniqueIndex:idx_user_theme_signature"`
 	Name       string    `json:"name" gorm:"size:255;not null"`
 	EditorType string    `json:"editorType" gorm:"size:20;uniqueIndex:idx_user_theme_signature"`
 	Signature  string    `json:"signature" gorm:"size:128;uniqueIndex:idx_user_theme_signature"`
@@ -44,8 +44,8 @@ type Theme struct {
 
 type UserPreferences struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    uint      `json:"userId" gorm:"uniqueIndex"`
 	User      *User     `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	UserID    uint      `json:"userId" gorm:"uniqueIndex"`
 	JsonData  string    `json:"jsonData" gorm:"type:jsonb;not null"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
