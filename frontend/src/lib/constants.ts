@@ -40,20 +40,6 @@ export const TUTORIAL_APPLY_PALETTE = [
 ];
 
 /**
- * Desktop viewport breakpoints (mobile not supported)
- * - SM: Small desktop (1024px) - tablets in landscape, small laptops
- * - MD: Medium desktop (1440px) - standard monitors
- * - LG: Large desktop (1920px) - full HD displays
- * - XL: Extra large desktop (2560px) - 2K/4K displays
- */
-export const DESKTOP_BREAKPOINTS = {
-	SM: 1024,
-	MD: 1440,
-	LG: 1920,
-	XL: 2560
-} as const;
-
-/**
  * Responsive canvas sizing
  * Returns the appropriate max width for the canvas based on viewport
  */
