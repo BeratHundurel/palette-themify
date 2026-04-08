@@ -11,10 +11,11 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"prepare": "svelte-kit sync || echo '' && husky ../.husky",
+		"prepare": "husky",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
+		"format:staged": "prettier --write --ignore-unknown",
 		"lint": "prettier --check . && eslint ."
 	},
 	"devDependencies": {

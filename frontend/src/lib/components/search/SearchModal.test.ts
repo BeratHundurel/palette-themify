@@ -6,7 +6,7 @@ import type { WallhavenSearchResponse } from '$lib/types/wallhaven';
 
 import SearchModal from './SearchModal.svelte';
 import { searchWallhaven } from '$lib/api/wallhaven';
-        import { SEARCH_DEBOUNCE_MS } from './search';
+import { SEARCH_DEBOUNCE_MS } from './search';
 
 vi.mock('$lib/api/wallhaven', () => ({
 	searchWallhaven: vi.fn()
