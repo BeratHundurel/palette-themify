@@ -59,9 +59,7 @@
 		onclick={appStore.triggerFileSelect}
 		class={cn(
 			'group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-[background-color,border-color] duration-300',
-			isDragOver
-				? 'border-white bg-white/25'
-				: 'border-white/50 bg-white/10 hover:border-white hover:bg-white/20'
+			isDragOver ? 'border-white bg-white/25' : 'border-white/50 bg-white/10 hover:border-white hover:bg-white/20'
 		)}
 		aria-label="Upload an image or drag and drop it here"
 	>
