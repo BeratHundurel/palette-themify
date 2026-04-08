@@ -6,6 +6,7 @@
 		createInitialSearchState,
 		dedupeResults,
 		getSearchLastPage,
+		getWallhavenSettingsSignature,
 		getTotalResults,
 		handleSearchQuery,
 		hasAnyResults,
@@ -20,6 +21,7 @@
 
 	// modal ui state
 	let lastQuery = $state('');
+	let lastSettingsSignature = $state('');
 	let lastScrollTop = $state(0);
 	let scrollEl = $state<HTMLDivElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
@@ -35,6 +37,7 @@
 	let latestSearchRequestId = initialSearchState.latestSearchRequestId;
 
 	const normalizedQuery = $derived(normalizeSearchQuery(appStore.state.searchQuery));
+	const currentSettingsSignature = $derived(getWallhavenSettingsSignature(appStore.state.wallhavenSettings));
 	const showEmptyState = $derived(pages.length === 0 || !hasAnyResults(pages));
 
 	function snapshotSearchState(): SearchState {
@@ -105,6 +108,7 @@
 		}
 
 		try {
+			lastSettingsSignature = currentSettingsSignature;
 			const res = await searchWallhaven(appStore.state.wallhavenSettings, normalized, requestedPage);
 			if (requestId !== latestSearchRequestId) return;
 
@@ -175,8 +179,9 @@
 		}
 	}
 
-	function scheduleSearchIfQueryChanged() {
-		if (lastQuery !== normalizedQuery) {
+	function scheduleSearchIfNeeded() {
+		const settingsChangedSinceLastSearch = lastSettingsSignature !== currentSettingsSignature;
+		if (lastQuery !== normalizedQuery || (settingsChangedSinceLastSearch && normalizedQuery.length > 0)) {
 			scheduleSearch(appStore.state.searchQuery);
 		}
 	}
@@ -222,8 +227,8 @@
 						type="text"
 						bind:this={inputEl}
 						bind:value={appStore.state.searchQuery}
-						onchange={scheduleSearchIfQueryChanged}
-						onfocus={scheduleSearchIfQueryChanged}
+						onchange={scheduleSearchIfNeeded}
+						onfocus={scheduleSearchIfNeeded}
 						oninput={() => scheduleSearch(appStore.state.searchQuery)}
 						placeholder="Search wallpapers..."
 						class="text-md w-full rounded border-none bg-zinc-800/75 p-4 font-light text-zinc-100 placeholder-zinc-500 transition-[background-color,box-shadow,color] duration-300 outline-none"

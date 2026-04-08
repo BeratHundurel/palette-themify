@@ -1,4 +1,4 @@
-import type { WallhavenResult } from '$lib/types/wallhaven';
+import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 
 export type PageResult = {
 	page: number;
@@ -15,7 +15,7 @@ export type SearchState = {
 	latestSearchRequestId: number;
 };
 
-export const SEARCH_DEBOUNCE_MS = 750;
+export const SEARCH_DEBOUNCE_MS = 400;
 export const SEARCH_SCROLL_THRESHOLD_PX = 300;
 
 export function normalizeSearchQuery(query: string): string {
@@ -76,4 +76,16 @@ export function getTotalResults(pages: PageResult[]): number {
 
 export function hasAnyResults(pages: PageResult[]): boolean {
 	return pages.some((resultPage) => resultPage.items.length > 0);
+}
+
+export function getWallhavenSettingsSignature(settings: WallhavenSettings): string {
+	return [
+		settings.categories,
+		settings.purity,
+		settings.sorting,
+		settings.order,
+		settings.topRange,
+		settings.apikey,
+		settings.ratios.join(',')
+	].join('|');
 }

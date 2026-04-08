@@ -269,4 +269,29 @@ describe('SearchModal', () => {
 		expect(searchWallhavenMock).toHaveBeenCalledTimes(1);
 		expect(screen.getByText("You've reached the end of the results")).toBeInTheDocument();
 	});
+
+	it('re-runs search when settings changed while modal was closed', async () => {
+		searchWallhavenMock
+			.mockResolvedValueOnce(makeResponse(['initial-1'], 1, 1))
+			.mockResolvedValueOnce(makeResponse(['updated-1'], 1, 1));
+
+		const { rerender } = render(SearchModal, { isOpen: true });
+		const input = screen.getByPlaceholderText('Search wallpapers...');
+
+		await fireEvent.input(input, { target: { value: 'nature' } });
+		await vi.advanceTimersByTimeAsync(760);
+		await screen.findByText('1 result for "nature"');
+		expect(searchWallhavenMock).toHaveBeenCalledTimes(1);
+
+		await rerender({ isOpen: false });
+		appStore.state.wallhavenSettings.sorting = 'favorites';
+
+		await rerender({ isOpen: true });
+		const reopenedInput = screen.getByPlaceholderText('Search wallpapers...');
+		await fireEvent.focus(reopenedInput);
+		await vi.advanceTimersByTimeAsync(760);
+
+		await waitFor(() => expect(searchWallhavenMock).toHaveBeenCalledTimes(2));
+		expect(searchWallhavenMock).toHaveBeenNthCalledWith(2, appStore.state.wallhavenSettings, 'nature', 1);
+	});
 });
