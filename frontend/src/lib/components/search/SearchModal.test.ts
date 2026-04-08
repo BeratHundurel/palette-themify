@@ -6,6 +6,7 @@ import type { WallhavenSearchResponse } from '$lib/types/wallhaven';
 
 import SearchModal from './SearchModal.svelte';
 import { searchWallhaven } from '$lib/api/wallhaven';
+        import { SEARCH_DEBOUNCE_MS } from './search';
 
 vi.mock('$lib/api/wallhaven', () => ({
 	searchWallhaven: vi.fn()
@@ -18,6 +19,7 @@ vi.mock('svelte-french-toast', () => ({
 }));
 
 const searchWallhavenMock = vi.mocked(searchWallhaven);
+const AFTER_DEBOUNCE_MS = SEARCH_DEBOUNCE_MS + 1;
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;
@@ -65,10 +67,10 @@ describe('SearchModal', () => {
 		await fireEvent.input(input, { target: { value: 'na' } });
 		await fireEvent.input(input, { target: { value: 'nature' } });
 
-		await vi.advanceTimersByTimeAsync(740);
+		await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS - 1);
 		expect(searchWallhavenMock).not.toHaveBeenCalled();
 
-		await vi.advanceTimersByTimeAsync(15);
+		await vi.advanceTimersByTimeAsync(2);
 		await waitFor(() => expect(searchWallhavenMock).toHaveBeenCalledTimes(1));
 		expect(searchWallhavenMock).toHaveBeenCalledWith(appStore.state.wallhavenSettings, 'nature', 1);
 	});
@@ -86,7 +88,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'forest' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 
 		await screen.findByText('2 results for "forest"');
 
@@ -125,7 +127,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'forest' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 		await screen.findByText('2 results for "forest"');
 
 		const scroller = container.querySelector('.custom-scrollbar') as HTMLDivElement;
@@ -140,7 +142,7 @@ describe('SearchModal', () => {
 
 		expect(searchWallhavenMock).toHaveBeenCalledTimes(1);
 
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 		await waitFor(() => expect(searchWallhavenMock).toHaveBeenCalledTimes(2));
 		expect(searchWallhavenMock).toHaveBeenNthCalledWith(2, appStore.state.wallhavenSettings, 'desert', 1);
 	});
@@ -154,7 +156,7 @@ describe('SearchModal', () => {
 		await fireEvent.input(input, { target: { value: 'cancel-me' } });
 		await fireEvent.click(screen.getByLabelText('Close search'));
 
-		await vi.advanceTimersByTimeAsync(800);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS + 100);
 		expect(searchWallhavenMock).not.toHaveBeenCalled();
 	});
 
@@ -167,7 +169,7 @@ describe('SearchModal', () => {
 		await fireEvent.input(input, { target: { value: 'to-clear' } });
 		await fireEvent.input(input, { target: { value: '' } });
 
-		await vi.advanceTimersByTimeAsync(800);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS + 100);
 		expect(searchWallhavenMock).not.toHaveBeenCalled();
 	});
 
@@ -181,11 +183,11 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'old' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 		await waitFor(() => expect(searchWallhavenMock).toHaveBeenCalledTimes(1));
 
 		await fireEvent.input(input, { target: { value: 'new' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 		await waitFor(() => expect(searchWallhavenMock).toHaveBeenCalledTimes(2));
 		await screen.findByText('2 results for "new"');
 
@@ -205,7 +207,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'pick' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 
 		const resultThumb = await screen.findByAltText('wallpaper thumb');
 		await fireEvent.click(resultThumb.closest('button') as HTMLButtonElement);
@@ -225,7 +227,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'impossible-query' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 
 		await screen.findByText('No results found');
 		expect(screen.getByText('Try adjusting your search terms')).toBeInTheDocument();
@@ -239,7 +241,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'failure-case' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 
 		await screen.findByText('No results found');
 		expect(screen.getByText('Try adjusting your search terms')).toBeInTheDocument();
@@ -253,7 +255,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'final-page' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 		await screen.findByText('2 results for "final-page"');
 
 		const scroller = container.querySelector('.custom-scrollbar') as HTMLDivElement;
@@ -279,7 +281,7 @@ describe('SearchModal', () => {
 		const input = screen.getByPlaceholderText('Search wallpapers...');
 
 		await fireEvent.input(input, { target: { value: 'nature' } });
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 		await screen.findByText('1 result for "nature"');
 		expect(searchWallhavenMock).toHaveBeenCalledTimes(1);
 
@@ -289,7 +291,7 @@ describe('SearchModal', () => {
 		await rerender({ isOpen: true });
 		const reopenedInput = screen.getByPlaceholderText('Search wallpapers...');
 		await fireEvent.focus(reopenedInput);
-		await vi.advanceTimersByTimeAsync(760);
+		await vi.advanceTimersByTimeAsync(AFTER_DEBOUNCE_MS);
 
 		await waitFor(() => expect(searchWallhavenMock).toHaveBeenCalledTimes(2));
 		expect(searchWallhavenMock).toHaveBeenNthCalledWith(2, appStore.state.wallhavenSettings, 'nature', 1);
