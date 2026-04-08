@@ -1,6 +1,46 @@
 <script lang="ts">
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { cn } from '$lib/utils';
+
+	let dragDepth = $state(0);
+	let isDragOver = $state(false);
+
+	function handleDragEnter() {
+		dragDepth += 1;
+		isDragOver = true;
+	}
+
+	function handleDragLeave() {
+		dragDepth = Math.max(0, dragDepth - 1);
+		if (dragDepth === 0) {
+			isDragOver = false;
+		}
+	}
+
+	function handleDrop(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		dragDepth = 0;
+		isDragOver = false;
+		void appStore.handleDrop(event);
+	}
+
+	function handleDragOver(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
+
+	function handleDragEnterEvent(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		handleDragEnter();
+	}
+
+	function handleDragLeaveEvent(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		handleDragLeave();
+	}
 </script>
 
 <section
@@ -12,12 +52,17 @@
 >
 	<button
 		type="button"
-		ondrop={appStore.handleDrop}
-		ondragover={() => {}}
-		ondragenter={() => {}}
-		ondragleave={() => {}}
+		ondrop={handleDrop}
+		ondragover={handleDragOver}
+		ondragenter={handleDragEnterEvent}
+		ondragleave={handleDragLeaveEvent}
 		onclick={appStore.triggerFileSelect}
-		class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/50 bg-white/10 p-12 transition-[background-color,border-color] duration-300 hover:border-white hover:bg-white/20"
+		class={cn(
+			'group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-[background-color,border-color] duration-300',
+			isDragOver
+				? 'border-white bg-white/25'
+				: 'border-white/50 bg-white/10 hover:border-white hover:bg-white/20'
+		)}
 		aria-label="Upload an image or drag and drop it here"
 	>
 		<svg
