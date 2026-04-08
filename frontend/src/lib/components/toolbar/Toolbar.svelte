@@ -87,7 +87,7 @@
 	tabindex="0"
 	onmousedown={handleMouseDown}
 	style="right: {right}px; top: {top}px; visibility: {isPositioned ? 'visible' : 'hidden'};"
-	class={cn('fixed select-none', moving ? 'cursor-move **:pointer-events-none' : '')}
+	class={cn('fixed z-50 select-none', moving ? 'cursor-move **:pointer-events-none' : '')}
 	bind:this={toolbarSection}
 >
 	<div

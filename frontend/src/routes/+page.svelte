@@ -71,14 +71,14 @@
 		</div>
 	</div>
 
+	<Toolbar />
+
 	<div class="relative z-30 flex h-full w-full flex-col items-center overflow-hidden">
 		<UploadOverlay />
 
 		<div class="flex flex-1 flex-col items-center justify-center">
 			<Canvas />
 		</div>
-
-		<Toolbar />
 
 		<div class="w-full pb-4">
 			<div class="flex w-full justify-center">
