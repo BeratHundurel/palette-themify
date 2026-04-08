@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { setAuthToken, getCurrentUser } from '$lib/api/auth';
 	import toast from 'svelte-french-toast';
 

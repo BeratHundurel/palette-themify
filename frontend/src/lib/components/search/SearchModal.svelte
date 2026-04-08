@@ -1,62 +1,118 @@
 <script lang="ts">
 	import { searchWallhaven } from '$lib/api/wallhaven';
-	import { appStore } from '$lib/stores/app.svelte';
-	import type { WallhavenResult } from '$lib/types/wallhaven';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import toast from 'svelte-french-toast';
+	import {
+		createInitialSearchState,
+		dedupeResults,
+		getSearchLastPage,
+		getTotalResults,
+		handleSearchQuery,
+		hasAnyResults,
+		normalizeSearchQuery,
+		SEARCH_DEBOUNCE_MS,
+		SEARCH_SCROLL_THRESHOLD_PX,
+		type SearchState,
+		type PageResult
+	} from './search';
 
 	let { isOpen = $bindable() } = $props();
 
-	let inputEl = $state<HTMLInputElement | null>(null);
-	let scrollEl = $state<HTMLDivElement | null>(null);
-	let lastScrollTop = $state(0);
+	// modal ui state
 	let lastQuery = $state('');
+	let lastScrollTop = $state(0);
+	let scrollEl = $state<HTMLDivElement | null>(null);
+	let inputEl = $state<HTMLInputElement | null>(null);
+	let searchTimer: number | null = null;
+
+	// search state
+	const initialSearchState = createInitialSearchState();
+	let pages = $state<PageResult[]>(initialSearchState.pages);
+	let page = $state(initialSearchState.page);
+	let hasMore = $state(initialSearchState.hasMore);
+	let isSearching = $state(initialSearchState.isSearching);
+	let loadingMore = $state(initialSearchState.loadingMore);
+	let latestSearchRequestId = initialSearchState.latestSearchRequestId;
+
+	const normalizedQuery = $derived(normalizeSearchQuery(appStore.state.searchQuery));
+	const showEmptyState = $derived(pages.length === 0 || !hasAnyResults(pages));
+
+	function snapshotSearchState(): SearchState {
+		return {
+			pages,
+			hasMore,
+			page,
+			lastQuery,
+			isSearching,
+			loadingMore,
+			latestSearchRequestId
+		};
+	}
+
+	function restoreSearchState(nextState: SearchState) {
+		pages = nextState.pages;
+		hasMore = nextState.hasMore;
+		page = nextState.page;
+		lastQuery = nextState.lastQuery;
+		isSearching = nextState.isSearching;
+		loadingMore = nextState.loadingMore;
+		latestSearchRequestId = nextState.latestSearchRequestId;
+	}
+
+	function cancelScheduledSearch() {
+		if (searchTimer === null) return;
+		clearTimeout(searchTimer);
+		searchTimer = null;
+	}
+
+	function closeModal() {
+		if (scrollEl) {
+			lastScrollTop = scrollEl.scrollTop;
+		}
+		cancelScheduledSearch();
+		isOpen = false;
+	}
+
+	function loadWallpaperForPalette(url: string | undefined) {
+		if (!url) return;
+		const toastId = toast.loading('Extracting palette...');
+		appStore.loadWallhavenImage(url, toastId);
+		closeModal();
+	}
 
 	$effect(() => {
 		if (isOpen && inputEl) {
 			inputEl.focus();
 		}
-	});
 
-	$effect(() => {
 		if (isOpen && scrollEl) {
 			scrollEl.scrollTop = lastScrollTop;
 		}
 	});
 
-	interface PageResult {
-		page: number;
-		items: WallhavenResult[];
-	}
-
-	let pages = $state<PageResult[]>([]);
-	let isSearching = $state(false);
-	let loadingMore = $state(false);
-	let page = $state(1);
-	let hasMore = $state(true);
-
-	async function performSearch(q: string, p = 1, append = false) {
-		if (!q) {
-			pages = [];
-			hasMore = true;
-			page = 1;
+	async function performSearch(query: string, requestedPage = 1, append = false) {
+		const normalized = normalizeSearchQuery(query);
+		if (!normalized) {
+			restoreSearchState(handleSearchQuery(normalized, snapshotSearchState()));
 			return;
 		}
 
-		if (p <= 1) {
+		const requestId = ++latestSearchRequestId;
+		if (requestedPage <= 1) {
 			isSearching = true;
 		} else {
 			loadingMore = true;
 		}
 
 		try {
-			const res = await searchWallhaven(appStore.state.wallhavenSettings, q, p);
+			const res = await searchWallhaven(appStore.state.wallhavenSettings, normalized, requestedPage);
+			if (requestId !== latestSearchRequestId) return;
 
 			const data = res.data || [];
 			if (append) {
-				const allExistingIds = new Set(pages.flatMap((page) => page.items).map((r) => r.id));
-				const newItems = data.filter((d) => !allExistingIds.has(d.id));
+				const newItems = dedupeResults(pages, data);
 				if (newItems.length > 0) {
-					pages = [...pages, { page: p, items: newItems }];
+					pages = [...pages, { page: requestedPage, items: newItems }];
 				} else {
 					hasMore = false;
 				}
@@ -64,81 +120,71 @@
 				pages = [{ page: 1, items: data }];
 			}
 
-			const meta = res.meta ?? {};
-			const lastPage =
-				typeof meta.last_page === 'number'
-					? meta.last_page
-					: typeof meta.per_page === 'number' && typeof meta.total === 'number'
-						? Math.ceil(meta.total / meta.per_page)
-						: null;
-
+			const lastPage = getSearchLastPage(res.meta ?? {});
 			if (hasMore) {
 				if (lastPage !== null) {
-					hasMore = p < lastPage;
+					hasMore = requestedPage < lastPage;
 				} else {
 					hasMore = data.length > 0;
 				}
 			}
-			page = p;
+			page = requestedPage;
+			lastQuery = normalized;
 		} catch {
+			if (requestId !== latestSearchRequestId) return;
 			if (!append) pages = [];
 			hasMore = false;
 		} finally {
-			isSearching = false;
-			loadingMore = false;
-			lastQuery = q;
+			if (requestId === latestSearchRequestId) {
+				isSearching = false;
+				loadingMore = false;
+			}
 		}
 	}
 
-	let _timer: number | null = null;
-
-	function scheduleSearch(q: string) {
+	function scheduleSearch(query: string) {
 		if (!isOpen) return;
+		cancelScheduledSearch();
 
-		if (_timer !== null) {
-			clearTimeout(_timer);
+		restoreSearchState(handleSearchQuery(query, snapshotSearchState()));
+		const normalized = normalizeSearchQuery(query);
+		if (!normalized) {
+			return;
 		}
 
-		_timer = window.setTimeout(() => {
+		searchTimer = window.setTimeout(() => {
 			page = 1;
 			hasMore = true;
-			performSearch(q.trim(), 1, false);
-			_timer = null;
-		}, 750);
+			void performSearch(normalized, 1, false);
+			searchTimer = null;
+		}, SEARCH_DEBOUNCE_MS);
 	}
 
 	async function loadMore() {
-		if (isSearching || loadingMore || !hasMore) return;
+		if (isSearching || loadingMore || !hasMore || searchTimer !== null) return;
 		const next = page + 1;
-		await performSearch(appStore.state.searchQuery, next, true);
+		await performSearch(lastQuery || appStore.state.searchQuery, next, true);
 	}
 
 	function handleScroll(e: Event) {
 		const target = e.target as HTMLElement;
 		if (!target) return;
 		lastScrollTop = target.scrollTop;
-		const threshold = 300;
-		if (target.scrollHeight - target.scrollTop - target.clientHeight < threshold) {
-			loadMore();
+		if (target.scrollHeight - target.scrollTop - target.clientHeight < SEARCH_SCROLL_THRESHOLD_PX) {
+			void loadMore();
 		}
 	}
 
-	function loadWallpaperForPalette(url: string | undefined) {
-		if (!url) return;
-		const toastId = toast.loading('Extracting palette...');
-		appStore.loadWallhavenImage(url, toastId);
-		close();
+	function scheduleSearchIfQueryChanged() {
+		if (lastQuery !== normalizedQuery) {
+			scheduleSearch(appStore.state.searchQuery);
+		}
 	}
 
-	function close() {
-		if (scrollEl) {
-			lastScrollTop = scrollEl.scrollTop;
+	function handleEscapeKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			closeModal();
 		}
-		if (_timer !== null) {
-			clearTimeout(_timer);
-			_timer = null;
-		}
-		isOpen = false;
 	}
 </script>
 
@@ -147,21 +193,19 @@
 		class="fixed inset-0 flex items-start justify-center bg-black/80 px-6 pt-16 pb-6"
 		role="button"
 		tabindex="0"
-		onclick={close}
-		onkeypress={(e) => {
-			if (e.key === 'Escape') close();
-		}}
+		onclick={closeModal}
+		onkeydown={handleEscapeKeydown}
 	>
 		<div
 			class="animate-scale-in border-brand/50 shadow-brand/20 relative w-full max-w-4xl rounded-xl border bg-zinc-900 shadow-2xl xl:max-w-5xl"
 			role="dialog"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && close()}
+			onkeydown={handleEscapeKeydown}
 		>
 			<!-- Close Button Overlay -->
 			<button
-				onclick={close}
+				onclick={closeModal}
 				class="hover:text-brand absolute top-4 right-4 z-10 rounded-lg p-2 text-zinc-400 transition-[background-color,color] duration-300 hover:bg-zinc-800/50"
 				aria-label="Close search"
 			>
@@ -178,19 +222,9 @@
 						type="text"
 						bind:this={inputEl}
 						bind:value={appStore.state.searchQuery}
-						onchange={() => {
-							if (lastQuery !== appStore.state.searchQuery.trim()) {
-								scheduleSearch(appStore.state.searchQuery);
-							}
-						}}
-						onfocus={() => {
-							if (lastQuery !== appStore.state.searchQuery.trim()) {
-								scheduleSearch(appStore.state.searchQuery);
-							}
-						}}
-						oninput={() => {
-							scheduleSearch(appStore.state.searchQuery);
-						}}
+						onchange={scheduleSearchIfQueryChanged}
+						onfocus={scheduleSearchIfQueryChanged}
+						oninput={() => scheduleSearch(appStore.state.searchQuery)}
 						placeholder="Search wallpapers..."
 						class="text-md w-full rounded border-none bg-zinc-800/75 p-4 font-light text-zinc-100 placeholder-zinc-500 transition-[background-color,box-shadow,color] duration-300 outline-none"
 					/>
@@ -209,7 +243,7 @@
 						<p class="text-sm font-medium text-zinc-300">Searching wallpapers...</p>
 						<p class="text-xs text-zinc-500">Finding the perfect images for you</p>
 					</div>
-				{:else if pages.length === 0 || pages.every((p) => p.items.length === 0)}
+				{:else if showEmptyState}
 					{#if appStore.state.searchQuery}
 						<div class="flex flex-col items-center py-12">
 							<svg class="mb-4 h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +272,7 @@
 						</div>
 					{/if}
 				{:else}
-					{@const totalResults = pages.reduce((sum, page) => sum + page.items.length, 0)}
+					{@const totalResults = getTotalResults(pages)}
 					<div class="mb-6">
 						<p class="text-sm font-medium text-zinc-300">
 							{totalResults}
@@ -262,7 +296,11 @@
 										<button
 											class="relative block h-full w-full overflow-hidden"
 											onclick={() => loadWallpaperForPalette(result.path)}
-											onkeypress={() => loadWallpaperForPalette(result.path)}
+											onkeydown={(e) => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													loadWallpaperForPalette(result.path);
+												}
+											}}
 										>
 											<img
 												src={result.thumbs.original}

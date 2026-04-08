@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
+	import { APPLY_PALETTE_SETTINGS_CONSTRAINTS } from '$lib/types/applyPaletteSettings';
 
 	let luminosity = $derived(appStore.state.applyPaletteSettings.luminosity);
 	let nearest = $derived(appStore.state.applyPaletteSettings.nearest);
@@ -15,9 +16,7 @@
 			id: 'luminosity',
 			label: 'Luminosity',
 			value: luminosity,
-			min: 0.1,
-			max: 3.0,
-			step: 0.1,
+			constraint: APPLY_PALETTE_SETTINGS_CONSTRAINTS.luminosity,
 			tooltip: 'Brightness adjustment factor. 1.0 = no change, >1.0 = brighter, <1.0 = darker',
 			action: (val: number) => (appStore.state.applyPaletteSettings.luminosity = val)
 		},
@@ -25,9 +24,7 @@
 			id: 'nearest',
 			label: 'Nearest Count',
 			value: nearest,
-			min: 1,
-			max: 20,
-			step: 1,
+			constraint: APPLY_PALETTE_SETTINGS_CONSTRAINTS.nearest,
 			tooltip: 'Number of palette colors to use for interpolation. Higher = smoother blending',
 			action: (val: number) => (appStore.state.applyPaletteSettings.nearest = val)
 		},
@@ -35,9 +32,7 @@
 			id: 'power',
 			label: 'Power',
 			value: power,
-			min: 0.5,
-			max: 10.0,
-			step: 0.5,
+			constraint: APPLY_PALETTE_SETTINGS_CONSTRAINTS.power,
 			tooltip: 'Distance weighting power. Lower = soft blending, higher = sharp transitions',
 			action: (val: number) => (appStore.state.applyPaletteSettings.power = val)
 		},
@@ -45,16 +40,36 @@
 			id: 'maxDistance',
 			label: 'Max Distance',
 			value: maxDistance,
-			min: 0,
-			max: 200,
-			step: 5,
+			constraint: APPLY_PALETTE_SETTINGS_CONSTRAINTS.maxDistance,
 			tooltip: 'Maximum distance threshold. Only pixels within this range get recolored (0 = all pixels)',
 			action: (val: number) => (appStore.state.applyPaletteSettings.maxDistance = val)
 		}
 	]);
 
-	function handleSliderChange(value: number, action: (val: number) => void) {
-		action(value);
+	function sanitizeInputValue(id: string, value: number, fallback: number): number {
+		if (!Number.isFinite(value)) return fallback;
+
+		if (id === 'luminosity') {
+			const { min, max } = APPLY_PALETTE_SETTINGS_CONSTRAINTS.luminosity;
+			return Math.min(max, Math.max(min, value));
+		}
+
+		if (id === 'nearest') {
+			const { min, max } = APPLY_PALETTE_SETTINGS_CONSTRAINTS.nearest;
+			return Math.round(Math.min(max, Math.max(min, value)));
+		}
+
+		if (id === 'power') {
+			const { min, max } = APPLY_PALETTE_SETTINGS_CONSTRAINTS.power;
+			return Math.min(max, Math.max(min, value));
+		}
+
+		const { min, max } = APPLY_PALETTE_SETTINGS_CONSTRAINTS.maxDistance;
+		return Math.min(max, Math.max(min, value));
+	}
+
+	function handleSliderChange(id: string, currentValue: number, nextValue: number, action: (val: number) => void) {
+		action(sanitizeInputValue(id, nextValue, currentValue));
 	}
 </script>
 
@@ -98,20 +113,22 @@
 				<input
 					id={setting.id}
 					type="range"
-					min={setting.min}
-					max={setting.max}
-					step={setting.step}
+					min={setting.constraint.min}
+					max={setting.constraint.max}
+					step={setting.constraint.step}
 					value={setting.value}
-					oninput={(e) => handleSliderChange(parseFloat(e.currentTarget.value), setting.action)}
+					oninput={(e) =>
+						handleSliderChange(setting.id, setting.value, parseFloat(e.currentTarget.value), setting.action)}
 					class="slider flex-1 cursor-pointer appearance-none bg-transparent"
 				/>
 				<input
 					type="number"
-					min={setting.min}
-					max={setting.max}
-					step={setting.step}
+					min={setting.constraint.min}
+					max={setting.constraint.max}
+					step={setting.constraint.step}
 					value={setting.value}
-					onchange={(e) => handleSliderChange(parseFloat(e.currentTarget.value), setting.action)}
+					onchange={(e) =>
+						handleSliderChange(setting.id, setting.value, parseFloat(e.currentTarget.value), setting.action)}
 					class="focus:border-brand/50 w-16 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-center text-xs text-zinc-300 focus:outline-none"
 				/>
 			</div>

@@ -2,7 +2,7 @@
 	import type { Color, NamedColor } from '$lib/types/color';
 	import { cn } from '$lib/utils';
 	import toast from 'svelte-french-toast';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 
 	const copy_options = [

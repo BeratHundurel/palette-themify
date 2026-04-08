@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { appStore } from '$lib/stores/app.svelte';
-	import { preventDefault, cn } from '$lib/utils';
+	import { appStore } from '$lib/stores/app/store.svelte';
+	import { cn } from '$lib/utils';
 </script>
 
 <section
@@ -13,14 +13,11 @@
 	<button
 		type="button"
 		ondrop={appStore.handleDrop}
-		ondragover={preventDefault}
-		ondragenter={preventDefault}
-		ondragleave={preventDefault}
+		ondragover={() => {}}
+		ondragenter={() => {}}
+		ondragleave={() => {}}
 		onclick={appStore.triggerFileSelect}
-		class={cn(
-			'group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/50 bg-white/10 p-12 transition-[background-color,border-color] duration-300',
-			'hover:border-white hover:bg-white/20'
-		)}
+		class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/50 bg-white/10 p-12 transition-[background-color,border-color] duration-300 hover:border-white hover:bg-white/20"
 		aria-label="Upload an image or drag and drop it here"
 	>
 		<svg

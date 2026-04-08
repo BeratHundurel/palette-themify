@@ -7,6 +7,9 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/artifacts
+/playwright-report
+/test-results
 
 # Example files
 /static/example_*.json

@@ -14,7 +14,7 @@
 	import SavedPalettesPopover from './saved-palettes/SavedPalettesPopover.svelte';
 	import SavedThemesPopover from './saved-themes/SavedThemesPopover.svelte';
 	import Download from './download/Download.svelte';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 
 	// === Drag State ===

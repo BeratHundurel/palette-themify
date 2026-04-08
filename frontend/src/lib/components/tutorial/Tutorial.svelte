@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { UI } from '$lib/constants';
+	import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
 	import { tutorialStore, type TutorialStep } from '$lib/stores/tutorial.svelte';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tick } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -29,10 +29,10 @@
 		if (
 			currentStep?.id === 'selection-tools' &&
 			appStore.state.activeSelectorId &&
-			appStore.state.activeSelectorId !== UI.DEFAULT_SELECTOR_ID
+			appStore.state.activeSelectorId !== DEFAULT_SELECTOR_ID
 		) {
 			const nonGreenSelector = appStore.state.selectors.find(
-				(s) => s.id === appStore.state.activeSelectorId && s.id !== UI.DEFAULT_SELECTOR_ID
+				(s) => s.id === appStore.state.activeSelectorId && s.id !== DEFAULT_SELECTOR_ID
 			);
 
 			if (nonGreenSelector?.selection && !appStore.state.isDragging && !appStore.state.isExtracting) {

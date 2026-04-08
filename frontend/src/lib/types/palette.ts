@@ -8,20 +8,20 @@ export type PaletteData = {
 	isSystem?: boolean;
 };
 
+export type GetPalettesResponse = {
+	palettes: PaletteData[];
+};
+
+export type ExtractPaletteResponse = {
+	palette: Color[];
+};
+
 export type SavePaletteRequest = {
 	name: string;
 	palette: Color[];
 };
 
-export type GetPalettesResponse = {
-	palettes: PaletteData[];
-};
-
 export type SavePaletteResult = {
 	message: string;
 	name: string;
-};
-
-export type ExtractPaletteResponse = {
-	palette: Color[];
 };

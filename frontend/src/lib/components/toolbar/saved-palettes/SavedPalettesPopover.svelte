@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import { TUTORIAL_APPLY_PALETTE, TUTORIAL_PALETTE_NAME } from '$lib/constants';
+	import { TUTORIAL_APPLY_PALETTE, TUTORIAL_PALETTE_NAME } from '$lib/types/tutorial';
 	import toast from 'svelte-french-toast';
 	import type { Color } from '$lib/types/color';
 

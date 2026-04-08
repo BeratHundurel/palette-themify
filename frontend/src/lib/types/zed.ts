@@ -275,11 +275,11 @@ export type ZedThemeEntry = {
 	style: ZedThemeStyle;
 };
 
-export const ZedThemeSchema = 'https://zed.dev/schema/themes/v0.2.0.json' as const;
-
 export type ZedTheme = {
 	$schema: typeof ZedThemeSchema;
 	name: string;
 	author: string;
 	themes: ZedThemeEntry[];
 };
+
+export const ZedThemeSchema = 'https://zed.dev/schema/themes/v0.2.0.json' as const;

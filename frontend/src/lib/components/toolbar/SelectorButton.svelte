@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import type { Selector } from '$lib/types/selector';
 	import { cn } from '$lib/utils';
 

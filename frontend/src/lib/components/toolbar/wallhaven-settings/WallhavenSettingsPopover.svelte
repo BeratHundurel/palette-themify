@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { cn } from '$lib/utils';
 	import { AVAILABLE_RATIOS } from '$lib/types/wallhaven';

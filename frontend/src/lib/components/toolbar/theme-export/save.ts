@@ -1,11 +1,11 @@
 import type { EditorThemeType } from '$lib/api/theme';
 import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
-import { appStore } from '$lib/stores/app.svelte';
+import { appStore } from '$lib/stores/app/store.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
 import type { SavedThemeItem, ThemeGenerationResponse } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
 
-import { getThemeSignature, normalizeThemeName, validateThemeName } from './utils';
+import { normalizeThemeName, validateThemeName } from './utils';
 
 type SaveThemeArgs = {
 	name: string;
@@ -34,7 +34,7 @@ function buildSavedTheme({
 		editorType,
 		themeResult,
 		createdAt: new Date().toISOString(),
-		signature: getThemeSignature(themeResult)
+		signature: appStore.getThemeSignature(themeResult)
 	};
 }
 
@@ -45,11 +45,11 @@ export function saveTheme({ name, editorType, themeResult }: SaveThemeArgs) {
 	if (!trimmedName) return;
 
 	const normalizedName = normalizeThemeName(trimmedName);
-	const signature = getThemeSignature(themeResult);
+	const signature = appStore.getThemeSignature(themeResult);
 	const existingThemes = appStore.state.savedThemes;
 
 	const identicalTheme = existingThemes.find((item) => {
-		const existingSignature = item.signature ?? getThemeSignature(item.themeResult);
+		const existingSignature = item.signature ?? appStore.getThemeSignature(item.themeResult);
 		return item.editorType === editorType && existingSignature === signature;
 	});
 	if (identicalTheme) {

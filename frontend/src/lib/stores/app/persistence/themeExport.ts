@@ -1,21 +1,8 @@
 import { browser } from '$app/environment';
-import type { EditorThemeType, ThemeAppearance } from '../../api/theme';
+import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
+import { DEFAULT_THEME_EXPORT_PREFERENCES, type ThemeExportPreferences } from '$lib/types/theme';
 
 const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';
-
-export type ThemeExportPreferences = {
-	editorType: EditorThemeType;
-	appearance: ThemeAppearance;
-	saveOnCopy: boolean;
-	boostCoefficient: number;
-};
-
-export const DEFAULT_THEME_EXPORT_PREFERENCES: ThemeExportPreferences = {
-	editorType: 'vscode',
-	appearance: 'dark',
-	saveOnCopy: true,
-	boostCoefficient: 1
-};
 
 function asNonNegativeFiniteNumber(value: unknown, fallback: number): number {
 	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return fallback;

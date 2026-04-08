@@ -1,16 +1,7 @@
 import { browser } from '$app/environment';
-import type { WallhavenSettings } from '$lib/types/wallhaven';
+import { DEFAULT_WALLHAVEN_SETTINGS, type WallhavenSettings } from '$lib/types/wallhaven';
 
 const WALLHAVEN_SETTINGS_KEY = 'wallhavenSettings';
-export const DEFAULT_WALLHAVEN_SETTINGS: WallhavenSettings = {
-	categories: '111',
-	purity: '100',
-	sorting: 'relevance',
-	order: 'desc',
-	topRange: '1M',
-	ratios: [],
-	apikey: ''
-};
 
 function asString(value: unknown, fallback: string): string {
 	return typeof value === 'string' ? value : fallback;

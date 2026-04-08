@@ -1,5 +1,3 @@
-export const VSCodeThemeSchema = 'vscode://schemas/color-theme' as const;
-
 export type FontStyle = 'normal' | 'italic' | 'oblique';
 
 export type VSCodeTokenSettings = {
@@ -219,3 +217,5 @@ export type VSCodeTheme = {
 	colors: VSCodeThemeColors;
 	tokenColors: VSCodeTokenColor[];
 };
+
+export const VSCodeThemeSchema = 'vscode://schemas/color-theme' as const;

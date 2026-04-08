@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import { isDesktopApp } from '$lib/platform';

@@ -1,6 +1,6 @@
 import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
-import { COLOR_REGEX } from '$lib/constants';
-import type { SavedThemeItem, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
+import { COLOR_REGEX } from '$lib/types/color';
+import type { ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 
 export const THEME_NAME_DEBOUNCE_MS = 300;
 
@@ -44,16 +44,6 @@ export function validateThemeName(name: string): string | null {
 
 export function normalizeThemeName(name: string): string {
 	return name.trim().toLowerCase();
-}
-
-export function getThemeSignature(result: SavedThemeItem['themeResult'] | null): string {
-	if (!result) return '';
-
-	try {
-		return JSON.stringify(result);
-	} catch {
-		return '';
-	}
 }
 
 export function normalizeHex(value: string | null | undefined): string | null {

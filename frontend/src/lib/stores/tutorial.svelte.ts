@@ -1,6 +1,7 @@
-import { appStore } from './app.svelte';
+import { appStore } from './app/store.svelte';
 import { popoverStore } from './popovers.svelte';
-import { UI, TUTORIAL_APPLY_PALETTE } from '$lib/constants';
+import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
+import { TUTORIAL_APPLY_PALETTE } from '$lib/types/tutorial';
 import type { Color } from '$lib/types/color';
 
 export interface TutorialStep {
@@ -160,7 +161,7 @@ function createTutorialStore() {
 
 	function clearNonGreenSelections(store: typeof appStore) {
 		store.state.selectors.forEach((selector) => {
-			if (selector.id !== UI.DEFAULT_SELECTOR_ID) {
+			if (selector.id !== DEFAULT_SELECTOR_ID) {
 				selector.selection = undefined;
 			}
 		});

@@ -10,7 +10,7 @@
 	import Tutorial from '$lib/components/tutorial/Tutorial.svelte';
 	import TutorialStart from '$lib/components/tutorial/TutorialStart.svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import TutorialButton from '$lib/components/tutorial/TutorialButton.svelte';
 	import Search from '$lib/components/search/Search.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';

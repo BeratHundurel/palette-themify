@@ -5,93 +5,42 @@ import toast from 'svelte-french-toast';
 import * as paletteApi from '$lib/api/palette';
 import * as themeApi from '$lib/api/theme';
 import { downloadImage } from '$lib/api/wallhaven';
-import { CANVAS, SELECTION, IMAGE, UI } from '$lib/constants';
-import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
+import { CANVAS } from '$lib/types/canvas';
+import { IMAGE } from '$lib/types/image';
+import { DEFAULT_SELECTOR_ID, SELECTION } from '$lib/types/selector';
+import { DEFAULT_APPLY_PALETTE_SETTINGS, type ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
+import type { AppPreferences, AppPreferencesPayload } from '$lib/types/appPreferences';
+import type { AppState } from '$lib/stores/app/appState';
 import type { Color } from '$lib/types/color';
-import type { Selector } from '$lib/types/selector';
 import type { PaletteData } from '$lib/types/palette';
-import type { SavedThemeItem, ThemeExportState } from '$lib/types/theme';
-import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
+import { DEFAULT_THEME_EXPORT_PREFERENCES, type SavedThemeItem, type ThemeExportPreferences } from '$lib/types/theme';
+import { DEFAULT_WALLHAVEN_SETTINGS, type WallhavenSettings } from '$lib/types/wallhaven';
 import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
-import { type SortMethod } from '$lib/colorUtils';
 
-import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/savedThemes';
+import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/savedThemes';
 import {
 	loadWallhavenSettings,
-	DEFAULT_WALLHAVEN_SETTINGS,
 	parseWallhavenSettings,
 	saveWallhavenSettings,
 	clearWallhavenSettings
-} from '$lib/stores/app/wallhavenSettings';
+} from '$lib/stores/app/persistence/wallhavenSettings';
 import {
 	loadApplyPaletteSettings,
-	DEFAULT_APPLY_PALETTE_SETTINGS,
 	parseApplyPaletteSettings,
 	saveApplyPaletteSettings,
 	clearApplyPaletteSettings
-} from '$lib/stores/app/applyPaletteSettings';
+} from '$lib/stores/app/persistence/applyPaletteSettings';
 import {
 	clearThemeExportPreferences,
-	DEFAULT_THEME_EXPORT_PREFERENCES,
 	loadThemeExportPreferences,
 	parseThemeExportPreferences,
-	saveThemeExportPreferences,
-	type ThemeExportPreferences
-} from '$lib/stores/app/themeExport';
+	saveThemeExportPreferences
+} from '$lib/stores/app/persistence/themeExport';
 import * as preferencesApi from '$lib/api/preferences';
 import * as themesApi from '$lib/api/themes';
 
-import { authStore } from './auth.svelte';
-import { tutorialStore } from './tutorial.svelte';
-
-export type SavedPaletteItem = PaletteData;
-
-interface AppState {
-	fileInput: HTMLInputElement | null;
-	canvas: HTMLCanvasElement | null;
-	canvasContext: CanvasRenderingContext2D | null;
-	image: HTMLImageElement | null;
-	originalImageWidth: number;
-	originalImageHeight: number;
-	canvasScaleX: number;
-	canvasScaleY: number;
-
-	searchQuery: string;
-
-	imageLoaded: boolean;
-	isDragging: boolean;
-	isExtracting: boolean;
-	startX: number;
-	startY: number;
-	dragRect: DOMRect | null;
-	dragScaleX: number;
-	dragScaleY: number;
-
-	colors: Color[];
-	wallhavenResults: WallhavenResult[];
-	wallhavenSettings: WallhavenSettings;
-	selectors: Selector[];
-	activeSelectorId: string;
-	newFilterColor: string;
-	savedPalettes: PaletteData[];
-	sortMethod: SortMethod;
-	applyPaletteSettings: ApplyPaletteSettings;
-	themeExport: ThemeExportState;
-	savedThemes: SavedThemeItem[];
-	paletteVersion: number;
-}
-
-type AppPreferencesPayload = Partial<{
-	applyPaletteSettings: Partial<ApplyPaletteSettings>;
-	wallhavenSettings: Partial<WallhavenSettings>;
-	themeExport: Partial<ThemeExportPreferences>;
-}>;
-
-type AppPreferences = {
-	applyPaletteSettings: ApplyPaletteSettings;
-	wallhavenSettings: WallhavenSettings;
-	themeExport: ThemeExportPreferences;
-};
+import { authStore } from '../auth.svelte';
+import { tutorialStore } from '../tutorial.svelte';
 
 function createAppStore() {
 	const themeExportPreferences = loadThemeExportPreferences();
@@ -120,11 +69,11 @@ function createAppStore() {
 		wallhavenResults: [],
 		wallhavenSettings: loadWallhavenSettings(),
 		selectors: [
-			{ id: UI.DEFAULT_SELECTOR_ID, color: 'oklch(79.2% 0.209 151.711)', selected: true },
+			{ id: DEFAULT_SELECTOR_ID, color: 'oklch(79.2% 0.209 151.711)', selected: true },
 			{ id: 'red', color: 'oklch(64.5% 0.246 16.439)', selected: false },
 			{ id: 'blue', color: 'oklch(71.5% 0.143 215.221)', selected: false }
 		],
-		activeSelectorId: UI.DEFAULT_SELECTOR_ID,
+		activeSelectorId: DEFAULT_SELECTOR_ID,
 		newFilterColor: '',
 		savedPalettes: [],
 		sortMethod: 'none',
@@ -150,6 +99,7 @@ function createAppStore() {
 
 	let lastPaletteSignature = '';
 	let preferencesSyncTimer: ReturnType<typeof setTimeout> | null = null;
+	let redrawFrameId: number | null = null;
 
 	function isObjectRecord(value: unknown): value is Record<string, unknown> {
 		return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -319,7 +269,21 @@ function createAppStore() {
 		});
 	}
 
-	function getCleanImageDataUrl(): string | null {
+	function scheduleCanvasRedraw() {
+		if (!browser) {
+			drawImageAndBoxes();
+			return;
+		}
+
+		if (redrawFrameId !== null) return;
+
+		redrawFrameId = window.requestAnimationFrame(() => {
+			redrawFrameId = null;
+			drawImageAndBoxes();
+		});
+	}
+
+	async function getCleanImageBlob(): Promise<Blob | null> {
 		if (!state.canvas || !state.image) return null;
 
 		const tempCanvas = document.createElement('canvas');
@@ -329,7 +293,10 @@ function createAppStore() {
 		if (!tempCtx) return null;
 
 		tempCtx.drawImage(state.image, 0, 0, state.canvas.width, state.canvas.height);
-		return tempCanvas.toDataURL(IMAGE.OUTPUT_FORMAT);
+
+		return await new Promise<Blob | null>((resolve) => {
+			tempCanvas.toBlob((blob) => resolve(blob), IMAGE.OUTPUT_FORMAT);
+		});
 	}
 
 	return {
@@ -623,39 +590,11 @@ function createAppStore() {
 
 		parseThemeExportPreferences,
 
-		async drawToCanvas(file: File) {
-			const reader = new FileReader();
-			reader.onload = () => {
-				state.image = new Image();
-				state.image.onload = () => {
-					if (!state.canvas || !state.image) return;
-
-					state.canvasContext = state.canvas.getContext('2d')!;
-					state.originalImageWidth = state.image.width;
-					state.originalImageHeight = state.image.height;
-
-					const dimensions = calculateImageDimensions(state.originalImageWidth, state.originalImageHeight);
-
-					state.canvasScaleX = dimensions.scaleX;
-					state.canvasScaleY = dimensions.scaleY;
-					state.canvas.width = dimensions.width;
-					state.canvas.height = dimensions.height;
-					state.canvas.style.width = dimensions.width + 'px';
-					state.canvas.style.height = dimensions.height + 'px';
-
-					state.canvasContext.drawImage(state.image, 0, 0, dimensions.width, dimensions.height);
-					state.imageLoaded = true;
-					drawImageAndBoxes();
-				};
-				state.image.src = reader.result as string;
-			};
-			reader.readAsDataURL(file);
-		},
-
 		async drawBlobToCanvas(blob: Blob) {
 			return new Promise<void>((resolve, reject) => {
 				const url = URL.createObjectURL(blob);
 				const newImage = new Image();
+				newImage.decoding = 'async';
 
 				newImage.onload = () => {
 					try {
@@ -682,7 +621,7 @@ function createAppStore() {
 						state.canvasContext.drawImage(newImage, 0, 0, dimensions.width, dimensions.height);
 						state.image = newImage;
 						state.imageLoaded = true;
-						drawImageAndBoxes();
+						scheduleCanvasRedraw();
 						URL.revokeObjectURL(url);
 						resolve();
 					} catch (error) {
@@ -701,17 +640,21 @@ function createAppStore() {
 		},
 
 		clearAllSelections() {
-			this.state.activeSelectorId = UI.DEFAULT_SELECTOR_ID;
+			this.state.activeSelectorId = DEFAULT_SELECTOR_ID;
 
 			this.state.selectors.forEach((selector) => {
 				selector.selection = undefined;
-				selector.selected = selector.id === UI.DEFAULT_SELECTOR_ID;
+				selector.selected = selector.id === DEFAULT_SELECTOR_ID;
 			});
 
 			this.redrawCanvas();
 		},
 
 		redrawCanvas() {
+			if (redrawFrameId !== null) {
+				cancelAnimationFrame(redrawFrameId);
+				redrawFrameId = null;
+			}
 			drawImageAndBoxes();
 		},
 
@@ -743,7 +686,7 @@ function createAppStore() {
 					h: Math.abs(pos.y - state.startY)
 				};
 			}
-			drawImageAndBoxes();
+			scheduleCanvasRedraw();
 		},
 
 		async handleMouseUp() {
@@ -763,7 +706,7 @@ function createAppStore() {
 			const file = input?.files?.[0];
 			if (!file) return;
 
-			await appStore.drawToCanvas(file);
+			await appStore.drawBlobToCanvas(file);
 			await appStore.extractPalette(file);
 		},
 
@@ -778,7 +721,7 @@ function createAppStore() {
 			event.preventDefault();
 			const files = event.dataTransfer?.files;
 			if (files?.length) {
-				await appStore.drawToCanvas(files[0]);
+				await appStore.drawBlobToCanvas(files[0]);
 				await appStore.extractPalette(files[0]);
 			}
 		},
@@ -985,11 +928,14 @@ function createAppStore() {
 				return;
 			}
 
+			if (!state.canvas || !state.imageLoaded || !state.image) {
+				toast.error('Load an image before applying a palette.');
+				return;
+			}
+
 			const toastId = toast.loading('Applying palette...');
 
 			try {
-				if (!state.canvas) return;
-
 				const srcBlob = await new Promise<Blob>((resolve) =>
 					state.canvas!.toBlob((b) => resolve(b!), IMAGE.OUTPUT_FORMAT)
 				);
@@ -1116,13 +1062,11 @@ function createAppStore() {
 			const toastId = toast.loading('Preparing download...');
 
 			try {
-				const imageDataUrl = getCleanImageDataUrl();
-				if (!imageDataUrl) {
+				const blob = await getCleanImageBlob();
+				if (!blob) {
 					toast.error('Could not prepare the download. Please try again.', { id: toastId });
 					return;
 				}
-
-				const blob = await fetch(imageDataUrl).then((res) => res.blob());
 
 				const url = URL.createObjectURL(blob);
 				const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -1131,9 +1075,11 @@ function createAppStore() {
 				const link = document.createElement('a');
 				link.href = url;
 				link.download = filename;
+				document.body.append(link);
 				link.click();
+				link.remove();
 
-				URL.revokeObjectURL(url);
+				setTimeout(() => URL.revokeObjectURL(url), 0);
 				toast.success('Image downloaded', { id: toastId });
 			} catch {
 				toast.error('Download failed. Please try again.', { id: toastId });

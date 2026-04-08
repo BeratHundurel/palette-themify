@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { isDesktopApp } from '$lib/platform';
 	import toast from 'svelte-french-toast';
 
@@ -141,7 +141,6 @@
 
 	$effect(() => {
 		if (isOpen) {
-			console.log('Adding keydown listener');
 			document.addEventListener('keydown', handleKeydown);
 			return () => document.removeEventListener('keydown', handleKeydown);
 		}
@@ -180,7 +179,13 @@
 					</p>
 				</div>
 
-				<form onsubmit={handleSubmit} class="space-y-4">
+				<form
+					onsubmit={(event) => {
+						event.preventDefault();
+						void handleSubmit();
+					}}
+					class="space-y-4"
+				>
 					<div>
 						<label for="username" class="mb-1 block text-sm font-medium text-zinc-300">Username</label>
 						<input

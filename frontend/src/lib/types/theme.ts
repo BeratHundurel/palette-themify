@@ -46,6 +46,13 @@ export interface ThemeExportState {
 	backupColors: Color[] | null;
 }
 
+export type ThemeExportPreferences = {
+	editorType: EditorThemeType;
+	appearance: ThemeAppearance;
+	saveOnCopy: boolean;
+	boostCoefficient: number;
+};
+
 export type SavedThemeItem = {
 	id: string;
 	name: string;
@@ -53,4 +60,11 @@ export type SavedThemeItem = {
 	themeResult: ThemeGenerationResponse;
 	createdAt: string;
 	signature?: string;
+};
+
+export const DEFAULT_THEME_EXPORT_PREFERENCES: ThemeExportPreferences = {
+	editorType: 'vscode',
+	appearance: 'dark',
+	saveOnCopy: true,
+	boostCoefficient: 1
 };

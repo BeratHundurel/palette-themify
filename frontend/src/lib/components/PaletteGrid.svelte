@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { UI } from '$lib/constants';
-	import { appStore } from '$lib/stores/app.svelte';
+	import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
+	import { appStore } from '$lib/stores/app/store.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import { cn, copyToClipboard } from '$lib/utils';
+	import { cn } from '$lib/utils';
 	import { sortColorsByMethod, type SortMethod } from '$lib/colorUtils';
 	import { tick } from 'svelte';
 	import toast from 'svelte-french-toast';
@@ -19,7 +19,7 @@
 		const groupRect = sortButtonGroup.getBoundingClientRect();
 		const buttonRect = button.getBoundingClientRect();
 		hoverX = buttonRect.left - groupRect.left;
-		buttonWidth = buttonRect.width - UI.SORT_BUTTON_PADDING;
+		buttonWidth = buttonRect.width - 5;
 		showHover = true;
 	}
 
@@ -47,7 +47,8 @@
 
 	async function handleCopy(hex: string) {
 		try {
-			await copyToClipboard(hex, (message) => toast.success(message));
+			await navigator.clipboard.writeText(hex);
+			toast.success('Copied to clipboard');
 			tutorialStore.setColorCopied(true);
 		} catch {
 			toast.error('Could not copy to clipboard. Please try again.');
@@ -60,10 +61,10 @@
 		appStore.state.image = null;
 		appStore.state.imageLoaded = false;
 		appStore.state.colors = [];
-		appStore.state.activeSelectorId = UI.DEFAULT_SELECTOR_ID;
+		appStore.state.activeSelectorId = DEFAULT_SELECTOR_ID;
 		appStore.state.selectors.forEach((s) => {
 			s.selection = undefined;
-			s.selected = s.id === UI.DEFAULT_SELECTOR_ID;
+			s.selected = s.id === DEFAULT_SELECTOR_ID;
 		});
 		appStore.state.sortMethod = 'none';
 	}
@@ -113,7 +114,7 @@
 				tabindex="0"
 				onkeyup={(e) => (e.key === 'Enter' || e.key === ' ') && handleCopy(color.hex)}
 				onclick={() => handleCopy(color.hex)}
-				in:scale={{ delay: i * 80, duration: 300, start: 0.7 }}
+				in:scale={{ delay: i * 60, duration: 200, start: 0.6 }}
 				class="flex h-8 cursor-pointer items-center justify-center rounded-md p-1.5 shadow-md xl:h-9 xl:p-2"
 				style="background-color: {color.hex}"
 			>
