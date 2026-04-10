@@ -3,4 +3,17 @@ bin
 frontend/dist
 frontend/node_modules
 frontend/bindings
-build
+
+# Keep desktop build files cleanly scoped to desktop targets
+build/**
+!build/Taskfile.yml
+!build/config.yml
+!build/appicon.png
+!build/appicon.icon/
+!build/appicon.icon/**
+!build/darwin/
+!build/darwin/**
+!build/linux/
+!build/linux/**
+!build/windows/
+!build/windows/**
