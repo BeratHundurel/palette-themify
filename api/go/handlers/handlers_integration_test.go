@@ -110,6 +110,7 @@ func setupPaletteRouter() *gin.Engine {
 	router := gin.New()
 	router.POST("/palettes", SavePaletteHandler)
 	router.GET("/palettes", GetPalettesHandler)
+	router.DELETE("/palettes", DeletePalettesBatchHandler)
 	return router
 }
 
@@ -120,6 +121,7 @@ func setupThemeRouter() *gin.Engine {
 	router.PUT("/themes/:id", UpdateThemeHandler)
 	router.GET("/themes", GetThemesHandler)
 	router.DELETE("/themes/:id", DeleteThemeHandler)
+	router.DELETE("/themes", DeleteThemesBatchHandler)
 	return router
 }
 
@@ -455,6 +457,173 @@ func TestDeleteThemeHandler_RemovesTheme(t *testing.T) {
 	assert.Equal(t, int64(0), count)
 }
 
+func TestDeleteThemesBatchHandler_RemovesOnlyRequestedThemes(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	theme1, _, err := saveUserTheme(user.ID, "Theme 1", "vscode", "sig-1", `{"name":"Theme 1"}`)
+	if err != nil {
+		t.Fatalf("save theme1: %v", err)
+	}
+	theme2, _, err := saveUserTheme(user.ID, "Theme 2", "vscode", "sig-2", `{"name":"Theme 2"}`)
+	if err != nil {
+		t.Fatalf("save theme2: %v", err)
+	}
+	_, _, err = saveUserTheme(user.ID, "Theme 3", "vscode", "sig-3", `{"name":"Theme 3"}`)
+	if err != nil {
+		t.Fatalf("save theme3: %v", err)
+	}
+
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+	body, err := json.Marshal(map[string]any{
+		"ids": []string{fmt.Sprintf("%d", theme1.ID), fmt.Sprintf("%d", theme2.ID)},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/themes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var count int64
+	if err := db.DB.Model(&model.Theme{}).Where("user_id = ?", user.ID).Count(&count).Error; err != nil {
+		t.Fatalf("count themes: %v", err)
+	}
+	assert.Equal(t, int64(1), count)
+}
+
+func TestDeleteThemesBatchHandler_InvalidPayload(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+	req := httptest.NewRequest("DELETE", "/themes", strings.NewReader("not-json"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeleteThemesBatchHandler_EmptyIDs(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+	body, err := json.Marshal(map[string]any{"ids": []string{}})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/themes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeleteThemesBatchHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupThemeRouter()
+	body, err := json.Marshal(map[string]any{"ids": []string{"1"}})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/themes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestDeleteThemesBatchHandler_IgnoresOtherUsersIDs(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	owner := createTestUser(t)
+	ownerTheme, _, err := saveUserTheme(owner.ID, "Owner Theme", "vscode", "owner-sig", `{"name":"Owner Theme"}`)
+	if err != nil {
+		t.Fatalf("save owner theme: %v", err)
+	}
+
+	otherUser := model.User{Name: "Other User", Email: "other@example.com", PasswordHash: "hash"}
+	if err := db.DB.Create(&otherUser).Error; err != nil {
+		t.Fatalf("create other user: %v", err)
+	}
+	otherTheme, _, err := saveUserTheme(otherUser.ID, "Other Theme", "vscode", "other-sig", `{"name":"Other Theme"}`)
+	if err != nil {
+		t.Fatalf("save other theme: %v", err)
+	}
+
+	token, err := authpkg.GenerateJWTToken(owner)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+	body, err := json.Marshal(map[string]any{
+		"ids": []string{fmt.Sprintf("%d", ownerTheme.ID), fmt.Sprintf("%d", otherTheme.ID)},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/themes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var ownerCount int64
+	if err := db.DB.Model(&model.Theme{}).Where("id = ?", ownerTheme.ID).Count(&ownerCount).Error; err != nil {
+		t.Fatalf("count owner theme: %v", err)
+	}
+	assert.Equal(t, int64(0), ownerCount)
+
+	var otherCount int64
+	if err := db.DB.Model(&model.Theme{}).Where("id = ?", otherTheme.ID).Count(&otherCount).Error; err != nil {
+		t.Fatalf("count other theme: %v", err)
+	}
+	assert.Equal(t, int64(1), otherCount)
+}
+
 func TestDeletePaletteHandler_AuthRequired(t *testing.T) {
 	setupTestDB(t)
 	resetTestDB(t)
@@ -573,6 +742,193 @@ func TestDeletePaletteHandler_CannotDeleteOtherUsersPalette(t *testing.T) {
 		t.Fatalf("count palettes: %v", err)
 	}
 	assert.Equal(t, int64(1), count, "Palette should not be deleted")
+}
+
+func TestDeletePalettesBatchHandler_RemovesOnlyNonSystemRequested(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	if err := saveUserPalette(user.ID, "Palette 1", []model.Color{{Hex: "#FF0000"}}); err != nil {
+		t.Fatalf("save palette1: %v", err)
+	}
+	if err := saveUserPalette(user.ID, "Palette 2", []model.Color{{Hex: "#00FF00"}}); err != nil {
+		t.Fatalf("save palette2: %v", err)
+	}
+
+	var palettes []model.Palette
+	if err := db.DB.Where("user_id = ?", user.ID).Order("id ASC").Find(&palettes).Error; err != nil {
+		t.Fatalf("load palettes: %v", err)
+	}
+	if len(palettes) < 2 {
+		t.Fatalf("expected at least 2 palettes, got %d", len(palettes))
+	}
+
+	if err := db.DB.Model(&model.Palette{}).Where("id = ?", palettes[1].ID).Update("is_system", true).Error; err != nil {
+		t.Fatalf("mark system palette: %v", err)
+	}
+
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	body, err := json.Marshal(map[string]any{
+		"ids": []string{fmt.Sprintf("%d", palettes[0].ID), fmt.Sprintf("%d", palettes[1].ID)},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/palettes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var remainingCount int64
+	if err := db.DB.Model(&model.Palette{}).Where("user_id = ?", user.ID).Count(&remainingCount).Error; err != nil {
+		t.Fatalf("count remaining palettes: %v", err)
+	}
+	assert.Equal(t, int64(1), remainingCount)
+
+	var systemStillExists int64
+	if err := db.DB.Model(&model.Palette{}).Where("id = ? AND is_system = ?", palettes[1].ID, true).Count(&systemStillExists).Error; err != nil {
+		t.Fatalf("count system palette: %v", err)
+	}
+	assert.Equal(t, int64(1), systemStillExists)
+}
+
+func TestDeletePalettesBatchHandler_InvalidPayload(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	req := httptest.NewRequest("DELETE", "/palettes", strings.NewReader("not-json"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeletePalettesBatchHandler_EmptyIDs(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	body, err := json.Marshal(map[string]any{"ids": []string{}})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/palettes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeletePalettesBatchHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupPaletteRouter()
+	body, err := json.Marshal(map[string]any{"ids": []string{"1"}})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/palettes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestDeletePalettesBatchHandler_IgnoresOtherUsersIDs(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	owner := createTestUser(t)
+	if err := saveUserPalette(owner.ID, "Owner Palette", []model.Color{{Hex: "#AA0000"}}); err != nil {
+		t.Fatalf("save owner palette: %v", err)
+	}
+
+	var ownerPalette model.Palette
+	if err := db.DB.Where("user_id = ?", owner.ID).First(&ownerPalette).Error; err != nil {
+		t.Fatalf("load owner palette: %v", err)
+	}
+
+	otherUser := model.User{Name: "Palette Other", Email: "palette-other@example.com", PasswordHash: "hash"}
+	if err := db.DB.Create(&otherUser).Error; err != nil {
+		t.Fatalf("create other user: %v", err)
+	}
+	if err := saveUserPalette(otherUser.ID, "Other Palette", []model.Color{{Hex: "#00AA00"}}); err != nil {
+		t.Fatalf("save other palette: %v", err)
+	}
+
+	var otherPalette model.Palette
+	if err := db.DB.Where("user_id = ?", otherUser.ID).First(&otherPalette).Error; err != nil {
+		t.Fatalf("load other palette: %v", err)
+	}
+
+	token, err := authpkg.GenerateJWTToken(owner)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupPaletteRouter()
+	body, err := json.Marshal(map[string]any{
+		"ids": []string{fmt.Sprintf("%d", ownerPalette.ID), fmt.Sprintf("%d", otherPalette.ID)},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("DELETE", "/palettes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var ownerCount int64
+	if err := db.DB.Model(&model.Palette{}).Where("id = ?", ownerPalette.ID).Count(&ownerCount).Error; err != nil {
+		t.Fatalf("count owner palette: %v", err)
+	}
+	assert.Equal(t, int64(0), ownerCount)
+
+	var otherCount int64
+	if err := db.DB.Model(&model.Palette{}).Where("id = ?", otherPalette.ID).Count(&otherCount).Error; err != nil {
+		t.Fatalf("count other palette: %v", err)
+	}
+	assert.Equal(t, int64(1), otherCount)
 }
 
 func TestDeleteThemeHandler_CannotDeleteOtherUsersTheme(t *testing.T) {

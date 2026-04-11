@@ -33,6 +33,10 @@ type SavePaletteRequest struct {
 	Palette []model.Color `json:"palette" binding:"required"`
 }
 
+type DeletePalettesRequest struct {
+	IDs []string `json:"ids"`
+}
+
 type GetPalettesResponse struct {
 	Palettes []PaletteData `json:"palettes"`
 }
@@ -98,6 +102,33 @@ func DeletePaletteHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Palette deleted successfully"})
+}
+
+func DeletePalettesBatchHandler(c *gin.Context) {
+	var req DeletePalettesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Palette IDs are required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to delete palettes"})
+		return
+	}
+
+	deletedCount, err := deleteUserPalettes(userID, req.IDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Palettes deleted successfully", "deleted": deletedCount})
 }
 
 func saveUserPalette(userID uint, name string, palette []model.Color) error {
@@ -171,6 +202,19 @@ func deleteUserPalette(userID uint, paletteID string) error {
 	}
 
 	return nil
+}
+
+func deleteUserPalettes(userID uint, paletteIDs []string) (int64, error) {
+	if db.DB == nil {
+		return 0, fmt.Errorf("database not available")
+	}
+
+	result := db.DB.Where("id IN ? AND user_id = ? AND is_system = ?", paletteIDs, userID, false).Delete(&model.Palette{})
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return result.RowsAffected, nil
 }
 
 func processImageWithShepardsMethod(

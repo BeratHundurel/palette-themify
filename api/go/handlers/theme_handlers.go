@@ -26,6 +26,10 @@ type themePayload struct {
 	Signature  string
 }
 
+type DeleteThemesRequest struct {
+	IDs []string `json:"ids"`
+}
+
 func SaveThemeHandler(c *gin.Context) {
 	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
@@ -162,6 +166,38 @@ func DeleteThemeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Theme deleted successfully"})
 }
 
+func DeleteThemesBatchHandler(c *gin.Context) {
+	if db.DB == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
+		return
+	}
+
+	var req DeleteThemesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Theme IDs are required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to delete themes"})
+		return
+	}
+
+	deletedCount, err := deleteUserThemes(userID, req.IDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Themes deleted successfully", "deleted": deletedCount})
+}
+
 func saveUserTheme(userID uint, name string, editorType string, signature string, jsonData string) (model.Theme, bool, error) {
 	if db.DB == nil {
 		return model.Theme{}, false, fmt.Errorf("database not available")
@@ -261,6 +297,19 @@ func deleteUserTheme(userID uint, themeID string) error {
 	}
 
 	return db.DB.Delete(&theme).Error
+}
+
+func deleteUserThemes(userID uint, themeIDs []string) (int64, error) {
+	if db.DB == nil {
+		return 0, fmt.Errorf("database not available")
+	}
+
+	result := db.DB.Where("id IN ? AND user_id = ?", themeIDs, userID).Delete(&model.Theme{})
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return result.RowsAffected, nil
 }
 
 func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
