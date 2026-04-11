@@ -52,3 +52,14 @@ export async function deleteTheme(themeId: string): Promise<{ message: string }>
 	await ensureOk(response);
 	return response.json();
 }
+
+export async function deleteThemes(themeIds: string[]): Promise<{ message: string; deleted: number }> {
+	const response = await fetch(buildURL('/themes'), {
+		method: 'DELETE',
+		headers: getAuthHeaders(),
+		body: JSON.stringify({ ids: themeIds })
+	});
+
+	await ensureOk(response);
+	return response.json();
+}

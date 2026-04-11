@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BrandButton from '$lib/components/ui/BrandButton.svelte';
 	import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
@@ -125,21 +126,14 @@
 
 	{#if appStore.state.imageLoaded}
 		<div class="flex flex-row justify-between">
-			<button
-				class="border-brand/50 hover:shadow-brand-lg w-30 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-[background-color,border-color,box-shadow,color] duration-300 xl:w-36"
-				onclick={returnToUpload}>Back</button
-			>
+			<BrandButton class="w-30 text-zinc-300 xl:w-36" onclick={returnToUpload}>Back</BrandButton>
 
 			<div class="flex items-center gap-4">
-				<button
-					id="save-palette"
-					class="border-brand/50 hover:shadow-brand-lg w-30 cursor-pointer rounded-md border bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition-[background-color,border-color,box-shadow,color] duration-300 xl:w-36"
-					onclick={appStore.savePalette}
-				>
+				<BrandButton id="save-palette" class="w-30 text-zinc-300 xl:w-36" onclick={appStore.savePalette}>
 					Save Palette
 
 					<span>🎨</span>
-				</button>
+				</BrandButton>
 			</div>
 		</div>
 	{/if}

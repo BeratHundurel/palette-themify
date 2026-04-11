@@ -1,5 +1,10 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import ActionPillButton from '$lib/components/ui/ActionPillButton.svelte';
+	import ColorSwatch from '$lib/components/ui/ColorSwatch.svelte';
+	import DangerTextButton from '$lib/components/ui/DangerTextButton.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import IconDangerButton from '$lib/components/ui/IconDangerButton.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
@@ -36,10 +41,31 @@
 		tutorialStore.setSavedPaletteApplied(true);
 	}
 
+	function handleCreateThemeFromPalette(palette: Color[]) {
+		if (!palette || palette.length === 0) {
+			toast.error('This palette has no colors to generate a theme.');
+			return;
+		}
+
+		appStore.resetThemeExportSession();
+		appStore.state.themeExport.backupColors = palette.map((color) => ({ hex: color.hex }));
+
+		popoverStore.close('saved');
+		popoverStore.state.current = 'themeExport';
+	}
+
 	async function handlePaletteDelete(paletteId: string, paletteName: string) {
 		if (confirm(`Are you sure you want to delete "${paletteName}"?`)) {
 			await appStore.deletePalette(paletteId);
 		}
+	}
+
+	async function handleDeleteAllPalettes() {
+		const palettesToDelete = displayPalettes.filter((item) => !item.isSystem);
+		if (palettesToDelete.length === 0) return;
+		if (!confirm('Are you sure you want to delete all saved palettes?')) return;
+
+		await appStore.deletePalettes(palettesToDelete.map((palette) => palette.id));
 	}
 </script>
 
@@ -53,10 +79,20 @@
 	aria-labelledby="saved-palettes-title"
 	tabindex="-1"
 >
-	<h3 id="saved-palettes-title" class="text-brand mb-3 text-xs font-medium">Saved Palettes</h3>
+	<div class="mb-3 flex items-center justify-between">
+		<h3 id="saved-palettes-title" class="text-brand text-xs font-medium">Saved Palettes</h3>
+
+		<DangerTextButton
+			onclick={handleDeleteAllPalettes}
+			title="Delete all saved palettes"
+			disabled={displayPalettes.filter((item) => !item.isSystem).length === 0}
+		>
+			Delete all
+		</DangerTextButton>
+	</div>
 	<div class="scrollable-content custom-scrollbar max-h-72 overflow-y-auto">
 		{#if displayPalettes.length === 0}
-			<div class="flex flex-col items-center justify-center py-12 text-center">
+			<EmptyState>
 				<svg class="mb-3 h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
 						stroke-linecap="round"
@@ -67,7 +103,7 @@
 				</svg>
 				<p class="text-sm text-zinc-400">No saved palettes yet</p>
 				<p class="mt-1 text-xs text-zinc-500">Save your current palette to see it here</p>
-			</div>
+			</EmptyState>
 		{:else}
 			<ul class="flex flex-col gap-3">
 				{#each displayPalettes as item, i (item.id + '-' + i)}
@@ -108,25 +144,30 @@
 
 								<!-- Actions -->
 								<div class="flex items-center gap-1.5">
-									<button
-										class="text-brand hover:bg-brand/10 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-[transform,background-color] hover:scale-105"
-										onclick={() => handlePaletteLoad(item.palette)}
-										type="button"
-										title="Apply palette"
-									>
+									<ActionPillButton onclick={() => handlePaletteLoad(item.palette)} title="Apply palette">
 										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 										</svg>
 										Apply
-									</button>
+									</ActionPillButton>
+
+									<ActionPillButton
+										onclick={() => handleCreateThemeFromPalette(item.palette)}
+										title="Create theme from palette"
+									>
+										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M13 10V3L4 14h7v7l9-11h-7z"
+											/>
+										</svg>
+										Theme
+									</ActionPillButton>
 
 									{#if !item.isSystem}
-										<button
-											class="flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition-[transform,background-color,color] hover:scale-110 hover:bg-red-500/10 hover:text-red-400"
-											onclick={() => handlePaletteDelete(item.id, item.name)}
-											type="button"
-											title="Delete palette"
-										>
+										<IconDangerButton onclick={() => handlePaletteDelete(item.id, item.name)} title="Delete palette">
 											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
 													stroke-linecap="round"
@@ -135,7 +176,7 @@
 													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
 												/>
 											</svg>
-										</button>
+										</IconDangerButton>
 									{/if}
 								</div>
 							</div>
@@ -145,11 +186,7 @@
 									{#each item.palette as color, index (item.id + '-' + index)}
 										{#if index < 12}
 											<div class="group/swatch relative">
-												<span
-													class="inline-block h-8 w-8 cursor-pointer rounded-md border border-zinc-700/50 shadow-md transition-[transform,box-shadow,border-color] duration-300 hover:scale-105 hover:ring-2 hover:ring-white/50"
-													style="background-color: {color.hex}"
-													title={color.hex}
-												></span>
+												<ColorSwatch color={color.hex} title={color.hex} />
 											</div>
 										{/if}
 									{/each}

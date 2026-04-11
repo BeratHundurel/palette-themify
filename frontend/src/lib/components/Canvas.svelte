@@ -3,8 +3,8 @@
 	import { cn } from '$lib/utils';
 </script>
 
-<section class="mb-6 flex w-full justify-center px-4">
-	<div class="flex w-full max-w-[90vw] justify-center lg:max-w-200">
+<section class="flex w-full justify-center px-4">
+	<div class="flex w-full max-w-200 justify-center">
 		<canvas
 			bind:this={appStore.state.canvas}
 			onmousedown={appStore.handleMouseDown}

@@ -32,6 +32,10 @@
 	let saveOnCopy = $derived(appStore.state.themeExport.saveOnCopy);
 	let accentBoostCoefficient = $derived(appStore.state.themeExport.boostCoefficient);
 	let accentBoostInput = $state(appStore.state.themeExport.boostCoefficient.toFixed(2));
+	let backupColors = $derived(appStore.state.themeExport.backupColors ?? []);
+	let themeSourceColorCount = $derived(
+		appStore.state.colors.length > 0 ? appStore.state.colors.length : backupColors.length
+	);
 
 	const baseOverrides = $derived(themeResult?.themeOverrides ?? {});
 
@@ -132,6 +136,7 @@
 		}
 
 		const hasPaletteColors = appStore.state.colors && appStore.state.colors.length > 0;
+		const hasBackupColors = backupColors.length > 0;
 		const nextType = options?.type ?? editorType;
 		const nextAppearance = options?.appearance ?? themeAppearance;
 		const requestOverrides = options?.overrides ?? buildRequestOverrides(nextAppearance, themeAppearance);
@@ -160,13 +165,19 @@
 				);
 				appStore.state.themeExport.loadedThemeOverridesReference = null;
 				appStore.state.themeExport.lastGeneratedPaletteVersion = appStore.state.paletteVersion;
+			} else if (hasBackupColors) {
+				response = await generateTheme(
+					backupColors,
+					nextType,
+					themeName.trim(),
+					requestOverrides,
+					nextAppearance,
+					requestAccentBoostCoefficient
+				);
 			} else {
 				if (!themeResult?.theme) {
 					return;
 				}
-
-				const hasBackupColors =
-					appStore.state.themeExport.backupColors && appStore.state.themeExport.backupColors.length > 0;
 
 				if (
 					(nextType !== detectThemeType(themeResult.theme) ||
@@ -174,7 +185,7 @@
 					hasBackupColors
 				) {
 					response = await generateTheme(
-						appStore.state.themeExport.backupColors!,
+						backupColors,
 						nextType,
 						themeName.trim(),
 						requestOverrides,
@@ -713,7 +724,7 @@
 						<polyline points="22 4 12 14.01 9 11.01" />
 					</svg>
 					<span
-						>Theme generated from <span class="text-brand font-semibold">{appStore.state.colors.length}</span> palette colors</span
+						>Theme generated from <span class="text-brand font-semibold">{themeSourceColorCount}</span> palette colors</span
 					>
 				</div>
 				<div class="flex items-center gap-4">

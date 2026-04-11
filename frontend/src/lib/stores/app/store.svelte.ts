@@ -387,6 +387,30 @@ function createAppStore() {
 			this.persistThemeChange(null, 'delete', themeId);
 		},
 
+		async deleteThemes(themeIds: string[]) {
+			if (themeIds.length === 0) return;
+
+			const uniqueThemeIds = Array.from(new Set(themeIds));
+			const previousThemes = [...state.savedThemes];
+			state.savedThemes = state.savedThemes.filter((item) => !uniqueThemeIds.includes(item.id));
+			saveSavedThemes(state.savedThemes);
+
+			if (!browser || !authStore.state.isAuthenticated) return;
+
+			const remoteThemeIds = uniqueThemeIds.filter((id) => !id.startsWith('local_'));
+			if (remoteThemeIds.length === 0) return;
+
+			try {
+				await themesApi.deleteThemes(remoteThemeIds);
+				await this.loadSavedThemesFromApi();
+			} catch (error) {
+				console.error('Failed to sync theme batch delete:', error);
+				state.savedThemes = previousThemes;
+				saveSavedThemes(state.savedThemes);
+				toast.error('Could not delete the themes. Please try again.');
+			}
+		},
+
 		async persistThemeChange(theme: SavedThemeItem | null, action: 'create' | 'update' | 'delete', themeId?: string) {
 			if (!browser) return;
 			if (!authStore.state.isAuthenticated) return;
@@ -1009,6 +1033,45 @@ function createAppStore() {
 				}
 			} catch {
 				toast.error('Could not delete the palette. Please try again.');
+			}
+		},
+
+		async deletePalettes(paletteIds: string[]) {
+			if (paletteIds.length === 0) return;
+
+			const uniquePaletteIds = Array.from(new Set(paletteIds));
+
+			try {
+				if (authStore.state.isAuthenticated) {
+					const remotePaletteIds = uniquePaletteIds.filter((id) => !id.startsWith('local_'));
+					if (remotePaletteIds.length > 0) {
+						await paletteApi.deletePalettes(remotePaletteIds);
+					}
+
+					if (browser) {
+						const stored = localStorage.getItem('savedPalettes');
+						if (stored) {
+							const palettes = JSON.parse(stored) as PaletteData[];
+							const filtered = palettes.filter((p) => !uniquePaletteIds.includes(p.id));
+							localStorage.setItem('savedPalettes', JSON.stringify(filtered));
+						}
+					}
+
+					await appStore.loadSavedPalettes();
+					toast.success('Palettes deleted');
+					return;
+				}
+
+				if (browser) {
+					const stored = localStorage.getItem('savedPalettes');
+					const palettes = stored ? (JSON.parse(stored) as PaletteData[]) : [];
+					const filtered = palettes.filter((p) => !uniquePaletteIds.includes(p.id));
+					localStorage.setItem('savedPalettes', JSON.stringify(filtered));
+				}
+				await appStore.loadSavedPalettes();
+				toast.success('Palettes deleted');
+			} catch {
+				toast.error('Could not delete the palettes. Please try again.');
 			}
 		},
 

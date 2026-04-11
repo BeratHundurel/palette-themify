@@ -16,6 +16,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import ThemeExportPopover from '$lib/components/toolbar/theme-export/ThemeExportPopover.svelte';
 	import { isDesktopApp } from '$lib/platform';
+	import BrandButton from '$lib/components/ui/BrandButton.svelte';
 
 	let showAuthModal = $state(false);
 
@@ -52,10 +53,7 @@
 				{#if authStore.state.isAuthenticated}
 					<UserProfile />
 				{:else}
-					<button
-						onclick={() => (showAuthModal = true)}
-						class="border-brand/50 hover:shadow-brand-lg flex w-32 cursor-pointer items-center justify-center gap-2 rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow,color] duration-300"
-					>
+					<BrandButton class="flex w-32 items-center justify-center gap-2" onclick={() => (showAuthModal = true)}>
 						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"
@@ -65,7 +63,7 @@
 							/>
 						</svg>
 						<span>Sign In</span>
-					</button>
+					</BrandButton>
 				{/if}
 			</div>
 		</div>

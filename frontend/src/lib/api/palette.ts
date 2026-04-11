@@ -67,3 +67,13 @@ export async function deletePalette(id: string): Promise<{ message: string }> {
 	await ensureOk(res);
 	return res.json();
 }
+
+export async function deletePalettes(ids: string[]): Promise<{ message: string; deleted: number }> {
+	const res = await fetch(buildURL('/palettes'), {
+		method: 'DELETE',
+		headers: getAuthHeaders(),
+		body: JSON.stringify({ ids })
+	});
+	await ensureOk(res);
+	return res.json();
+}

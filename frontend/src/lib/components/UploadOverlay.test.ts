@@ -22,20 +22,20 @@ describe('UploadOverlay', () => {
 		render(UploadOverlay);
 		const dropTarget = screen.getByLabelText('Upload an image or drag and drop it here');
 
-		expect(dropTarget).toHaveClass('border-white/50');
-		expect(dropTarget).not.toHaveClass('bg-white/25');
+		expect(dropTarget).toHaveClass('border-white/60');
+		expect(dropTarget).not.toHaveClass('bg-white/28');
 
 		await fireEvent.dragEnter(dropTarget);
 		await fireEvent.dragEnter(dropTarget);
-		await waitFor(() => expect(dropTarget).toHaveClass('bg-white/25'));
+		await waitFor(() => expect(dropTarget).toHaveClass('bg-white/28'));
 
 		await fireEvent.dragLeave(dropTarget);
-		expect(dropTarget).toHaveClass('bg-white/25');
+		expect(dropTarget).toHaveClass('bg-white/28');
 
 		await fireEvent.dragLeave(dropTarget);
 		await waitFor(() => {
-			expect(dropTarget).toHaveClass('border-white/50');
-			expect(dropTarget).not.toHaveClass('bg-white/25');
+			expect(dropTarget).toHaveClass('border-white/60');
+			expect(dropTarget).not.toHaveClass('bg-white/28');
 		});
 	});
 
@@ -59,14 +59,14 @@ describe('UploadOverlay', () => {
 		const dropTarget = screen.getByLabelText('Upload an image or drag and drop it here');
 
 		await fireEvent.dragEnter(dropTarget);
-		await waitFor(() => expect(dropTarget).toHaveClass('bg-white/25'));
+		await waitFor(() => expect(dropTarget).toHaveClass('bg-white/28'));
 
 		const dropEvent = await dispatchCancelableEvent(dropTarget, 'drop');
 
 		expect(dropEvent.defaultPrevented).toBe(true);
 		expect(handleDropSpy).toHaveBeenCalledTimes(1);
 		expect(handleDropSpy).toHaveBeenCalledWith(dropEvent);
-		expect(dropTarget).toHaveClass('border-white/50');
-		expect(dropTarget).not.toHaveClass('bg-white/25');
+		expect(dropTarget).toHaveClass('border-white/60');
+		expect(dropTarget).not.toHaveClass('bg-white/28');
 	});
 });
