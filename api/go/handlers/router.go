@@ -38,14 +38,19 @@ func NewRouter() *gin.Engine {
 
 	router.GET("/palettes", GetPalettesHandler)
 	router.POST("/palettes", SavePaletteHandler)
+	router.POST("/palettes/:id/share", SharePaletteHandler)
+	router.DELETE("/palettes/:id/share", UnsharePaletteHandler)
 	router.DELETE("/palettes/:id", DeletePaletteHandler)
 	router.DELETE("/palettes", DeletePalettesBatchHandler)
 
 	router.GET("/themes", GetThemesHandler)
 	router.POST("/themes", SaveThemeHandler)
+	router.POST("/themes/:id/share", ShareThemeHandler)
+	router.DELETE("/themes/:id/share", UnshareThemeHandler)
 	router.PUT("/themes/:id", UpdateThemeHandler)
 	router.DELETE("/themes/:id", DeleteThemeHandler)
 	router.DELETE("/themes", DeleteThemesBatchHandler)
+	router.GET("/shared-items", GetSharedItemsHandler)
 	router.POST("/apply-palette", ApplyPaletteHandler)
 
 	router.GET("/wallhaven/search", WallhavenSearchHandler)

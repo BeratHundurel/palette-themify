@@ -26,6 +26,8 @@ type PaletteData struct {
 	Palette   []model.Color `json:"palette"`
 	CreatedAt time.Time     `json:"createdAt"`
 	IsSystem  bool          `json:"isSystem"`
+	IsShared  bool          `json:"isShared"`
+	SharedAt  *time.Time    `json:"sharedAt"`
 }
 
 type SavePaletteRequest struct {
@@ -131,6 +133,50 @@ func DeletePalettesBatchHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Palettes deleted successfully", "deleted": deletedCount})
 }
 
+func SharePaletteHandler(c *gin.Context) {
+	paletteID := c.Param("id")
+	if paletteID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Palette ID is required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to share palettes"})
+		return
+	}
+
+	palette, err := setPaletteShared(userID, paletteID, true)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Palette shared successfully", "palette": palette})
+}
+
+func UnsharePaletteHandler(c *gin.Context) {
+	paletteID := c.Param("id")
+	if paletteID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Palette ID is required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to unshare palettes"})
+		return
+	}
+
+	palette, err := setPaletteShared(userID, paletteID, false)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Palette unshared successfully", "palette": palette})
+}
+
 func saveUserPalette(userID uint, name string, palette []model.Color) error {
 	if db.DB == nil {
 		return fmt.Errorf("database not available")
@@ -176,6 +222,8 @@ func getUserPalettes(userID uint) ([]PaletteData, error) {
 			Palette:   colors,
 			CreatedAt: dbPalette.CreatedAt,
 			IsSystem:  dbPalette.IsSystem,
+			IsShared:  dbPalette.IsShared,
+			SharedAt:  dbPalette.SharedAt,
 		}
 	}
 
@@ -215,6 +263,45 @@ func deleteUserPalettes(userID uint, paletteIDs []string) (int64, error) {
 	}
 
 	return result.RowsAffected, nil
+}
+
+func setPaletteShared(userID uint, paletteID string, shared bool) (PaletteData, error) {
+	if db.DB == nil {
+		return PaletteData{}, fmt.Errorf("database not available")
+	}
+
+	var dbPalette model.Palette
+	if err := db.DB.Where("id = ? AND user_id = ?", paletteID, userID).First(&dbPalette).Error; err != nil {
+		return PaletteData{}, fmt.Errorf("palette not found or unauthorized")
+	}
+
+	dbPalette.IsShared = shared
+	if shared {
+		now := time.Now().UTC()
+		dbPalette.SharedAt = &now
+	} else {
+		dbPalette.SharedAt = nil
+	}
+	dbPalette.UpdatedAt = time.Now().UTC()
+
+	if err := db.DB.Save(&dbPalette).Error; err != nil {
+		return PaletteData{}, err
+	}
+
+	var colors []model.Color
+	if err := json.Unmarshal([]byte(dbPalette.JsonData), &colors); err != nil {
+		return PaletteData{}, err
+	}
+
+	return PaletteData{
+		ID:        fmt.Sprintf("%d", dbPalette.ID),
+		Name:      dbPalette.Name,
+		Palette:   colors,
+		CreatedAt: dbPalette.CreatedAt,
+		IsSystem:  dbPalette.IsSystem,
+		IsShared:  dbPalette.IsShared,
+		SharedAt:  dbPalette.SharedAt,
+	}, nil
 }
 
 func processImageWithShepardsMethod(

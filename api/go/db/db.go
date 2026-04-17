@@ -81,7 +81,48 @@ func getEnv(key, defaultValue string) string {
 }
 
 func runMigrations() error {
-	return DB.AutoMigrate(&model.Palette{}, &model.Theme{}, &model.User{}, &model.UserPreferences{})
+	if dbError := DB.Exec(`
+		DO $$
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM pg_indexes
+				WHERE schemaname = 'public' AND indexname = 'idx_users_name'
+			) THEN
+				DROP INDEX IF EXISTS idx_users_name;
+			END IF;
+		END $$;
+	`).Error; dbError != nil {
+		return dbError
+	}
+
+	if err := DB.AutoMigrate(&model.Palette{}, &model.Theme{}, &model.User{}, &model.UserPreferences{}); err != nil {
+		return err
+	}
+
+	if !DB.Migrator().HasColumn(&model.Palette{}, "is_shared") {
+		if err := DB.Migrator().AddColumn(&model.Palette{}, "IsShared"); err != nil {
+			return err
+		}
+	}
+	if !DB.Migrator().HasColumn(&model.Palette{}, "shared_at") {
+		if err := DB.Migrator().AddColumn(&model.Palette{}, "SharedAt"); err != nil {
+			return err
+		}
+	}
+
+	if !DB.Migrator().HasColumn(&model.Theme{}, "is_shared") {
+		if err := DB.Migrator().AddColumn(&model.Theme{}, "IsShared"); err != nil {
+			return err
+		}
+	}
+	if !DB.Migrator().HasColumn(&model.Theme{}, "shared_at") {
+		if err := DB.Migrator().AddColumn(&model.Theme{}, "SharedAt"); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func CloseDatabase() error {

@@ -198,6 +198,72 @@ func DeleteThemesBatchHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Themes deleted successfully", "deleted": deletedCount})
 }
 
+func ShareThemeHandler(c *gin.Context) {
+	if db.DB == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
+		return
+	}
+
+	themeID := c.Param("id")
+	if themeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Theme ID is required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to share themes"})
+		return
+	}
+
+	theme, err := setThemeShared(userID, themeID, true)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	responseTheme, err := buildThemeResponse(theme, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Theme shared successfully", "theme": responseTheme})
+}
+
+func UnshareThemeHandler(c *gin.Context) {
+	if db.DB == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
+		return
+	}
+
+	themeID := c.Param("id")
+	if themeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Theme ID is required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to unshare themes"})
+		return
+	}
+
+	theme, err := setThemeShared(userID, themeID, false)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	responseTheme, err := buildThemeResponse(theme, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Theme unshared successfully", "theme": responseTheme})
+}
+
 func saveUserTheme(userID uint, name string, editorType string, signature string, jsonData string) (model.Theme, bool, error) {
 	if db.DB == nil {
 		return model.Theme{}, false, fmt.Errorf("database not available")
@@ -276,6 +342,8 @@ func getUserThemes(userID uint) ([]json.RawMessage, error) {
 		payload["name"] = dbTheme.Name
 		payload["editorType"] = dbTheme.EditorType
 		payload["signature"] = dbTheme.Signature
+		payload["isShared"] = dbTheme.IsShared
+		payload["sharedAt"] = dbTheme.SharedAt
 		encoded, err := json.Marshal(payload)
 		if err != nil {
 			continue
@@ -310,6 +378,32 @@ func deleteUserThemes(userID uint, themeIDs []string) (int64, error) {
 	}
 
 	return result.RowsAffected, nil
+}
+
+func setThemeShared(userID uint, themeID string, shared bool) (model.Theme, error) {
+	if db.DB == nil {
+		return model.Theme{}, fmt.Errorf("database not available")
+	}
+
+	var theme model.Theme
+	if err := db.DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
+		return model.Theme{}, fmt.Errorf("theme not found or unauthorized")
+	}
+
+	theme.IsShared = shared
+	if shared {
+		now := time.Now().UTC()
+		theme.SharedAt = &now
+	} else {
+		theme.SharedAt = nil
+	}
+	theme.UpdatedAt = time.Now().UTC()
+
+	if err := db.DB.Save(&theme).Error; err != nil {
+		return model.Theme{}, err
+	}
+
+	return theme, nil
 }
 
 func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
@@ -373,6 +467,8 @@ func buildThemeResponse(theme model.Theme, payload map[string]any) (map[string]a
 	payload["name"] = theme.Name
 	payload["editorType"] = theme.EditorType
 	payload["signature"] = theme.Signature
+	payload["isShared"] = theme.IsShared
+	payload["sharedAt"] = theme.SharedAt
 
 	return payload, nil
 }
