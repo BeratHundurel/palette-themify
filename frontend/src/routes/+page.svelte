@@ -17,6 +17,9 @@
 	import ThemeExportPopover from '$lib/components/toolbar/theme-export/ThemeExportPopover.svelte';
 	import { isDesktopApp } from '$lib/platform';
 	import BrandButton from '$lib/components/ui/BrandButton.svelte';
+	import BrandLinks from '$lib/components/ui/BrandLinks.svelte';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
+	import PromptDialog from '$lib/components/ui/PromptDialog.svelte';
 
 	let showAuthModal = $state(false);
 
@@ -40,16 +43,17 @@
 	<div class="absolute top-0 left-0 z-10 h-full w-full bg-black/60"></div>
 
 	<div class="z-40 h-max w-full p-4">
-		<div class="flex flex-row items-center justify-between gap-4">
-			<div class="flex shrink-0 items-center gap-4">
+		<div class="grid grid-cols-3 items-center gap-4">
+			<div class="flex min-w-0 items-center gap-4 justify-self-start">
 				<TutorialButton />
 			</div>
 
-			<div class="flex min-w-0 flex-1 justify-center lg:min-w-75">
+			<div class="flex min-w-0 justify-center">
 				<Search />
 			</div>
 
-			<div class="flex shrink-0 items-center gap-4">
+			<div class="flex min-w-0 items-center justify-end gap-4 justify-self-end">
+				<BrandLinks href="/shared">Community</BrandLinks>
 				{#if authStore.state.isAuthenticated}
 					<UserProfile />
 				{:else}
@@ -95,3 +99,6 @@
 <TutorialStart />
 
 <Tutorial />
+
+<ConfirmDialog />
+<PromptDialog />
