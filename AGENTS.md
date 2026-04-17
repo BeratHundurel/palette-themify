@@ -1,15 +1,15 @@
-# Project Guidelines
+# Agent Notes
 
-## Code Style
+## Quick style pointers
 
-- Svelte uses runes (`$state`/`$effect`/`$derived`) — follow patterns in [app.svelte.ts](frontend/src/lib/stores/app.svelte.ts).
+- Svelte uses runes (`$state`/`$effect`/`$derived`).
 - Reactive utilities live in `*.svelte.ts`; components are PascalCase.
-- Colors are `{ hex: string }` — see [color.ts](frontend/src/lib/types/color.ts).
-- Use `ensureOk` for API error normalization — see [base.ts](frontend/src/lib/api/base.ts).
-- Comment only non-obvious logic. Prefer simple, direct solutions.
+- Use `ensureOk` for API error normalization.
+- Comment only non-obvious logic.
 
-## Architecture
+## Primary references
 
-- **Frontend** (SvelteKit, `frontend/src`): all HTTP calls isolated in `frontend/src/lib/api/`.
-- **Go API** (port 8088): auth, palettes, workspaces, apply-palette, Wallhaven proxy — [main.go](api/go/main.go).
-- **Zig API** (port 8089): palette extraction and theme generation via Tokamak — [palette_api.zig](api/zig/src/palette_api.zig).
+- Svelte context: https://svelte.dev/llms-medium.txt
+- Frontend patterns: `frontend/src/lib/stores/app.svelte.ts`, `frontend/src/lib/api/base.ts`, `frontend/src/lib/types/color.ts`
+- Go API source/docs: `api/go/main.go` and package docs in `api/go/`
+- Zig API source/docs: `api/zig/src/palette_api.zig` and related modules in `api/zig/src/`
