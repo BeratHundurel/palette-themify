@@ -3,7 +3,8 @@ import type {
 	SavePaletteRequest,
 	GetPalettesResponse,
 	SavePaletteResult,
-	ExtractPaletteResponse
+	ExtractPaletteResponse,
+	PaletteData
 } from '$lib/types/palette';
 
 import { getAuthHeaders } from './auth';
@@ -73,6 +74,24 @@ export async function deletePalettes(ids: string[]): Promise<{ message: string; 
 		method: 'DELETE',
 		headers: getAuthHeaders(),
 		body: JSON.stringify({ ids })
+	});
+	await ensureOk(res);
+	return res.json();
+}
+
+export async function sharePalette(id: string): Promise<{ message: string; palette: PaletteData }> {
+	const res = await fetch(buildURL(`/palettes/${id}/share`), {
+		method: 'POST',
+		headers: getAuthHeaders()
+	});
+	await ensureOk(res);
+	return res.json();
+}
+
+export async function unsharePalette(id: string): Promise<{ message: string; palette: PaletteData }> {
+	const res = await fetch(buildURL(`/palettes/${id}/share`), {
+		method: 'DELETE',
+		headers: getAuthHeaders()
 	});
 	await ensureOk(res);
 	return res.json();

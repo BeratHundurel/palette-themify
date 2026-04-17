@@ -6,6 +6,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import IconDangerButton from '$lib/components/ui/IconDangerButton.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
+	import { dialogStore } from '$lib/stores/dialog.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
@@ -14,28 +15,17 @@
 	import { generateOverridable, type EditorThemeType } from '$lib/api/theme';
 	import { hydrateThemeExportResponse } from '../theme-export/session';
 
-	async function handleThemeCopy(item: SavedThemeItem) {
-		try {
-			const themeJson = JSON.stringify(item.themeResult.theme, null, 2);
-			await navigator.clipboard.writeText(themeJson);
-			toast.success('Theme JSON copied to clipboard!');
-			popoverStore.close('themes');
-		} catch {
-			toast.error('Could not copy the theme. Please try again.');
-		}
-	}
-
 	async function handleThemeSave(item: SavedThemeItem) {
 		if (!isDesktopApp) return;
 
 		try {
 			const themeJson = JSON.stringify(item.themeResult.theme, null, 2);
-			const savedPath = await saveThemeToEditorTarget({
+			await saveThemeToEditorTarget({
 				editorType: item.editorType,
 				themeName: item.name,
 				themeJSON: themeJson
 			});
-			toast.success(`Theme saved to ${savedPath}`);
+			toast.success('Theme saved to editor folder');
 			popoverStore.close('themes');
 		} catch (error) {
 			console.error('Error saving theme to editor folder:', error);
@@ -88,22 +78,47 @@
 	}
 
 	async function handleThemeDelete(themeId: string, themeName: string) {
-		if (confirm(`Are you sure you want to delete "${themeName}"?`)) {
-			appStore.deleteTheme(themeId);
-		}
+		const shouldDelete = await dialogStore.confirm({
+			title: 'Delete saved theme?',
+			message: `Are you sure you want to delete "${themeName}"?`,
+			confirmLabel: 'Delete theme',
+			variant: 'danger'
+		});
+		if (!shouldDelete) return;
+
+		appStore.deleteTheme(themeId);
 	}
 
 	async function handleDeleteAllThemes() {
 		if (appStore.state.savedThemes.length === 0) return;
-		if (!confirm('Are you sure you want to delete all saved themes?')) return;
+
+		const shouldDeleteAll = await dialogStore.confirm({
+			title: 'Delete all saved themes?',
+			message: `This will permanently delete ${appStore.state.savedThemes.length} saved theme${appStore.state.savedThemes.length === 1 ? '' : 's'}.`,
+			confirmLabel: 'Delete all',
+			variant: 'danger'
+		});
+		if (!shouldDeleteAll) return;
 
 		const themeIds = appStore.state.savedThemes.map((item) => item.id);
 		await appStore.deleteThemes(themeIds);
 	}
 
 	function getPreviewColors(item: SavedThemeItem): string[] {
-		// Return the first 6 colors from the theme result
 		return item.themeResult.colors.slice(0, 6).map((color) => color.hex);
+	}
+
+	function isLocalTheme(item: SavedThemeItem): boolean {
+		return item.id.startsWith('local_');
+	}
+
+	async function handleThemeShareToggle(item: SavedThemeItem) {
+		if (isLocalTheme(item)) {
+			toast.error('Sign in first to share themes.');
+			return;
+		}
+
+		await appStore.setThemeShared(item.id, !item.isShared);
 	}
 </script>
 
@@ -149,25 +164,37 @@
 						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
 					>
 						<div class="p-3">
-							<h4 class="text-brand truncate font-mono text-sm font-semibold" title={item.name}>
+							<h4 class="text-brand mb-2 truncate font-mono text-sm font-semibold" title={item.name}>
 								{item.name}
 							</h4>
-							<div class="mb-2 flex items-center justify-end gap-1">
-								<ActionPillButton onclick={() => handleSavedThemeLoad(item)} class="gap-1" title="Load into inspector">
+							<div class="mb-3 flex items-center justify-around gap-1">
+								<ActionPillButton
+									onclick={() => handleThemeShareToggle(item)}
+									class="px-2"
+									title={isLocalTheme(item)
+										? 'Sign in synced theme required to share'
+										: item.isShared
+											? 'Remove from shared list'
+											: 'Share theme publicly'}
+								>
+									{item.isShared ? 'Unshare' : 'Share'}
+								</ActionPillButton>
+								<ActionPillButton
+									onclick={() => handleSavedThemeLoad(item)}
+									class="gap-1 px-2"
+									title="Load into inspector"
+								>
 									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 									</svg>
 									Load
 								</ActionPillButton>
-								<ActionPillButton onclick={() => handleThemeCopy(item)} class="gap-1" title="Copy theme">
-									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-									</svg>
-									Copy
-								</ActionPillButton>
 								{#if isDesktopApp}
-									<ActionPillButton onclick={() => handleThemeSave(item)} class="gap-1" title="Save to editor folder">
+									<ActionPillButton
+										onclick={() => handleThemeSave(item)}
+										class="gap-1 px-2"
+										title="Save to editor folder"
+									>
 										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
@@ -179,7 +206,11 @@
 										Save
 									</ActionPillButton>
 								{/if}
-								<IconDangerButton onclick={() => handleThemeDelete(item.id, item.name)} title="Delete theme">
+								<IconDangerButton
+									onclick={() => handleThemeDelete(item.id, item.name)}
+									title="Delete theme"
+									class="shrink-0 p-1"
+								>
 									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path
 											stroke-linecap="round"
@@ -203,21 +234,30 @@
 						</div>
 
 						<div class="group-hover:border-brand/50 group border-t border-zinc-600 bg-zinc-900/50 px-3 py-1.5">
-							<span class="flex items-center gap-1.5 text-xs text-zinc-500">
-								<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-									/>
-								</svg>
-								{new Date(item.createdAt).toLocaleDateString('en-US', {
-									month: 'short',
-									day: 'numeric',
-									year: 'numeric'
-								})}
-							</span>
+							<div class="flex items-center justify-between gap-2">
+								<span class="flex items-center gap-1.5 text-xs text-zinc-500">
+									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+										/>
+									</svg>
+									{new Date(item.createdAt).toLocaleDateString('en-US', {
+										month: 'short',
+										day: 'numeric',
+										year: 'numeric'
+									})}
+								</span>
+								{#if item.isShared}
+									<span
+										class="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300"
+									>
+										Shared
+									</span>
+								{/if}
+							</div>
 						</div>
 					</li>
 				{/each}

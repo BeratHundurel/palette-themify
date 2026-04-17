@@ -6,18 +6,22 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import IconDangerButton from '$lib/components/ui/IconDangerButton.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import { dialogStore } from '$lib/stores/dialog.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
 	import { TUTORIAL_APPLY_PALETTE, TUTORIAL_PALETTE_NAME } from '$lib/types/tutorial';
 	import toast from 'svelte-french-toast';
 	import type { Color } from '$lib/types/color';
+	import type { PaletteData } from '$lib/types/palette';
 
-	const tutorialPaletteItem = {
+	const tutorialPaletteItem: PaletteData = {
 		id: 'tutorial_palette_preview',
 		name: TUTORIAL_PALETTE_NAME,
 		palette: TUTORIAL_APPLY_PALETTE,
 		createdAt: new Date(0).toISOString(),
-		isSystem: true
+		isSystem: true,
+		isShared: false
 	};
 
 	let displayPalettes = $derived.by(() => {
@@ -55,17 +59,52 @@
 	}
 
 	async function handlePaletteDelete(paletteId: string, paletteName: string) {
-		if (confirm(`Are you sure you want to delete "${paletteName}"?`)) {
-			await appStore.deletePalette(paletteId);
-		}
+		const shouldDelete = await dialogStore.confirm({
+			title: 'Delete saved palette?',
+			message: `Are you sure you want to delete "${paletteName}"?`,
+			confirmLabel: 'Delete palette',
+			variant: 'danger'
+		});
+		if (!shouldDelete) return;
+
+		await appStore.deletePalette(paletteId);
 	}
 
 	async function handleDeleteAllPalettes() {
 		const palettesToDelete = displayPalettes.filter((item) => !item.isSystem);
 		if (palettesToDelete.length === 0) return;
-		if (!confirm('Are you sure you want to delete all saved palettes?')) return;
+
+		const shouldDeleteAll = await dialogStore.confirm({
+			title: 'Delete all saved palettes?',
+			message: `This will permanently delete ${palettesToDelete.length} saved palette${palettesToDelete.length === 1 ? '' : 's'}.`,
+			confirmLabel: 'Delete all',
+			variant: 'danger'
+		});
+		if (!shouldDeleteAll) return;
 
 		await appStore.deletePalettes(palettesToDelete.map((palette) => palette.id));
+	}
+
+	function isLocalPalette(id: string): boolean {
+		return id.startsWith('local_');
+	}
+
+	async function handlePaletteShareToggle(item: PaletteData) {
+		if (item.isSystem) {
+			toast.error('System palettes cannot be shared. Save a copy first.');
+			return;
+		}
+
+		if (isLocalPalette(item.id)) {
+			toast.error(
+				authStore.state.isAuthenticated
+					? 'Sync this palette first, then share it.'
+					: 'Sign in to sync this palette before sharing.'
+			);
+			return;
+		}
+
+		await appStore.setPaletteShared(item.id, !item.isShared);
 	}
 </script>
 
@@ -114,71 +153,88 @@
 							: ''}"
 					>
 						<div class="p-3">
-							<!-- Header -->
-							<div class="mb-3 flex items-start justify-between">
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-2">
-										<h4 class="text-brand truncate font-mono text-sm font-semibold" title={item.name}>
-											{item.name}
-										</h4>
-										{#if item.isSystem}
-											<span
-												class="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300"
-											>
-												System
-											</span>
-										{/if}
-									</div>
-									<div class="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
-										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-											/>
-										</svg>
-										<span>{item.palette.length} {item.palette.length === 1 ? 'color' : 'colors'}</span>
-									</div>
-								</div>
-
-								<!-- Actions -->
-								<div class="flex items-center gap-1.5">
-									<ActionPillButton onclick={() => handlePaletteLoad(item.palette)} title="Apply palette">
-										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-										</svg>
-										Apply
-									</ActionPillButton>
-
-									<ActionPillButton
-										onclick={() => handleCreateThemeFromPalette(item.palette)}
-										title="Create theme from palette"
-									>
-										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M13 10V3L4 14h7v7l9-11h-7z"
-											/>
-										</svg>
-										Theme
-									</ActionPillButton>
-
-									{#if !item.isSystem}
-										<IconDangerButton onclick={() => handlePaletteDelete(item.id, item.name)} title="Delete palette">
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-												/>
-											</svg>
-										</IconDangerButton>
+							<div class="mb-3 min-w-0">
+								<div class="flex items-center gap-2">
+									<h4 class="text-brand truncate font-mono text-sm font-semibold" title={item.name}>
+										{item.name}
+									</h4>
+									{#if item.isSystem}
+										<span
+											class="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300"
+										>
+											System
+										</span>
 									{/if}
 								</div>
+								<div class="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+										/>
+									</svg>
+									<span>{item.palette.length} {item.palette.length === 1 ? 'color' : 'colors'}</span>
+								</div>
+							</div>
+
+							<div class="mb-3 flex items-center justify-around gap-1">
+								<ActionPillButton
+									onclick={() => handlePaletteLoad(item.palette)}
+									class="gap-1 px-2"
+									title="Apply palette"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+									Apply
+								</ActionPillButton>
+
+								<ActionPillButton
+									onclick={() => handleCreateThemeFromPalette(item.palette)}
+									class="gap-1 px-2"
+									title="Create theme from palette"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M13 10V3L4 14h7v7l9-11h-7z"
+										/>
+									</svg>
+									Theme
+								</ActionPillButton>
+
+								<ActionPillButton
+									onclick={() => handlePaletteShareToggle(item)}
+									class="px-2"
+									title={item.isSystem || isLocalPalette(item.id)
+										? 'Sign in synced palette required to share'
+										: item.isShared
+											? 'Remove from shared list'
+											: 'Share palette publicly'}
+								>
+									{item.isShared ? 'Unshare' : 'Share'}
+								</ActionPillButton>
+
+								{#if !item.isSystem}
+									<IconDangerButton
+										onclick={() => handlePaletteDelete(item.id, item.name)}
+										class="shrink-0 p-1"
+										title="Delete palette"
+									>
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+											/>
+										</svg>
+									</IconDangerButton>
+								{/if}
 							</div>
 
 							<div class="relative mb-2">
@@ -202,21 +258,30 @@
 						</div>
 
 						<div class="group-hover:border-brand/50 group border-t border-zinc-600 bg-zinc-900/50 px-3 py-1.5">
-							<span class="flex items-center gap-1.5 text-xs text-zinc-500">
-								<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-									/>
-								</svg>
-								{new Date(item.createdAt).toLocaleDateString('en-US', {
-									month: 'short',
-									day: 'numeric',
-									year: 'numeric'
-								})}
-							</span>
+							<div class="flex items-center justify-between gap-2">
+								<span class="flex items-center gap-1.5 text-xs text-zinc-500">
+									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+										/>
+									</svg>
+									{new Date(item.createdAt).toLocaleDateString('en-US', {
+										month: 'short',
+										day: 'numeric',
+										year: 'numeric'
+									})}
+								</span>
+								{#if item.isShared}
+									<span
+										class="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300"
+									>
+										Shared
+									</span>
+								{/if}
+							</div>
 						</div>
 					</li>
 				{/each}

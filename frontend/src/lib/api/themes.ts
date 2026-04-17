@@ -63,3 +63,23 @@ export async function deleteThemes(themeIds: string[]): Promise<{ message: strin
 	await ensureOk(response);
 	return response.json();
 }
+
+export async function shareTheme(themeId: string): Promise<SavedThemeResponse> {
+	const response = await fetch(buildURL(`/themes/${themeId}/share`), {
+		method: 'POST',
+		headers: getAuthHeaders()
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function unshareTheme(themeId: string): Promise<SavedThemeResponse> {
+	const response = await fetch(buildURL(`/themes/${themeId}/share`), {
+		method: 'DELETE',
+		headers: getAuthHeaders()
+	});
+
+	await ensureOk(response);
+	return response.json();
+}

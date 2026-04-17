@@ -38,6 +38,7 @@ import {
 } from '$lib/stores/app/persistence/themeExport';
 import * as preferencesApi from '$lib/api/preferences';
 import * as themesApi from '$lib/api/themes';
+import { dialogStore } from '$lib/stores/dialog.svelte';
 
 import { authStore } from '../auth.svelte';
 import { tutorialStore } from '../tutorial.svelte';
@@ -408,6 +409,23 @@ function createAppStore() {
 				state.savedThemes = previousThemes;
 				saveSavedThemes(state.savedThemes);
 				toast.error('Could not delete the themes. Please try again.');
+			}
+		},
+
+		async setThemeShared(themeId: string, shared: boolean) {
+			if (!browser || !authStore.state.isAuthenticated) {
+				toast.error('Sign in to share themes.');
+				return;
+			}
+
+			try {
+				const response = shared ? await themesApi.shareTheme(themeId) : await themesApi.unshareTheme(themeId);
+				this.applyThemeResponse(response.theme);
+				toast.success(shared ? 'Theme shared' : 'Theme removed from shared list');
+			} catch {
+				toast.error(
+					shared ? 'Could not share the theme. Please try again.' : 'Could not unshare the theme. Please try again.'
+				);
 			}
 		},
 
@@ -903,7 +921,12 @@ function createAppStore() {
 				toast.error('Extract a palette before saving.');
 				return;
 			}
-			const paletteName = prompt('Enter a name for your palette:');
+			const paletteName = await dialogStore.prompt({
+				title: 'Save current palette',
+				message: 'Enter a name for your palette.',
+				placeholder: 'My Palette',
+				confirmLabel: 'Save palette'
+			});
 			if (!paletteName) return;
 
 			try {
@@ -1072,6 +1095,32 @@ function createAppStore() {
 				toast.success('Palettes deleted');
 			} catch {
 				toast.error('Could not delete the palettes. Please try again.');
+			}
+		},
+
+		async setPaletteShared(paletteId: string, shared: boolean) {
+			if (!browser || !authStore.state.isAuthenticated) {
+				toast.error('Sign in to share palettes.');
+				return;
+			}
+
+			try {
+				const response = shared ? await paletteApi.sharePalette(paletteId) : await paletteApi.unsharePalette(paletteId);
+
+				state.savedPalettes = state.savedPalettes.map((item) =>
+					item.id === paletteId
+						? {
+								...item,
+								isShared: response.palette.isShared,
+								sharedAt: response.palette.sharedAt
+							}
+						: item
+				);
+				toast.success(shared ? 'Palette shared' : 'Palette removed from shared list');
+			} catch {
+				toast.error(
+					shared ? 'Could not share the palette. Please try again.' : 'Could not unshare the palette. Please try again.'
+				);
 			}
 		},
 

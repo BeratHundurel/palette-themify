@@ -60,6 +60,8 @@ export type SavedThemeItem = {
 	themeResult: ThemeGenerationResponse;
 	createdAt: string;
 	signature?: string;
+	isShared?: boolean;
+	sharedAt?: string | null;
 };
 
 export const DEFAULT_THEME_EXPORT_PREFERENCES: ThemeExportPreferences = {

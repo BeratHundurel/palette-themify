@@ -4,7 +4,7 @@ import { IMAGE } from '$lib/types/image';
 import { DEFAULT_THEME_EXPORT_PREFERENCES } from '$lib/types/theme';
 import type { SavedThemeItem } from '$lib/types/theme';
 
-const { authStoreMock, tutorialStoreMock } = vi.hoisted(() => ({
+const { authStoreMock, tutorialStoreMock, dialogStoreMock } = vi.hoisted(() => ({
 	authStoreMock: {
 		state: {
 			user: null,
@@ -14,6 +14,17 @@ const { authStoreMock, tutorialStoreMock } = vi.hoisted(() => ({
 	},
 	tutorialStoreMock: {
 		setCurrentPaletteSaved: vi.fn()
+	},
+	dialogStoreMock: {
+		prompt: vi.fn(),
+		confirm: vi.fn(),
+		resolveConfirm: vi.fn(),
+		resolvePrompt: vi.fn(),
+		close: vi.fn(),
+		state: {
+			confirm: null,
+			prompt: null
+		}
 	}
 }));
 
@@ -27,6 +38,10 @@ vi.mock('../auth.svelte', () => ({
 
 vi.mock('../tutorial.svelte', () => ({
 	tutorialStore: tutorialStoreMock
+}));
+
+vi.mock('$lib/stores/dialog.svelte', () => ({
+	dialogStore: dialogStoreMock
 }));
 
 vi.mock('$lib/api/palette', () => ({
@@ -169,6 +184,7 @@ describe('appStore', () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
 		vi.clearAllMocks();
+		dialogStoreMock.prompt.mockResolvedValue('Saved Palette');
 		authStoreMock.state.isAuthenticated = false;
 		resetStoreForTest();
 		localStorage.clear();
@@ -468,7 +484,7 @@ describe('appStore', () => {
 		it('saves palette to local storage for unauthenticated users', async () => {
 			authStoreMock.state.isAuthenticated = false;
 			appStore.state.colors = [{ hex: '#112233' }];
-			vi.spyOn(window, 'prompt').mockReturnValue('Local Sunset');
+			dialogStoreMock.prompt.mockResolvedValue('Local Sunset');
 
 			await appStore.savePalette();
 
@@ -484,7 +500,7 @@ describe('appStore', () => {
 		it('saves palette through API for authenticated users', async () => {
 			authStoreMock.state.isAuthenticated = true;
 			appStore.state.colors = [{ hex: '#112233' }];
-			vi.spyOn(window, 'prompt').mockReturnValue('Remote Sunset');
+			dialogStoreMock.prompt.mockResolvedValue('Remote Sunset');
 			vi.mocked(paletteApi.savePalette).mockResolvedValue({ message: 'ok', name: 'Remote Sunset' });
 			const loadSavedPalettesSpy = vi.spyOn(appStore, 'loadSavedPalettes').mockResolvedValue(undefined);
 

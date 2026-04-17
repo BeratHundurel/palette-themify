@@ -6,6 +6,8 @@ export type PaletteData = {
 	palette: Color[];
 	createdAt: string;
 	isSystem?: boolean;
+	isShared?: boolean;
+	sharedAt?: string | null;
 };
 
 export type GetPalettesResponse = {
