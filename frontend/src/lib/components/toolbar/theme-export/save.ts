@@ -1,6 +1,7 @@
 import type { EditorThemeType } from '$lib/api/theme';
 import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 import { appStore } from '$lib/stores/app/store.svelte';
+import { dialogStore } from '$lib/stores/dialog.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
 import type { SavedThemeItem, ThemeGenerationResponse } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
@@ -38,7 +39,7 @@ function buildSavedTheme({
 	};
 }
 
-export function saveTheme({ name, editorType, themeResult }: SaveThemeArgs) {
+export async function saveTheme({ name, editorType, themeResult }: SaveThemeArgs) {
 	if (!themeResult || !name) return;
 
 	const trimmedName = name.trim();
@@ -58,7 +59,12 @@ export function saveTheme({ name, editorType, themeResult }: SaveThemeArgs) {
 
 	const nameMatch = existingThemes.find((item) => normalizeThemeName(item.name) === normalizedName);
 	if (nameMatch) {
-		const replace = confirm(`A theme named "${trimmedName}" already exists. Replace it?`);
+		const replace = await dialogStore.confirm({
+			title: 'Theme name already exists',
+			message: `A theme named "${trimmedName}" already exists. Replace it?`,
+			confirmLabel: 'Replace theme',
+			variant: 'danger'
+		});
 		if (replace) {
 			const saved = buildSavedTheme({
 				id: nameMatch.id,
@@ -70,7 +76,12 @@ export function saveTheme({ name, editorType, themeResult }: SaveThemeArgs) {
 			return;
 		}
 
-		const renamed = prompt('Enter a new name for the theme:', trimmedName);
+		const renamed = await dialogStore.prompt({
+			title: 'Rename theme',
+			message: 'Enter a new name for the theme.',
+			initialValue: trimmedName,
+			confirmLabel: 'Save as new theme'
+		});
 		if (renamed === null) return;
 
 		const renameError = validateThemeName(renamed);
@@ -110,7 +121,7 @@ export async function exportTheme({ name, editorType, themeResult, saveOnCopy }:
 		await navigator.clipboard.writeText(themeJson);
 
 		if (saveOnCopy) {
-			saveTheme({
+			await saveTheme({
 				name: name.trim(),
 				editorType,
 				themeResult
@@ -139,21 +150,21 @@ export async function exportThemeToEditorFolder({ name, editorType, themeResult,
 
 	try {
 		const themeJson = JSON.stringify(themeResult.theme, null, 2);
-		const savedPath = await saveThemeToEditorTarget({
+		await saveThemeToEditorTarget({
 			editorType,
 			themeName: trimmedName,
 			themeJSON: themeJson
 		});
 
 		if (saveOnCopy) {
-			saveTheme({
+			await saveTheme({
 				name: trimmedName,
 				editorType,
 				themeResult
 			});
 		}
 
-		toast.success(`Theme saved to ${savedPath}`);
+		toast.success('Theme saved to editor folder');
 		popoverStore.close('themeExport');
 	} catch (error) {
 		console.error('Error saving theme to editor folder:', error);

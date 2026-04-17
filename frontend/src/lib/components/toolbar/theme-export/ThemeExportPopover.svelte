@@ -1,11 +1,21 @@
 <script lang="ts">
-	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { appStore } from '$lib/stores/app/store.svelte';
+	import { onDestroy } from 'svelte';
+	import toast from 'svelte-french-toast';
+
 	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import { isDesktopApp } from '$lib/platform';
+	import { appStore } from '$lib/stores/app/store.svelte';
+	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
-	import toast from 'svelte-french-toast';
+	import { cn } from '$lib/utils';
+
+	import AppearanceSelector from './AppearanceSelector.svelte';
+	import EditorSelector from './EditorSelector.svelte';
+	import OverrideGrid from './OverrideGrid.svelte';
+	import { getRecommendedOverrideColors } from './recommendations';
+	import { exportTheme as exportThemeToClipboard, exportThemeToEditorFolder } from './save';
+	import SaveBehaviorSection from './SaveBehaviorSection.svelte';
 	import {
 		buildRequestOverrides,
 		clearThemeVersions,
@@ -16,12 +26,12 @@
 		setManualOverrideFlag
 	} from './session';
 	import { normalizeHex, overrideFields, THEME_NAME_DEBOUNCE_MS, validateThemeName } from './utils';
-	import { exportTheme as exportThemeToClipboard, exportThemeToEditorFolder } from './save';
-	import { cn } from '$lib/utils';
 
 	const SHUFFLE_KEYS: Array<keyof ThemeOverrides> = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
+	const OVERRIDE_KEYS = overrideFields.map((field) => field.key);
 
 	let themeNameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let manualOverrideBadges = $state<Partial<Record<keyof ThemeOverrides, boolean>>>({});
 
 	let paletteVersion = $derived(appStore.state.paletteVersion);
 	let themeName = $derived(appStore.state.themeExport.themeName);
@@ -31,17 +41,24 @@
 	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
 	let saveOnCopy = $derived(appStore.state.themeExport.saveOnCopy);
 	let accentBoostCoefficient = $derived(appStore.state.themeExport.boostCoefficient);
-	let accentBoostInput = $state(appStore.state.themeExport.boostCoefficient.toFixed(2));
 	let backupColors = $derived(appStore.state.themeExport.backupColors ?? []);
 	let themeSourceColorCount = $derived(
 		appStore.state.colors.length > 0 ? appStore.state.colors.length : backupColors.length
 	);
+	let paletteColors = $derived(appStore.state.colors.length > 0 ? appStore.state.colors : backupColors);
 
 	const baseOverrides = $derived(themeResult?.themeOverrides ?? {});
 
 	let isOpen = $derived(popoverStore.isOpen('themeExport'));
 	let themeNameError = $state<string | null>(null);
 	let isGenerating = $state(false);
+	let isExportDisabled = $derived(!themeResult || themeNameError !== null);
+
+	onDestroy(() => {
+		if (themeNameDebounceTimer) {
+			clearTimeout(themeNameDebounceTimer);
+		}
+	});
 
 	$effect(() => {
 		// effect handling scenarios:
@@ -59,6 +76,7 @@
 
 		if (shouldGenerate) {
 			themeName = 'Generated Theme';
+			manualOverrideBadges = {};
 			resetThemeExportOverrideState();
 			generateThemeFromApi({ overrides: {}, bypassCache: true });
 		}
@@ -214,6 +232,8 @@
 	}
 
 	function resetOverrides() {
+		manualOverrideBadges = {};
+
 		const overrides =
 			appStore.state.themeExport.loadedThemeOverridesReference && appStore.state.colors.length === 0
 				? { ...appStore.state.themeExport.loadedThemeOverridesReference }
@@ -251,6 +271,7 @@
 		const overrides = getCurrentOverrides();
 		for (const [index, key] of SHUFFLE_KEYS.entries()) {
 			overrides[key] = shuffled[index];
+			manualOverrideBadges[key] = true;
 		}
 
 		appStore.state.themeExport.rawThemeOverrides = { ...overrides };
@@ -262,6 +283,21 @@
 		return themeOverrides[key] ?? baseOverrides[key] ?? '#000000';
 	}
 
+	function getOverrideRecommendations(key: keyof ThemeOverrides, currentValue: string): string[] {
+		return getRecommendedOverrideColors({
+			key,
+			currentValue,
+			themeOverrides,
+			baseOverrides,
+			paletteColors,
+			overrideKeys: OVERRIDE_KEYS
+		});
+	}
+
+	function handleClose() {
+		popoverStore.close('themeExport');
+	}
+
 	function updateThemeOverride(key: keyof ThemeOverrides, value: string) {
 		const normalized = normalizeHex(value);
 		if (!normalized) return;
@@ -270,6 +306,7 @@
 
 		const overrides = getCurrentOverrides();
 		overrides[key] = normalized;
+		manualOverrideBadges[key] = true;
 		appStore.state.themeExport.rawThemeOverrides = { ...overrides };
 		setManualOverrideFlag(key, true);
 
@@ -317,20 +354,13 @@
 		});
 	}
 
-	function handleAccentBoostInput(event: Event) {
-		const target = event.target as HTMLInputElement;
-		accentBoostInput = target.value;
-
-		const parsed = Number(target.value);
-		if (Number.isNaN(parsed)) return;
-
-		const clamped = Math.min(3, Math.max(0, parsed));
-		const normalized = Math.round(clamped * 100) / 100;
-
+	function handleAccentBoostChange(normalized: number) {
 		appStore.setThemeExportBoostCoefficient(normalized);
-		accentBoostInput = normalized.toFixed(2);
-
 		generateThemeFromApi({ bypassCache: true, accentBoostCoefficient: normalized });
+	}
+
+	function handleSaveOnCopyChange(checked: boolean) {
+		appStore.setThemeExportSaveOnCopy(checked);
 	}
 
 	async function handleExportTheme() {
@@ -374,7 +404,7 @@
 				</div>
 				<button
 					type="button"
-					onclick={() => popoverStore.close('themeExport')}
+					onclick={handleClose}
 					class="hover:text-brand rounded-lg p-2 text-zinc-400 transition-[background-color,color] duration-300 hover:bg-zinc-800/50"
 					aria-label="Close"
 				>
@@ -422,288 +452,28 @@
 					</div>
 				</div>
 
-				<div class="mb-8">
-					<div class="mb-6 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Appearance</h3>
-						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
-					</div>
-					<div class="grid grid-cols-2 gap-4">
-						<button
-							type="button"
-							onclick={() => handleThemeAppearanceChange('dark')}
-							class="group relative overflow-hidden rounded-xl border px-4 py-4 text-left transition-[background-color,border-color,box-shadow] duration-300 {themeAppearance ===
-							'dark'
-								? 'border-brand/70 shadow-brand/20 bg-zinc-900/80 shadow-lg'
-								: 'hover:border-brand/50 border-zinc-700 bg-zinc-950/60 hover:bg-zinc-900/60'}"
-						>
-							<div class="flex items-start justify-between gap-3">
-								<div>
-									<div class="text-sm font-semibold {themeAppearance === 'dark' ? 'text-brand' : 'text-zinc-200'}">
-										Dark
-									</div>
-									<div class="mt-1 text-xs text-zinc-400">Deep surfaces, bold accents</div>
-								</div>
-								<div class="rounded-lg border border-zinc-700 bg-zinc-950/80 p-2">
-									<div class="grid grid-cols-3 gap-1">
-										<div class="h-3 w-5 rounded bg-zinc-800"></div>
-										<div class="h-3 w-5 rounded bg-zinc-700"></div>
-										<div class="h-3 w-5 rounded bg-zinc-600"></div>
-										<div class="h-3 w-5 rounded bg-zinc-900"></div>
-										<div class="h-3 w-5 rounded bg-zinc-800"></div>
-										<div class="h-3 w-5 rounded bg-zinc-700"></div>
-										<div class="h-3 w-5 rounded bg-zinc-950"></div>
-										<div class="h-3 w-5 rounded bg-zinc-900"></div>
-										<div class="h-3 w-5 rounded bg-zinc-800"></div>
-									</div>
-								</div>
-							</div>
-							<div class="mt-3 flex items-center gap-2">
-								<div
-									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {themeAppearance ===
-									'dark'
-										? 'border-brand bg-brand/20'
-										: 'border-zinc-500'}"
-								>
-									{#if themeAppearance === 'dark'}
-										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
-									{/if}
-								</div>
-								<span class="text-xs font-medium text-zinc-400">Optimized for low-light setups</span>
-							</div>
-						</button>
+				<AppearanceSelector selected={themeAppearance} onSelect={handleThemeAppearanceChange} />
 
-						<button
-							type="button"
-							onclick={() => handleThemeAppearanceChange('light')}
-							class="group relative overflow-hidden rounded-xl border px-4 py-4 text-left transition-[background-color,border-color,box-shadow] duration-300 {themeAppearance ===
-							'light'
-								? 'border-brand/40 shadow-brand/10 bg-zinc-800/40 shadow-lg'
-								: 'hover:border-brand/40 border-zinc-700 bg-zinc-950/60 hover:bg-zinc-900/40'}"
-						>
-							<div class="flex items-start justify-between gap-3">
-								<div>
-									<div class="text-sm font-semibold {themeAppearance === 'light' ? 'text-brand' : 'text-zinc-200'}">
-										Light
-									</div>
-									<div class="mt-1 text-xs text-zinc-400">Airy surfaces, crisp contrast</div>
-								</div>
-								<div class="rounded-lg border border-zinc-700 bg-zinc-900/60 p-2">
-									<div class="grid grid-cols-3 gap-1">
-										<div class="h-3 w-5 rounded bg-zinc-200"></div>
-										<div class="h-3 w-5 rounded bg-zinc-300"></div>
-										<div class="h-3 w-5 rounded bg-zinc-400"></div>
-										<div class="h-3 w-5 rounded bg-zinc-100"></div>
-										<div class="h-3 w-5 rounded bg-zinc-200"></div>
-										<div class="h-3 w-5 rounded bg-zinc-300"></div>
-										<div class="h-3 w-5 rounded bg-zinc-50"></div>
-										<div class="h-3 w-5 rounded bg-zinc-100"></div>
-										<div class="h-3 w-5 rounded bg-zinc-200"></div>
-									</div>
-								</div>
-							</div>
-							<div class="mt-3 flex items-center gap-2">
-								<div
-									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {themeAppearance ===
-									'light'
-										? 'border-brand bg-brand/15'
-										: 'border-zinc-500'}"
-								>
-									{#if themeAppearance === 'light'}
-										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
-									{/if}
-								</div>
-								<span class="text-xs font-medium text-zinc-400">Balanced for daylight work</span>
-							</div>
-						</button>
-					</div>
-				</div>
+				<EditorSelector selected={editorType} onSelect={handleEditorTypeChange} />
 
-				<div class="mb-8">
-					<div class="mb-6 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Editor Type</h3>
-						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
-					</div>
-					<div class="grid grid-cols-2 gap-6">
-						<button
-							type="button"
-							onclick={() => handleEditorTypeChange('vscode')}
-							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-[background-color,border-color,box-shadow] duration-300 {editorType ===
-							'vscode'
-								? 'border-brand bg-brand/10 shadow-brand/20 shadow-lg'
-								: 'hover:border-brand/50 border-zinc-600 hover:bg-zinc-800/50'}"
-						>
-							<div class="flex items-center gap-2">
-								<div
-									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {editorType ===
-									'vscode'
-										? 'border-brand bg-brand/20'
-										: 'border-zinc-500'}"
-								>
-									{#if editorType === 'vscode'}
-										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
-									{/if}
-								</div>
-								<span class="text-sm font-medium {editorType === 'vscode' ? 'text-brand' : 'text-zinc-200'}"
-									>VS Code</span
-								>
-							</div>
-							<p class="mt-1.5 ml-7 text-xs text-zinc-400">Generate theme for Visual Studio Code</p>
-						</button>
+				<SaveBehaviorSection
+					{saveOnCopy}
+					{accentBoostCoefficient}
+					onSaveOnCopyChange={handleSaveOnCopyChange}
+					onAccentBoostChange={handleAccentBoostChange}
+				/>
 
-						<button
-							type="button"
-							onclick={() => handleEditorTypeChange('zed')}
-							class="group relative overflow-hidden rounded-lg border px-4 py-3 text-left transition-[background-color,border-color,box-shadow] duration-300 {editorType ===
-							'zed'
-								? 'border-brand bg-brand/10 shadow-brand/20 shadow-lg'
-								: 'hover:border-brand/50 border-zinc-600 hover:bg-zinc-800/50'}"
-						>
-							<div class="flex items-center gap-2">
-								<div
-									class="flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color] {editorType ===
-									'zed'
-										? 'border-brand bg-brand/20'
-										: 'border-zinc-500'}"
-								>
-									{#if editorType === 'zed'}
-										<div class="bg-brand h-2.5 w-2.5 rounded-full"></div>
-									{/if}
-								</div>
-								<span class="text-sm font-medium {editorType === 'zed' ? 'text-brand' : 'text-zinc-200'}">Zed</span>
-							</div>
-							<p class="mt-1.5 ml-7 text-xs text-zinc-400">Generate theme for Zed editor</p>
-						</button>
-					</div>
-				</div>
-
-				<div class="mb-8">
-					<div class="mb-4 flex items-center gap-2">
-						<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Save Behavior</h3>
-						<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
-					</div>
-					<div class="space-y-3">
-						<label
-							class="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3"
-						>
-							<div>
-								<div class="text-sm font-medium text-zinc-200">Save on copy</div>
-								<p class="mt-1 text-xs text-zinc-500">Store the generated theme locally when copying JSON</p>
-							</div>
-							<input
-								id="save-on-copy"
-								type="checkbox"
-								checked={saveOnCopy}
-								onchange={(e) => appStore.setThemeExportSaveOnCopy((e.target as HTMLInputElement).checked)}
-								class="text-brand focus:ring-brand h-4 w-4 rounded border-zinc-600 bg-zinc-800 focus:ring-2"
-							/>
-						</label>
-
-						<div class="rounded-lg border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
-							<div class="flex items-start justify-between gap-4">
-								<div>
-									<div class="text-sm font-medium text-zinc-200">Accent boost coefficient</div>
-									<p class="mt-1 text-xs text-zinc-500">
-										Set between 0.00 and 3.00 (default 1.00). Boosting mainly affects muted mid-tone accents; very
-										dark/light or already vivid colors may not change much. Values above 1.00 push harder, but results
-										can plateau once saturation/contrast safety limits are reached.
-									</p>
-								</div>
-							</div>
-
-							<div class="mt-3 flex items-center gap-3">
-								<input
-									type="range"
-									min="0"
-									max="3"
-									step="0.01"
-									value={accentBoostCoefficient}
-									oninput={handleAccentBoostInput}
-									class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
-								/>
-								<input
-									type="number"
-									min="0"
-									max="3"
-									step="0.01"
-									value={accentBoostInput}
-									oninput={handleAccentBoostInput}
-									onblur={() => (accentBoostInput = accentBoostCoefficient.toFixed(2))}
-									class="focus:border-brand/50 w-24 rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
-								/>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div>
-					<div class="mb-3 flex items-center justify-between gap-4">
-						<div class="flex items-center gap-2">
-							<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
-							<span class="text-xs text-zinc-500">Auto-regenerates variants</span>
-						</div>
-						<div class="flex items-center gap-2">
-							<button
-								type="button"
-								onclick={shuffleThemeDistribution}
-								disabled={!themeResult}
-								class="hover:border-brand/50 rounded border border-zinc-700/50 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
-								title="Shuffle C1–C9"
-							>
-								Shuffle
-							</button>
-							<button
-								type="button"
-								onclick={resetOverrides}
-								disabled={Object.values(themeOverrides).every((value) => value == null)}
-								class="hover:border-brand/50 rounded border border-zinc-700/50 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
-								title="Return to defaults"
-							>
-								Reset
-							</button>
-						</div>
-					</div>
-
-					<div class="grid grid-cols-2 gap-2">
-						{#each overrideFields as field (field.key)}
-							{@const isModified = themeOverrides[field.key] != null}
-							{@const currentValue = getOverrideValue(field.key)}
-							<div
-								class="group flex items-center gap-3 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2 transition-colors hover:border-zinc-700/80 hover:bg-zinc-900/60"
-							>
-								<div class="relative">
-									<input
-										type="color"
-										value={currentValue}
-										class="h-8 w-8 cursor-pointer rounded border-0 outline-none"
-										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
-										title="Click to pick color"
-									/>
-									{#if isModified}
-										<div class="bg-brand absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-zinc-900"></div>
-									{/if}
-								</div>
-
-								<div class="flex min-w-0 flex-1 items-center gap-2">
-									<div class="flex min-w-0 flex-1 flex-col">
-										<span class="text-sm font-medium text-zinc-200 {isModified ? 'text-brand' : ''}">{field.label}</span
-										>
-										<span class="truncate text-xs text-zinc-500">{field.hint}</span>
-									</div>
-
-									<input
-										type="text"
-										value={currentValue}
-										placeholder="#000000"
-										class="focus:border-brand/60 w-24 rounded border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-xs text-zinc-300 placeholder-zinc-600 transition-colors focus:bg-zinc-800 focus:outline-none {isModified
-											? 'border-brand/40 bg-zinc-800'
-											: ''}"
-										oninput={(e) => updateThemeOverride(field.key, (e.target as HTMLInputElement).value)}
-									/>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
+				<OverrideGrid
+					{overrideFields}
+					{themeOverrides}
+					themeResultExists={Boolean(themeResult)}
+					{manualOverrideBadges}
+					{getOverrideValue}
+					{getOverrideRecommendations}
+					onUpdateOverride={updateThemeOverride}
+					onShuffle={shuffleThemeDistribution}
+					onReset={resetOverrides}
+				/>
 			</div>
 
 			<div class="flex items-center justify-between border-t border-zinc-700 bg-zinc-800/50 px-6 py-5">
@@ -730,7 +500,7 @@
 				<div class="flex items-center gap-4">
 					<button
 						type="button"
-						onclick={() => popoverStore.close('themeExport')}
+						onclick={handleClose}
 						class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50"
 					>
 						Cancel
@@ -740,7 +510,7 @@
 							<button
 								type="button"
 								onclick={handleSaveThemeToEditorFolder}
-								disabled={!themeResult || themeNameError !== null}
+								disabled={isExportDisabled}
 								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								Save To Editor Folder
@@ -749,7 +519,7 @@
 						<button
 							type="button"
 							onclick={handleExportTheme}
-							disabled={!themeResult || themeNameError !== null}
+							disabled={isExportDisabled}
 							class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 						>
 							Copy Theme JSON

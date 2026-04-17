@@ -7,15 +7,15 @@ export const THEME_NAME_DEBOUNCE_MS = 300;
 export const overrideFields: Array<{ key: keyof ThemeOverrides; label: string; hint: string }> = [
 	{ key: 'background', label: 'Background', hint: 'Base background (c0)' },
 	{ key: 'foreground', label: 'Foreground', hint: 'Primary text color' },
-	{ key: 'c1', label: 'C1', hint: 'Properties/fields' },
-	{ key: 'c2', label: 'C2', hint: 'Functions' },
-	{ key: 'c3', label: 'C3', hint: 'Strings' },
-	{ key: 'c4', label: 'C4', hint: 'Special strings/punctuation' },
-	{ key: 'c5', label: 'C5', hint: 'Namespaces/types' },
-	{ key: 'c6', label: 'C6', hint: 'Keywords' },
-	{ key: 'c7', label: 'C7', hint: 'Parameters/enums' },
-	{ key: 'c8', label: 'C8', hint: 'Constructors' },
-	{ key: 'c9', label: 'C9', hint: 'Builtins/variants' },
+	{ key: 'c1', label: 'Properties', hint: 'Fields/member access' },
+	{ key: 'c2', label: 'Functions', hint: 'Function/method names' },
+	{ key: 'c3', label: 'Strings', hint: 'String literals' },
+	{ key: 'c4', label: 'Special Strings', hint: 'Escapes and punctuation' },
+	{ key: 'c5', label: 'Types', hint: 'Classes/namespaces/types' },
+	{ key: 'c6', label: 'Keywords', hint: 'Language keywords' },
+	{ key: 'c7', label: 'Parameters', hint: 'Params and enums' },
+	{ key: 'c8', label: 'Constructors', hint: 'Constructors/operators' },
+	{ key: 'c9', label: 'Builtins', hint: 'Builtins and variants' },
 	{ key: 'constants', label: 'Constants', hint: 'Numbers/boolean/constants' }
 ];
 
