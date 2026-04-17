@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { replaceState } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
@@ -25,7 +27,9 @@
 
 		try {
 			if (window.location.hash) {
-				window.history.replaceState(null, '', window.location.pathname + window.location.search);
+				let callbackUrl = resolve('/auth/google/callback');
+				callbackUrl += page.url.search;
+				replaceState(callbackUrl, page.state);
 			}
 
 			setAuthToken(token);
