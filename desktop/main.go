@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -32,9 +33,11 @@ func main() {
 		},
 	})
 
+	isMac := runtime.GOOS == "darwin"
+
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:      "image-to-palette",
-		Frameless:  true,
+		Frameless:  !isMac,
 		StartState: application.WindowStateMaximised,
 		Width:      1440,
 		Height:     900,

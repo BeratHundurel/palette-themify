@@ -1,6 +1,7 @@
 import type { EditorThemeType } from '$lib/api/theme';
 
 export type AppTarget = 'web' | 'desktop';
+export type DesktopOS = 'darwin' | 'windows' | 'linux' | 'unknown';
 type SaveBridgeFn = (editorType: EditorThemeType, themeName: string, themeJSON: string) => Promise<string>;
 
 let cachedWailsBridge: SaveBridgeFn | null = null;
@@ -42,6 +43,19 @@ function resolveAppTarget(): AppTarget {
 	}
 
 	return 'web';
+}
+
+function resolveDesktopOS(): DesktopOS {
+	if (typeof window === 'undefined') {
+		return 'unknown';
+	}
+
+	const runtimeOS = window._wails?.environment?.OS;
+	if (runtimeOS === 'darwin' || runtimeOS === 'windows' || runtimeOS === 'linux') {
+		return runtimeOS;
+	}
+
+	return 'unknown';
 }
 
 async function callWailsFunction(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string> {
@@ -176,6 +190,8 @@ function findFunctionInObject(obj: unknown, fnName: string): SaveBridgeFn | null
 
 export const appTarget = resolveAppTarget();
 export const isDesktopApp = appTarget === 'desktop';
+export const desktopOS = isDesktopApp ? resolveDesktopOS() : 'unknown';
+export const isMacDesktop = desktopOS === 'darwin';
 
 export function getDesktopSaveErrorMessage(error: unknown): string {
 	const message = error instanceof Error ? error.message : '';

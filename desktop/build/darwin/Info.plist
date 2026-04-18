@@ -4,7 +4,7 @@
         <key>CFBundlePackageType</key>
             <string>APPL</string>
         <key>CFBundleName</key>
-            <string>My Product</string>
+            <string>image-to-palette</string>
         <key>CFBundleExecutable</key>
             <string>image-to-palette-desktop.exe</string>
         <key>CFBundleIdentifier</key>
