@@ -1,4 +1,4 @@
-import { getSharedItems } from '$lib/api/shared';
+import { getCommunityItems } from '$lib/api/community';
 import type { PageLoad } from './$types';
 
 export const load = (async ({ fetch, url }) => {
@@ -7,19 +7,20 @@ export const load = (async ({ fetch, url }) => {
 	const sort = sortParam === 'oldest' || sortParam === 'name' ? sortParam : 'newest';
 
 	try {
-		const response = await getSharedItems({ q, sort, limit: 200, fetchFn: fetch });
+		const response = await getCommunityItems({ q, sort, limit: 200, fetchFn: fetch });
 		return {
 			searchQuery: q,
 			sortBy: sort,
 			items: response.items,
-			errorMessage: ''
+			hasLoadError: false
 		};
 	} catch (error) {
+		console.error('Failed to load community items:', error);
 		return {
 			searchQuery: q,
 			sortBy: sort,
 			items: [],
-			errorMessage: error instanceof Error ? error.message : 'Failed to load shared items.'
+			hasLoadError: true
 		};
 	}
 }) satisfies PageLoad;

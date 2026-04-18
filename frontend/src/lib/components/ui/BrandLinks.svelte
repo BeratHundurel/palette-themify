@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { cn } from '$lib/utils';
 
-	type InternalRoute = '/' | '/shared';
+	type InternalRoute = '/' | '/community';
 
 	type Props = {
 		class?: string;
@@ -26,7 +26,7 @@
 	</a>
 {:else}
 	<a
-		href={resolve('/shared')}
+		href={resolve('/community')}
 		class={cn(
 			'border-brand/50 hover:shadow-brand-lg inline-flex cursor-pointer items-center justify-center rounded-md border bg-zinc-900 px-3 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow,color] duration-300',
 			className

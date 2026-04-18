@@ -53,7 +53,7 @@
 			</div>
 
 			<div class="flex min-w-0 items-center justify-end gap-4 justify-self-end">
-				<BrandLinks href="/shared">Community</BrandLinks>
+				<BrandLinks href="/community">Community</BrandLinks>
 				{#if authStore.state.isAuthenticated}
 					<UserProfile />
 				{:else}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { navigating, page } from '$app/state';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import toast, { Toaster } from 'svelte-french-toast';
@@ -11,27 +11,26 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import BrandLinks from '$lib/components/ui/BrandLinks.svelte';
-	import type { SharedItem, SharedItemSort } from '$lib/types/shared';
+	import Select from '$lib/components/ui/Select.svelte';
+	import type { CommunityItem, CommunityItemSort } from '$lib/types/community';
 	import type { Theme } from '$lib/types/theme';
 
 	type SharedPageData = {
-		items: SharedItem[];
-		errorMessage: string;
+		items: CommunityItem[];
+		hasLoadError: boolean;
 	};
 
 	let { data }: { data: SharedPageData } = $props();
 
 	let searchQuery = $state('');
-	let sortBy = $state<SharedItemSort>('newest');
+	let sortBy = $state<CommunityItemSort>('newest');
+	let committedQuery = $state('');
+	let committedSort = $state<CommunityItemSort>('newest');
 
 	const items = $derived(data.items);
-	const errorMessage = $derived(data.errorMessage);
-	const isLoading = $derived.by(() => {
-		const nav = navigating;
-		return !!nav?.to && nav.to.url.pathname === page.url.pathname;
-	});
+	const hasLoadError = $derived(data.hasLoadError);
 
-	function buildSharedQuery(query: string, sort: SharedItemSort): string {
+	function buildSharedQuery(query: string, sort: CommunityItemSort): string {
 		const params = new SvelteURLSearchParams();
 		const trimmedQuery = query.trim();
 		if (trimmedQuery) params.set('q', trimmedQuery);
@@ -40,9 +39,9 @@
 		return queryString ? `?${queryString}` : '';
 	}
 
-	async function refreshSharedItems(query: string, sort: SharedItemSort, force = false): Promise<void> {
+	async function refreshSharedItems(query: string, sort: CommunityItemSort, force = false): Promise<void> {
 		const queryString = buildSharedQuery(query, sort);
-		let target = resolve('/shared');
+		let target = resolve('/community');
 		target += queryString;
 		const current = `${page.url.pathname}${page.url.search}`;
 
@@ -51,23 +50,30 @@
 		await goto(target, {
 			replaceState: true,
 			keepFocus: true,
-			noScroll: true,
-			invalidateAll: true
+			noScroll: true
 		});
 	}
 
 	$effect(() => {
-		searchQuery = (page.url.searchParams.get('q') ?? '').trim();
+		const nextQuery = (page.url.searchParams.get('q') ?? '').trim();
 		const sortParam = page.url.searchParams.get('sort');
-		sortBy = sortParam === 'oldest' || sortParam === 'name' ? sortParam : 'newest';
+		const nextSort = sortParam === 'oldest' || sortParam === 'name' ? sortParam : 'newest';
+		const queryIsDirty = searchQuery.trim() !== committedQuery;
+
+		committedQuery = nextQuery;
+		committedSort = nextSort;
+		sortBy = nextSort;
+
+		if (!queryIsDirty) {
+			searchQuery = nextQuery;
+		}
 	});
 
 	$effect(() => {
 		const query = searchQuery.trim();
 		const sort = sortBy;
-		const currentQuery = (page.url.searchParams.get('q') ?? '').trim();
-		const currentSortParam = page.url.searchParams.get('sort');
-		const currentSort = currentSortParam === 'oldest' || currentSortParam === 'name' ? currentSortParam : 'newest';
+		const currentQuery = committedQuery;
+		const currentSort = committedSort;
 
 		if (query === currentQuery && sort === currentSort) return;
 
@@ -78,7 +84,7 @@
 		return () => clearTimeout(timeout);
 	});
 
-	async function importAsTheme(item: SharedItem) {
+	async function importAsTheme(item: CommunityItem) {
 		if (item.kind === 'palette') {
 			if (!item.palette || item.palette.length === 0) {
 				toast.error('This shared palette has no colors.');
@@ -160,14 +166,14 @@
 				placeholder="Search by name"
 				class="focus:border-brand/70 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none"
 			/>
-			<select
+			<Select
 				bind:value={sortBy}
-				class="focus:border-brand/70 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none"
+				class="focus:border-brand/70 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none"
 			>
 				<option value="newest">Newest shared</option>
 				<option value="oldest">Oldest shared</option>
 				<option value="name">Name A-Z</option>
-			</select>
+			</Select>
 			<button
 				type="button"
 				onclick={() => void refreshSharedItems(searchQuery, sortBy, true)}
@@ -177,13 +183,9 @@
 			</button>
 		</div>
 
-		{#if isLoading}
-			<p class="text-sm text-zinc-400">Loading shared items...</p>
-		{:else if errorMessage}
-			<p class="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{errorMessage}</p>
-		{:else if items.length === 0}
+		{#if items.length === 0}
 			<p class="rounded-md border border-zinc-800 bg-zinc-900/60 px-4 py-6 text-center text-sm text-zinc-400">
-				No shared items found for this filter.
+				{hasLoadError ? 'Could not load shared items. Please try again.' : 'No shared items found for this filter.'}
 			</p>
 		{:else}
 			<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

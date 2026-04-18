@@ -1,12 +1,12 @@
 import { buildURL, ensureOk } from './base';
-import type { SharedItemSort, SharedItemsResponse } from '$lib/types/shared';
+import type { CommunityItemSort, CommunityItemsResponse } from '$lib/types/community';
 
-export async function getSharedItems(params?: {
+export async function getCommunityItems(params?: {
 	q?: string;
-	sort?: SharedItemSort;
+	sort?: CommunityItemSort;
 	limit?: number;
 	fetchFn?: typeof fetch;
-}): Promise<SharedItemsResponse> {
+}): Promise<CommunityItemsResponse> {
 	const doFetch = params?.fetchFn ?? fetch;
 	const res = await doFetch(
 		buildURL('/shared-items', {

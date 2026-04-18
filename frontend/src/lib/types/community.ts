@@ -1,12 +1,12 @@
 import type { Color } from './color';
 import type { EditorThemeType } from '$lib/api/theme';
 
-export type SharedItemKind = 'theme' | 'palette';
-export type SharedItemSort = 'newest' | 'oldest' | 'name';
+export type CommunityItemKind = 'theme' | 'palette';
+export type CommunityItemSort = 'newest' | 'oldest' | 'name';
 
-export type SharedItem = {
+export type CommunityItem = {
 	id: string;
-	kind: SharedItemKind;
+	kind: CommunityItemKind;
 	name: string;
 	palette: Color[];
 	sharedAt: string;
@@ -15,6 +15,6 @@ export type SharedItem = {
 	theme?: unknown;
 };
 
-export type SharedItemsResponse = {
-	items: SharedItem[];
+export type CommunityItemsResponse = {
+	items: CommunityItem[];
 };
