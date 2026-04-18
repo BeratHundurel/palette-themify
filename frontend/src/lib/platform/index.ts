@@ -1,7 +1,6 @@
 import type { EditorThemeType } from '$lib/api/theme';
 
 export type AppTarget = 'web' | 'desktop';
-export type DesktopOS = 'darwin' | 'windows' | 'linux' | 'unknown';
 type SaveBridgeFn = (editorType: EditorThemeType, themeName: string, themeJSON: string) => Promise<string>;
 
 let cachedWailsBridge: SaveBridgeFn | null = null;
