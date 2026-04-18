@@ -17,7 +17,7 @@ services:
       retries: 10
 
   go-api:
-    image: golang:1.26-alpine
+    image: golang:1.26.2-alpine
     container_name: image-to-palette-go-api
     working_dir: /app
     command: sh -c "go mod download && go run ."
