@@ -15,6 +15,9 @@
 		apikey: ''
 	};
 
+	const optionSelectClass = 'w-full rounded-lg px-2.5 py-1.5 text-xs';
+	const ratiosSelectClass = 'w-full rounded-lg px-2.5 py-1.5 text-sm';
+
 	function resetToDefaults() {
 		appStore.state.wallhavenSettings = { ...DEFAULT_SETTINGS };
 	}
@@ -130,11 +133,7 @@
 			<!-- Sorting -->
 			<div class="mb-5">
 				<label for="sort-method" class="mb-2 block text-xs font-medium text-zinc-300">Sort By</label>
-				<Select
-					id="sort-method"
-					bind:value={appStore.state.wallhavenSettings.sorting}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 duration-300 focus:outline-none"
-				>
+				<Select id="sort-method" bind:value={appStore.state.wallhavenSettings.sorting} class={optionSelectClass}>
 					<option value="relevance">Relevance</option>
 					<option value="date_added">Date Added</option>
 					<option value="random">Random</option>
@@ -148,11 +147,7 @@
 			<!-- Order -->
 			<div class="mb-5">
 				<label for="sort-order" class="mb-2 block text-xs font-medium text-zinc-300">Sort Order</label>
-				<Select
-					id="sort-order"
-					bind:value={appStore.state.wallhavenSettings.order}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 duration-300 focus:outline-none"
-				>
+				<Select id="sort-order" bind:value={appStore.state.wallhavenSettings.order} class={optionSelectClass}>
 					<option value="desc">Descending</option>
 					<option value="asc">Ascending</option>
 				</Select>
@@ -162,11 +157,7 @@
 			{#if appStore.state.wallhavenSettings.sorting === 'toplist'}
 				<div class="mb-5">
 					<label for="time-range" class="mb-2 block text-xs font-medium text-zinc-300">Time Range</label>
-					<Select
-						id="time-range"
-						bind:value={appStore.state.wallhavenSettings.topRange}
-						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 duration-300 focus:outline-none"
-					>
+					<Select id="time-range" bind:value={appStore.state.wallhavenSettings.topRange} class={optionSelectClass}>
 						<option value="1d">1 Day</option>
 						<option value="3d">3 Days</option>
 						<option value="1w">1 Week</option>
@@ -209,7 +200,7 @@
 					multiple
 					showChevron={false}
 					bind:value={appStore.state.wallhavenSettings.ratios}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 duration-300 focus:outline-none"
+					class={ratiosSelectClass}
 					size={4}
 				>
 					{#each AVAILABLE_RATIOS as ratio (ratio)}

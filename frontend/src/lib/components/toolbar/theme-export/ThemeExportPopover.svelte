@@ -313,6 +313,27 @@
 		generateThemeFromApi({ overrides, bypassCache: true });
 	}
 
+	function switchThemeOverride(key: keyof ThemeOverrides, sourceKey: keyof ThemeOverrides) {
+		if (key === sourceKey) return;
+
+		const currentValue = normalizeHex(getOverrideValue(key));
+		const sourceValue = normalizeHex(getOverrideValue(sourceKey));
+		if (!currentValue || !sourceValue) return;
+
+		clearThemeVersions();
+
+		const overrides = getCurrentOverrides();
+		overrides[key] = sourceValue;
+		overrides[sourceKey] = currentValue;
+		manualOverrideBadges[key] = true;
+		manualOverrideBadges[sourceKey] = true;
+		appStore.state.themeExport.rawThemeOverrides = { ...overrides };
+		setManualOverrideFlag(key, true);
+		setManualOverrideFlag(sourceKey, true);
+
+		generateThemeFromApi({ overrides, bypassCache: true });
+	}
+
 	async function handleEditorTypeChange(type: EditorThemeType) {
 		if (editorType === type) return;
 
@@ -471,6 +492,7 @@
 					{getOverrideValue}
 					{getOverrideRecommendations}
 					onUpdateOverride={updateThemeOverride}
+					onSwitchOverride={switchThemeOverride}
 					onShuffle={shuffleThemeDistribution}
 					onReset={resetOverrides}
 				/>
