@@ -166,10 +166,7 @@
 				placeholder="Search by name"
 				class="focus:border-brand/70 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none"
 			/>
-			<Select
-				bind:value={sortBy}
-				class="focus:border-brand/70 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none"
-			>
+			<Select bind:value={sortBy} class="rounded-md">
 				<option value="newest">Newest shared</option>
 				<option value="oldest">Oldest shared</option>
 				<option value="name">Name A-Z</option>
