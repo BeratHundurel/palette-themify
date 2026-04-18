@@ -68,6 +68,19 @@
 		return Math.min(max, Math.max(min, value));
 	}
 
+	function getStepPrecision(step: number): number {
+		if (!Number.isFinite(step) || step <= 0) return 0;
+		const stepText = step.toString();
+		const decimalIndex = stepText.indexOf('.');
+		return decimalIndex === -1 ? 0 : stepText.length - decimalIndex - 1;
+	}
+
+	function normalizeDisplayValue(value: number, step: number): number {
+		const precision = getStepPrecision(step);
+		const factor = 10 ** precision;
+		return Math.round(value * factor) / factor;
+	}
+
 	function handleSliderChange(id: string, currentValue: number, nextValue: number, action: (val: number) => void) {
 		action(sanitizeInputValue(id, nextValue, currentValue));
 	}
@@ -116,7 +129,7 @@
 					min={setting.constraint.min}
 					max={setting.constraint.max}
 					step={setting.constraint.step}
-					value={setting.value}
+					value={normalizeDisplayValue(setting.value, setting.constraint.step)}
 					oninput={(e) =>
 						handleSliderChange(setting.id, setting.value, parseFloat(e.currentTarget.value), setting.action)}
 					class="slider flex-1 cursor-pointer appearance-none bg-transparent"
@@ -126,7 +139,7 @@
 					min={setting.constraint.min}
 					max={setting.constraint.max}
 					step={setting.constraint.step}
-					value={setting.value}
+					value={normalizeDisplayValue(setting.value, setting.constraint.step)}
 					onchange={(e) =>
 						handleSliderChange(setting.id, setting.value, parseFloat(e.currentTarget.value), setting.action)}
 					class="focus:border-brand/50 w-16 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-center text-xs text-zinc-300 focus:outline-none"

@@ -14,48 +14,13 @@
 	let importJson = $state('');
 
 	let importFileInput: HTMLInputElement | null = $state(null);
-	let modeButtonGroup: HTMLDivElement | null = $state(null);
-	let imageModeButton: HTMLButtonElement | null = $state(null);
-	let themeModeButton: HTMLButtonElement | null = $state(null);
-
-	let hoverX = $state(0);
-	let hoverWidth = $state(0);
-	let showHover = $state(false);
-	let activeX = $state(0);
-	let activeWidth = $state(0);
-	const modeIndicatorInset = 4;
-
-	function updateActiveIndicator() {
-		if (!modeButtonGroup) return;
-		const activeButton = importMode === 'image' ? imageModeButton : themeModeButton;
-		if (!activeButton) return;
-
-		const groupRect = modeButtonGroup.getBoundingClientRect();
-		const buttonRect = activeButton.getBoundingClientRect();
-		activeX = buttonRect.left - groupRect.left - modeIndicatorInset;
-		activeWidth = buttonRect.width;
-	}
-
-	function handleModeButtonHover(event: MouseEvent) {
-		if (!modeButtonGroup) return;
-		const button = event.currentTarget as HTMLButtonElement;
-		const groupRect = modeButtonGroup.getBoundingClientRect();
-		const buttonRect = button.getBoundingClientRect();
-		hoverX = buttonRect.left - groupRect.left - modeIndicatorInset;
-		hoverWidth = buttonRect.width;
-		showHover = true;
-	}
+	const activeModeTransform = $derived(importMode === 'theme' ? 'calc(100% + 0.5rem)' : '0px');
 
 	function setImportMode(mode: 'image' | 'theme') {
 		importMode = mode;
 		dragDepth = 0;
 		isDragOver = false;
-		updateActiveIndicator();
 	}
-
-	$effect(() => {
-		updateActiveIndicator();
-	});
 
 	function handleDragEnter() {
 		if (importMode !== 'image') return;
@@ -160,39 +125,29 @@
 >
 	<div class="mb-6 flex items-center justify-center">
 		<div
-			bind:this={modeButtonGroup}
-			onmouseleave={() => (showHover = false)}
 			role="group"
 			aria-label="Import mode"
-			class="relative inline-flex gap-2 rounded-xl border border-white/40 bg-white/10 p-1 shadow-md backdrop-blur-sm"
+			class="relative inline-flex w-60 gap-2 rounded-xl border border-white/40 bg-white/10 p-1 shadow-md backdrop-blur-sm"
 		>
 			<div
 				class="bg-brand pointer-events-none absolute inset-y-1 left-1 rounded-lg shadow-sm transition-[transform,width] duration-300 ease-out"
-				style="transform: translateX({activeX}px); width: {activeWidth}px;"
-			></div>
-			<div
-				class="pointer-events-none absolute inset-y-1 left-1 rounded-lg bg-white/15 transition-[transform,width,opacity] duration-300 ease-out"
-				style="transform: translateX({hoverX}px); width: {hoverWidth}px; opacity: {showHover ? 1 : 0};"
+				style="width: calc((100% - 1rem) / 2); transform: translateX({activeModeTransform});"
 			></div>
 			<button
-				bind:this={imageModeButton}
 				type="button"
 				onclick={() => setImportMode('image')}
-				onmouseenter={handleModeButtonHover}
 				class={cn(
-					'relative z-10 h-9 min-w-26 rounded-lg px-4 text-sm font-medium transition-colors duration-300',
+					'relative z-10 h-9 flex-1 rounded-lg px-4 text-sm font-medium whitespace-nowrap transition-colors duration-300',
 					importMode === 'image' ? 'text-zinc-900' : 'text-zinc-100 hover:text-white'
 				)}
 			>
 				Image
 			</button>
 			<button
-				bind:this={themeModeButton}
 				type="button"
 				onclick={() => setImportMode('theme')}
-				onmouseenter={handleModeButtonHover}
 				class={cn(
-					'relative z-10 h-9 min-w-26 rounded-lg px-4 text-sm font-medium transition-colors duration-300',
+					'relative z-10 h-9 flex-1 rounded-lg px-4 text-sm font-medium whitespace-nowrap transition-colors duration-300',
 					importMode === 'theme' ? 'text-zinc-900' : 'text-zinc-100 hover:text-white'
 				)}
 			>

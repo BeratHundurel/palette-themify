@@ -3,6 +3,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { cn } from '$lib/utils';
 	import { AVAILABLE_RATIOS } from '$lib/types/wallhaven';
+	import Select from '$lib/components/ui/Select.svelte';
 
 	const DEFAULT_SETTINGS = {
 		categories: '111',
@@ -129,10 +130,10 @@
 			<!-- Sorting -->
 			<div class="mb-5">
 				<label for="sort-method" class="mb-2 block text-xs font-medium text-zinc-300">Sort By</label>
-				<select
+				<Select
 					id="sort-method"
 					bind:value={appStore.state.wallhavenSettings.sorting}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 duration-300 focus:outline-none"
 				>
 					<option value="relevance">Relevance</option>
 					<option value="date_added">Date Added</option>
@@ -141,30 +142,30 @@
 					<option value="favorites">Favorites</option>
 					<option value="toplist">Toplist</option>
 					<option value="hot">Hot</option>
-				</select>
+				</Select>
 			</div>
 
 			<!-- Order -->
 			<div class="mb-5">
 				<label for="sort-order" class="mb-2 block text-xs font-medium text-zinc-300">Sort Order</label>
-				<select
+				<Select
 					id="sort-order"
 					bind:value={appStore.state.wallhavenSettings.order}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 duration-300 focus:outline-none"
 				>
 					<option value="desc">Descending</option>
 					<option value="asc">Ascending</option>
-				</select>
+				</Select>
 			</div>
 
 			<!-- Top Range (only for toplist sorting) -->
 			{#if appStore.state.wallhavenSettings.sorting === 'toplist'}
 				<div class="mb-5">
 					<label for="time-range" class="mb-2 block text-xs font-medium text-zinc-300">Time Range</label>
-					<select
+					<Select
 						id="time-range"
 						bind:value={appStore.state.wallhavenSettings.topRange}
-						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
+						class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 duration-300 focus:outline-none"
 					>
 						<option value="1d">1 Day</option>
 						<option value="3d">3 Days</option>
@@ -173,7 +174,7 @@
 						<option value="3M">3 Months</option>
 						<option value="6M">6 Months</option>
 						<option value="1y">1 Year</option>
-					</select>
+					</Select>
 				</div>
 			{/if}
 		</section>
@@ -203,17 +204,18 @@
 					Aspect Ratios
 					<span class="ml-1 font-normal text-zinc-500">(optional)</span>
 				</label>
-				<select
+				<Select
 					id="ratio-filter"
 					multiple
+					showChevron={false}
 					bind:value={appStore.state.wallhavenSettings.ratios}
-					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
-					size="4"
+					class="focus:border-brand/50 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-300 duration-300 focus:outline-none"
+					size={4}
 				>
 					{#each AVAILABLE_RATIOS as ratio (ratio)}
 						<option value={ratio}>{ratio}</option>
 					{/each}
-				</select>
+				</Select>
 				<p class="mt-1 text-xs text-zinc-500">Hold Ctrl/Cmd to select multiple ratios</p>
 			</div>
 		</section>

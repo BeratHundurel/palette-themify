@@ -8,14 +8,20 @@
 
 	let { saveOnCopy, accentBoostCoefficient, onSaveOnCopyChange, onAccentBoostChange }: Props = $props();
 
+	function normalizeBoostCoefficient(value: number): number {
+		const clamped = Math.min(3, Math.max(0, value));
+		return Math.round(clamped * 100) / 100;
+	}
+
+	let displayAccentBoostCoefficient = $derived(normalizeBoostCoefficient(accentBoostCoefficient));
+
 	function handleAccentBoostInput(event: Event) {
 		const target = event.target as HTMLInputElement;
 
 		const parsed = Number(target.value);
 		if (Number.isNaN(parsed)) return;
 
-		const clamped = Math.min(3, Math.max(0, parsed));
-		const normalized = Math.round(clamped * 100) / 100;
+		const normalized = normalizeBoostCoefficient(parsed);
 
 		onAccentBoostChange(normalized);
 	}
@@ -61,7 +67,7 @@
 					min="0"
 					max="3"
 					step="0.01"
-					value={accentBoostCoefficient}
+					value={displayAccentBoostCoefficient}
 					oninput={handleAccentBoostInput}
 					class="accent-brand h-2 w-full cursor-pointer rounded-lg bg-zinc-800"
 				/>
@@ -70,7 +76,7 @@
 					min="0"
 					max="3"
 					step="0.01"
-					value={accentBoostCoefficient}
+					value={displayAccentBoostCoefficient}
 					oninput={handleAccentBoostInput}
 					class="focus:border-brand/50 w-24 rounded border border-zinc-700 bg-zinc-900 p-2 text-xs text-zinc-300 transition-[border-color,box-shadow,background-color] duration-300 focus:outline-none"
 				/>
