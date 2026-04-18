@@ -16,9 +16,6 @@ declare global {
 		};
 		_wails?: {
 			loadWailsJS?: () => Promise<void>;
-			environment?: {
-				OS?: 'darwin' | 'windows' | 'linux' | string;
-			};
 		};
 	}
 
