@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { cn } from '$lib/utils';
+
+	$effect(() => {
+		if (!appStore.state.canvas || !appStore.state.imageLoaded || !appStore.state.image) return;
+		appStore.restoreCanvasImage();
+	});
 </script>
 
 <section class="flex w-full justify-center px-4">

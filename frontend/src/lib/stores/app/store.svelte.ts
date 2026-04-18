@@ -700,6 +700,29 @@ function createAppStore() {
 			drawImageAndBoxes();
 		},
 
+		restoreCanvasImage() {
+			if (!state.canvas || !state.image || !state.imageLoaded) return;
+
+			const context = state.canvas.getContext('2d');
+			if (!context) return;
+			state.canvasContext = context;
+
+			const scaledWidth =
+				state.canvasScaleX > 0 ? Math.round(state.originalImageWidth / state.canvasScaleX) : state.image.width;
+			const scaledHeight =
+				state.canvasScaleY > 0 ? Math.round(state.originalImageHeight / state.canvasScaleY) : state.image.height;
+
+			const width = Number.isFinite(scaledWidth) && scaledWidth > 0 ? scaledWidth : state.image.width;
+			const height = Number.isFinite(scaledHeight) && scaledHeight > 0 ? scaledHeight : state.image.height;
+
+			state.canvas.width = width;
+			state.canvas.height = height;
+			state.canvas.style.width = width + 'px';
+			state.canvas.style.height = height + 'px';
+
+			this.redrawCanvas();
+		},
+
 		handleMouseDown(e: MouseEvent) {
 			if (!state.canvas || state.isExtracting || !state.activeSelectorId) return;
 			state.isDragging = true;

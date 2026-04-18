@@ -193,7 +193,7 @@
 </script>
 
 {#if tutorialStore.state.isActive}
-	<div class="pointer-events-none fixed inset-0 z-30" transition:fade={{ duration: 300 }}>
+	<div class="pointer-events-none fixed inset-0" transition:fade={{ duration: 300 }}>
 		{#if highlightElement && currentStep?.element}
 			{@const rect = highlightElement.getBoundingClientRect()}
 			{#if rect.width >= 8 && rect.height >= 8}
