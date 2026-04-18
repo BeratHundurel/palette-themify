@@ -1,8 +1,8 @@
 module image-to-palette/desktop
 
-go 1.26
+go 1.26.2
 
-require github.com/wailsapp/wails/v3 v3.0.0-alpha.74
+require github.com/wailsapp/wails/v3 v3.0.0-alpha.76
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
