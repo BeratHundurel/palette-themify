@@ -167,7 +167,17 @@
 							<h4 class="text-brand mb-2 truncate font-mono text-sm font-semibold" title={item.name}>
 								{item.name}
 							</h4>
-							<div class="mb-3 flex items-center justify-around gap-1">
+							<div class={cn('mb-3 flex items-center gap-1', isDesktopApp ? 'justify-around' : 'justify-end')}>
+								<ActionPillButton
+									onclick={() => handleSavedThemeLoad(item)}
+									class="gap-1 px-2"
+									title="Load into inspector"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+									Load
+								</ActionPillButton>
 								<ActionPillButton
 									onclick={() => handleThemeShareToggle(item)}
 									class="px-2"
@@ -178,16 +188,6 @@
 											: 'Share theme publicly'}
 								>
 									{item.isShared ? 'Unshare' : 'Share'}
-								</ActionPillButton>
-								<ActionPillButton
-									onclick={() => handleSavedThemeLoad(item)}
-									class="gap-1 px-2"
-									title="Load into inspector"
-								>
-									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-									</svg>
-									Load
 								</ActionPillButton>
 								{#if isDesktopApp}
 									<ActionPillButton
