@@ -16,6 +16,8 @@
 		type SearchState,
 		type PageResult
 	} from './search';
+	import { cn } from '$lib/utils';
+	import { isDesktopApp } from '$lib/platform';
 
 	let { isOpen = $bindable() } = $props();
 
@@ -195,7 +197,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 flex items-start justify-center bg-black/80 px-6 pt-16 pb-6"
+		class={cn('fixed inset-0 flex items-start justify-center bg-black/80 px-6 pb-6', isDesktopApp ? 'pt-16' : 'pt-6')}
 		role="button"
 		tabindex="0"
 		onclick={closeModal}
@@ -239,7 +241,11 @@
 				</div>
 			</div>
 
-			<div class="custom-scrollbar max-h-[75svh] overflow-auto px-6 py-6" bind:this={scrollEl} onscroll={handleScroll}>
+			<div
+				class={cn('custom-scrollbar overflow-auto px-6 pb-6', isDesktopApp ? 'max-h-[77svh]' : 'max-h-[80svh]')}
+				bind:this={scrollEl}
+				onscroll={handleScroll}
+			>
 				{#if isSearching}
 					<div class="flex flex-col items-center py-12">
 						<div
