@@ -21,7 +21,8 @@ export async function extractPalette(file: Blob | File): Promise<ExtractPaletteR
 		});
 	} catch (err) {
 		throw new Error(
-			`Cannot connect to Zig API server at ${ZIG_API_BASE}. ${err instanceof Error ? err.message : 'Network error'}`
+			`Cannot connect to Zig API server at ${ZIG_API_BASE}. ${err instanceof Error ? err.message : 'Network error'}`,
+			{ cause: err }
 		);
 	}
 
