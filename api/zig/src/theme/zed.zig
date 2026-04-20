@@ -418,7 +418,7 @@ pub fn generateZedTheme(
     const theme = ZedTheme{
         .@"$schema" = "https://zed.dev/schema/themes/v0.2.0.json",
         .name = theme_name,
-        .author = "Palette Themify",
+        .author = "ThemeSmith",
         .themes = themes,
     };
 

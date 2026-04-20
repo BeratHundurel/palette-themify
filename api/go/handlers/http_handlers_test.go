@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"image"
-	"image-to-palette/model"
 	"image/color"
 	"image/png"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"themesmith/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

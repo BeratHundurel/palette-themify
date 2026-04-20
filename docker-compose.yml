@@ -1,24 +1,24 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: image-to-palette-postgres
+    container_name: themesmith-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
-      POSTGRES_DB: ${POSTGRES_DB:-image_to_palette}
+      POSTGRES_DB: ${POSTGRES_DB:-themesmith}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d image_to_palette"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d themesmith"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   go-api:
     image: golang:1.26.2-alpine
-    container_name: image-to-palette-go-api
+    container_name: themesmith-go-api
     working_dir: /app
     command: sh -c "go mod download && go run ."
     volumes:
@@ -28,7 +28,7 @@ services:
       DB_PORT: "${DB_PORT:-5432}"
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-change-me}
-      DB_NAME: ${DB_NAME:-image_to_palette}
+      DB_NAME: ${DB_NAME:-themesmith}
       DB_SSL_MODE: ${DB_SSL_MODE:-disable}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8088/auth/google/callback}
@@ -43,7 +43,7 @@ services:
     build:
       context: ./api/zig
       dockerfile: Dockerfile
-    container_name: image-to-palette-zig-api
+    container_name: themesmith-zig-api
     working_dir: /app
     command: zig build run --cache-dir /tmp/zig-local-cache --global-cache-dir /tmp/zig-global-cache
     volumes:
@@ -56,7 +56,7 @@ services:
 
   frontend:
     image: node:24-alpine
-    container_name: image-to-palette-frontend
+    container_name: themesmith-frontend
     working_dir: /app
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     volumes:

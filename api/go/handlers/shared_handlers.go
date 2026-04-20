@@ -3,12 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"image-to-palette/db"
-	"image-to-palette/model"
 	"net/http"
 	gsort "sort"
 	"strconv"
 	"strings"
+	"themesmith/db"
+	"themesmith/model"
 	"time"
 
 	"github.com/gin-gonic/gin"

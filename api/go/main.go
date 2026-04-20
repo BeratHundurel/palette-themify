@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"image-to-palette/db"
-	"image-to-palette/handlers"
 	_ "image/gif"
 	_ "image/jpeg"
+	"themesmith/db"
+	"themesmith/handlers"
 
 	_ "golang.org/x/image/webp"
 )

@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"image-to-palette/auth"
-	"image-to-palette/db"
-	"image-to-palette/model"
 	"net/http"
+	"themesmith/auth"
+	"themesmith/db"
+	"themesmith/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

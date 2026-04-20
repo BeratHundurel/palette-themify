@@ -3,7 +3,7 @@ package handlers
 import (
 	"time"
 
-	"image-to-palette/auth"
+	"themesmith/auth"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -56,6 +56,7 @@ func NewRouter() *gin.Engine {
 	router.GET("/wallhaven/search", WallhavenSearchHandler)
 	router.GET("/wallhaven/w/:id", WallhavenGetWallpaperHandler)
 	router.GET("/wallhaven/download", WallhavenDownloadHandler)
+	router.GET("/desktop/download", DesktopDownloadHandler)
 
 	return router
 }

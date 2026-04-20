@@ -2,9 +2,9 @@ package db
 
 import (
 	"fmt"
-	"image-to-palette/model"
 	"log"
 	"os"
+	"themesmith/model"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -68,7 +68,7 @@ func getDatabaseConfig() DatabaseConfig {
 		Port:     getEnv("DB_PORT", "5432"),
 		User:     getEnv("DB_USER", "postgres"),
 		Password: getEnv("DB_PASSWORD", "password"),
-		Database: getEnv("DB_NAME", "image_to_palette"),
+		Database: getEnv("DB_NAME", "themesmith"),
 		SSLMode:  getEnv("DB_SSL_MODE", "disable"),
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"image-to-palette/model"
+	"themesmith/model"
 )
 
 type weightedColor struct {

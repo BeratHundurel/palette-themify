@@ -1,4 +1,4 @@
-module image-to-palette
+module themesmith
 
 go 1.26.2
 

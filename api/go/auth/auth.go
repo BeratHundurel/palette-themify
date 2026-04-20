@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"image-to-palette/db"
-	"image-to-palette/model"
+	"themesmith/db"
+	"themesmith/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -223,7 +223,7 @@ func GenerateJWTToken(user model.User) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "image-to-palette",
+			Issuer:    "themesmith",
 		},
 	}
 
@@ -427,7 +427,7 @@ func LoginHandler(c *gin.Context) {
 
 func buildLocalEmailForUsername(username string) string {
 	normalized := strings.ToLower(strings.TrimSpace(username))
-	return normalized + "@local.image-to-palette"
+	return normalized + "@local.themesmith"
 }
 
 func GetMeHandler(c *gin.Context) {

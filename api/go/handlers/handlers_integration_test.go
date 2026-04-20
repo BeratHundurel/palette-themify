@@ -5,15 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	authpkg "image-to-palette/auth"
-	"image-to-palette/db"
-	"image-to-palette/model"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	authpkg "themesmith/auth"
+	"themesmith/db"
+	"themesmith/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func setupTestDB(t *testing.T) {
 		container, err := postgres.Run(
 			ctx,
 			"postgres:16-alpine",
-			postgres.WithDatabase("image_to_palette_test"),
+			postgres.WithDatabase("themesmith_test"),
 			postgres.WithUsername("postgres"),
 			postgres.WithPassword("password"),
 			postgres.BasicWaitStrategies(),
@@ -63,7 +63,7 @@ func setupTestDB(t *testing.T) {
 		os.Setenv("DB_PORT", port.Port())
 		os.Setenv("DB_USER", "postgres")
 		os.Setenv("DB_PASSWORD", "password")
-		os.Setenv("DB_NAME", "image_to_palette_test")
+		os.Setenv("DB_NAME", "themesmith_test")
 		os.Setenv("DB_SSL_MODE", "disable")
 		os.Setenv("JWT_SECRET", "test-secret")
 

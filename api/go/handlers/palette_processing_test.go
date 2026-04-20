@@ -5,7 +5,7 @@ import (
 	"image/color"
 	"testing"
 
-	"image-to-palette/utils"
+	"themesmith/utils"
 
 	"github.com/stretchr/testify/assert"
 )

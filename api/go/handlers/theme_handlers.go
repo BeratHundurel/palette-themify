@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image-to-palette/auth"
-	"image-to-palette/db"
-	"image-to-palette/model"
 	"net/http"
+	"themesmith/auth"
+	"themesmith/db"
+	"themesmith/model"
 	"time"
 
 	"github.com/gin-gonic/gin"
