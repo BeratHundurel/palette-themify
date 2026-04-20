@@ -4,16 +4,13 @@ import { IMAGE } from '$lib/types/image';
 import { DEFAULT_THEME_EXPORT_PREFERENCES } from '$lib/types/theme';
 import type { SavedThemeItem } from '$lib/types/theme';
 
-const { authStoreMock, tutorialStoreMock, dialogStoreMock } = vi.hoisted(() => ({
+const { authStoreMock, dialogStoreMock } = vi.hoisted(() => ({
 	authStoreMock: {
 		state: {
 			user: null,
 			isAuthenticated: false,
 			isLoading: false
 		}
-	},
-	tutorialStoreMock: {
-		setCurrentPaletteSaved: vi.fn()
 	},
 	dialogStoreMock: {
 		prompt: vi.fn(),
@@ -34,10 +31,6 @@ vi.mock('$app/environment', () => ({
 
 vi.mock('../auth.svelte', () => ({
 	authStore: authStoreMock
-}));
-
-vi.mock('../tutorial.svelte', () => ({
-	tutorialStore: tutorialStoreMock
 }));
 
 vi.mock('$lib/stores/dialog.svelte', () => ({
@@ -494,7 +487,6 @@ describe('appStore', () => {
 			expect(stored[0].name).toBe('Local Sunset');
 			expect(stored[0].palette).toEqual([{ hex: '#112233' }]);
 			expect(toast.success).toHaveBeenCalledWith('Palette saved: Local Sunset');
-			expect(tutorialStoreMock.setCurrentPaletteSaved).toHaveBeenCalledWith(true);
 		});
 
 		it('saves palette through API for authenticated users', async () => {
@@ -509,7 +501,6 @@ describe('appStore', () => {
 			expect(paletteApi.savePalette).toHaveBeenCalledWith('Remote Sunset', [{ hex: '#112233' }]);
 			expect(loadSavedPalettesSpy).toHaveBeenCalledTimes(1);
 			expect(toast.success).toHaveBeenCalledWith('Palette saved: Remote Sunset');
-			expect(tutorialStoreMock.setCurrentPaletteSaved).toHaveBeenCalledWith(true);
 		});
 
 		it('loads local palettes and recovers from malformed cache', async () => {

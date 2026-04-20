@@ -15,6 +15,5 @@
 	onclick={restartTutorial}
 	title="Restart the interactive tutorial"
 >
-	<span>🎓</span>
 	<span>Tutorial</span>
 </BrandButton>

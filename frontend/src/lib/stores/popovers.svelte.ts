@@ -37,8 +37,9 @@ function createPopoverStore() {
 			const isInsidePopover = target.closest('.palette-dropdown-base');
 			const isInsideButton = target.closest('.toolbar-button-base');
 			const isInsideModal = target.closest('.share-modal-content') || target.closest('.share-modal-backdrop');
+			const isInsideTutorialTooltip = target.closest('.tutorial-tooltip-panel');
 
-			if (!isInsidePopover && !isInsideButton && !isInsideModal) {
+			if (!isInsidePopover && !isInsideButton && !isInsideModal && !isInsideTutorialTooltip) {
 				state.current = null;
 			}
 		};

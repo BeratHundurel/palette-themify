@@ -58,7 +58,7 @@
 >
 	<div class="desktop-window-brand">
 		<span class="desktop-window-logo" aria-hidden="true"></span>
-		<span class="desktop-window-title">image-to-palette</span>
+		<span class="desktop-window-title">ThemeSmith</span>
 	</div>
 
 	<div class="desktop-window-controls" style="--wails-draggable: no-drag">

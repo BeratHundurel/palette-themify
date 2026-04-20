@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import { isLocalId } from '$lib/localId';
 	import ActionPillButton from '$lib/components/ui/ActionPillButton.svelte';
 	import ColorSwatch from '$lib/components/ui/ColorSwatch.svelte';
 	import DangerTextButton from '$lib/components/ui/DangerTextButton.svelte';
@@ -9,28 +10,11 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { dialogStore } from '$lib/stores/dialog.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
-	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import { TUTORIAL_APPLY_PALETTE, TUTORIAL_PALETTE_NAME } from '$lib/types/tutorial';
 	import toast from 'svelte-french-toast';
 	import type { Color } from '$lib/types/color';
 	import type { PaletteData } from '$lib/types/palette';
 
-	const tutorialPaletteItem: PaletteData = {
-		id: 'tutorial_palette_preview',
-		name: TUTORIAL_PALETTE_NAME,
-		palette: TUTORIAL_APPLY_PALETTE,
-		createdAt: new Date(0).toISOString(),
-		isSystem: true,
-		isShared: false
-	};
-
-	let displayPalettes = $derived.by(() => {
-		if (tutorialStore.state.isActive && tutorialStore.getCurrentStep()?.id === 'apply-palette') {
-			return [tutorialPaletteItem, ...appStore.state.savedPalettes];
-		}
-
-		return appStore.state.savedPalettes.filter((item) => item.id !== tutorialPaletteItem.id);
-	});
+	let displayPalettes = $derived(appStore.state.savedPalettes);
 
 	function handlePaletteLoad(palette: Color[]) {
 		if (!appStore.state.imageLoaded) {
@@ -39,10 +23,7 @@
 		}
 
 		appStore.applyPalette(palette);
-		if (!(tutorialStore.state.isActive && tutorialStore.getCurrentStep()?.id === 'apply-palette')) {
-			popoverStore.close('saved');
-		}
-		tutorialStore.setSavedPaletteApplied(true);
+		popoverStore.close('saved');
 	}
 
 	function handleCreateThemeFromPalette(palette: Color[]) {
@@ -85,17 +66,13 @@
 		await appStore.deletePalettes(palettesToDelete.map((palette) => palette.id));
 	}
 
-	function isLocalPalette(id: string): boolean {
-		return id.startsWith('local_');
-	}
-
 	async function handlePaletteShareToggle(item: PaletteData) {
 		if (item.isSystem) {
 			toast.error('System palettes cannot be shared. Save a copy first.');
 			return;
 		}
 
-		if (isLocalPalette(item.id)) {
+		if (isLocalId(item.id)) {
 			toast.error(
 				authStore.state.isAuthenticated
 					? 'Sync this palette first, then share it.'
@@ -147,10 +124,7 @@
 			<ul class="flex flex-col gap-3">
 				{#each displayPalettes as item, i (item.id + '-' + i)}
 					<li
-						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5 {item.id ===
-						tutorialPaletteItem.id
-							? 'tutorial-palette-apply border-brand/60 bg-brand/10'
-							: ''}"
+						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
 					>
 						<div class="p-3">
 							<div class="mb-3 min-w-0">
@@ -210,7 +184,7 @@
 								<ActionPillButton
 									onclick={() => handlePaletteShareToggle(item)}
 									class="px-2"
-									title={item.isSystem || isLocalPalette(item.id)
+									title={item.isSystem || isLocalId(item.id)
 										? 'Sign in synced palette required to share'
 										: item.isShared
 											? 'Remove from shared list'

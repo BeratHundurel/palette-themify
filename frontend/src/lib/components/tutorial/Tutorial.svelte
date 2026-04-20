@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
 	import { tutorialStore, type TutorialStep } from '$lib/stores/tutorial.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
@@ -10,6 +9,35 @@
 	let highlightElement: HTMLElement | null = $state(null);
 	let tooltipElement: HTMLElement | null = $state(null);
 	let highlightKey = $state(0);
+	let themeAppearanceBaseline = $state<string | null>(null);
+	let themeEditorBaseline = $state<string | null>(null);
+	let themeOverridesBaseline = $state<string | null>(null);
+
+	type HighlightInset = {
+		top: number;
+		right: number;
+		bottom: number;
+		left: number;
+	};
+
+	const THEME_EXPORT_STEPS = new Set(['theme-appearance', 'theme-editor', 'theme-overrides', 'theme-copy-json']);
+
+	function requiresThemeExportPopover(stepId?: string): boolean {
+		if (!stepId) return false;
+		return THEME_EXPORT_STEPS.has(stepId);
+	}
+
+	function getHighlightInset(stepId?: string): HighlightInset {
+		if (stepId === 'theme-appearance') {
+			return { top: 8, right: 20, bottom: 8, left: 20 };
+		}
+
+		if (stepId === 'theme-overrides') {
+			return { top: 8, right: 8, bottom: 8, left: 8 };
+		}
+
+		return { top: 8, right: 8, bottom: 8, left: 8 };
+	}
 
 	$effect(() => {
 		const currentStep = tutorialStore.getCurrentStep();
@@ -26,27 +54,102 @@
 			tutorialStore.setHasSelection(true);
 		}
 
-		if (
-			currentStep?.id === 'selection-tools' &&
-			appStore.state.activeSelectorId &&
-			appStore.state.activeSelectorId !== DEFAULT_SELECTOR_ID
-		) {
-			const nonGreenSelector = appStore.state.selectors.find(
-				(s) => s.id === appStore.state.activeSelectorId && s.id !== DEFAULT_SELECTOR_ID
-			);
-
-			if (nonGreenSelector?.selection && !appStore.state.isDragging && !appStore.state.isExtracting) {
-				tutorialStore.setSelectorClicked(true);
-			}
+		if (currentStep?.id === 'open-theme-inspector' && popoverStore.isOpen('themeExport')) {
+			tutorialStore.setThemeInspectorOpened(true);
 		}
 
-		if (currentStep?.id === 'toolbar-features' && popoverStore.isOpen('saved')) {
-			tutorialStore.setSavedPalettesPopoverOpen(true);
+		if (currentStep?.id === 'toolbar-themes' && popoverStore.isOpen('themes')) {
+			tutorialStore.setSavedThemesPopoverOpen(true);
 			const popover = document.querySelector('.palette-dropdown-base') as HTMLElement;
 			if (popover) {
 				popover.focus();
 				popover.setAttribute('tabindex', '-1');
 			}
+		}
+	});
+
+	$effect(() => {
+		const currentStep = tutorialStore.getCurrentStep();
+
+		if (currentStep?.id !== 'theme-appearance') {
+			themeAppearanceBaseline = null;
+			return;
+		}
+
+		const currentAppearance = appStore.state.themeExport.appearance;
+
+		if (themeAppearanceBaseline === null) {
+			themeAppearanceBaseline = currentAppearance;
+			return;
+		}
+
+		if (currentAppearance !== themeAppearanceBaseline) {
+			tutorialStore.setThemeAppearanceChanged(true);
+		}
+	});
+
+	$effect(() => {
+		const currentStep = tutorialStore.getCurrentStep();
+
+		if (currentStep?.id !== 'theme-editor') {
+			themeEditorBaseline = null;
+			return;
+		}
+
+		const currentEditor = appStore.state.themeExport.editorType;
+
+		if (themeEditorBaseline === null) {
+			themeEditorBaseline = currentEditor;
+			return;
+		}
+
+		if (currentEditor !== themeEditorBaseline) {
+			tutorialStore.setThemeEditorChanged(true);
+		}
+	});
+
+	$effect(() => {
+		const currentStep = tutorialStore.getCurrentStep();
+
+		if (currentStep?.id !== 'theme-overrides') {
+			themeOverridesBaseline = null;
+			return;
+		}
+
+		const currentOverrides = JSON.stringify(appStore.state.themeExport.rawThemeOverrides ?? {});
+
+		if (themeOverridesBaseline === null) {
+			themeOverridesBaseline = currentOverrides;
+			return;
+		}
+
+		if (currentOverrides !== themeOverridesBaseline) {
+			tutorialStore.setThemeOverridesEdited(true);
+		}
+	});
+
+	$effect(() => {
+		if (!tutorialStore.state.isActive) return;
+
+		const currentStep = tutorialStore.getCurrentStep();
+		if (!currentStep) return;
+		if (!requiresThemeExportPopover(currentStep.id)) return;
+		if (currentStep.condition && currentStep.condition()) return;
+
+		if (!popoverStore.isOpen('themeExport')) {
+			popoverStore.state.current = 'themeExport';
+		}
+	});
+
+	$effect(() => {
+		if (!tutorialStore.state.isActive) return;
+
+		const currentStep = tutorialStore.getCurrentStep();
+		if (!currentStep) return;
+		if (requiresThemeExportPopover(currentStep.id)) return;
+
+		if (popoverStore.isOpen('themeExport')) {
+			popoverStore.close('themeExport');
 		}
 	});
 
@@ -60,6 +163,8 @@
 	$effect(() => {
 		const isActive = tutorialStore.state.isActive;
 		const currentStep = tutorialStore.getCurrentStep();
+		const currentPopover = popoverStore.state.current;
+		void currentPopover;
 
 		if (!isActive) {
 			highlightElement = null;
@@ -76,14 +181,34 @@
 		}
 		await tick();
 
+		if (requiresThemeExportPopover(stepId) && !popoverStore.isOpen('themeExport')) {
+			popoverStore.state.current = 'themeExport';
+			await tick();
+		}
+
 		const latestStep = tutorialStore.getCurrentStep();
 		if (!latestStep || latestStep.id !== stepId || latestStep.element !== stepElement) {
 			return;
 		}
 
 		if (stepElement) {
-			const element = document.querySelector(stepElement) as HTMLElement;
+			let element = document.querySelector(stepElement) as HTMLElement | null;
+
+			if (!element && stepId === 'theme-overrides') {
+				element = document.querySelector('#tutorial-theme-overrides-root') as HTMLElement | null;
+			}
+
 			if (element) {
+				if (requiresThemeExportPopover(stepId)) {
+					element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+					await tick();
+
+					const refreshedElement = document.querySelector(stepElement) as HTMLElement | null;
+					if (refreshedElement) {
+						element = refreshedElement;
+					}
+				}
+
 				highlightElement = element;
 				highlightKey++;
 				return;
@@ -133,19 +258,66 @@
 		const viewportWidth = window.innerWidth;
 		const viewportHeight = window.innerHeight;
 
-		let position = step.position;
+		const spacing = 20;
+		const hasTopSpace = rect.top - tooltipHeight - spacing >= spacing;
+		const hasBottomSpace = rect.bottom + tooltipHeight + spacing <= viewportHeight - spacing;
+		const hasLeftSpace = rect.left - tooltipWidth - spacing >= spacing;
+		const hasRightSpace = rect.right + tooltipWidth + spacing <= viewportWidth - spacing;
+		const topClearance = rect.top - spacing;
+		const bottomClearance = viewportHeight - rect.bottom - spacing;
+		const leftClearance = rect.left - spacing;
+		const rightClearance = viewportWidth - rect.right - spacing;
 
-		if (position === 'top' && rect.top - tooltipHeight - 20 < 0) {
-			position = rect.left > viewportWidth / 2 ? 'left' : 'right';
-		}
-		if (position === 'bottom' && rect.bottom + tooltipHeight + 20 > viewportHeight) {
-			position = rect.left > viewportWidth / 2 ? 'left' : 'right';
-		}
-		if (position === 'left' && rect.left - tooltipWidth - 20 < 0) {
-			position = 'right';
-		}
-		if (position === 'right' && rect.right + tooltipWidth + 20 > viewportWidth) {
-			position = 'left';
+		let position: TutorialStep['position'] = step.position;
+
+		if (position === 'top') {
+			if (!hasTopSpace) {
+				if (hasBottomSpace) {
+					position = 'bottom';
+				} else if (hasRightSpace) {
+					position = 'right';
+				} else if (hasLeftSpace) {
+					position = 'left';
+				} else {
+					position = topClearance >= bottomClearance ? 'top' : 'bottom';
+				}
+			}
+		} else if (position === 'bottom') {
+			if (!hasBottomSpace) {
+				if (hasTopSpace) {
+					position = 'top';
+				} else if (hasRightSpace) {
+					position = 'right';
+				} else if (hasLeftSpace) {
+					position = 'left';
+				} else {
+					position = bottomClearance >= topClearance ? 'bottom' : 'top';
+				}
+			}
+		} else if (position === 'left') {
+			if (!hasLeftSpace) {
+				if (hasRightSpace) {
+					position = 'right';
+				} else if (hasTopSpace) {
+					position = 'top';
+				} else if (hasBottomSpace) {
+					position = 'bottom';
+				} else {
+					position = topClearance >= bottomClearance ? 'top' : 'bottom';
+				}
+			}
+		} else if (position === 'right') {
+			if (!hasRightSpace) {
+				if (hasLeftSpace) {
+					position = 'left';
+				} else if (hasTopSpace) {
+					position = 'top';
+				} else if (hasBottomSpace) {
+					position = 'bottom';
+				} else {
+					position = rightClearance >= leftClearance ? 'right' : 'left';
+				}
+			}
 		}
 
 		let styles;
@@ -193,18 +365,19 @@
 </script>
 
 {#if tutorialStore.state.isActive}
-	<div class="pointer-events-none fixed inset-0" transition:fade={{ duration: 300 }}>
+	<div class="tutorial-overlay pointer-events-none fixed inset-0 z-10000" transition:fade={{ duration: 300 }}>
 		{#if highlightElement && currentStep?.element}
 			{@const rect = highlightElement.getBoundingClientRect()}
+			{@const inset = getHighlightInset(currentStep?.id)}
 			{#if rect.width >= 8 && rect.height >= 8}
 				{#key highlightKey}
 					<div
 						class="tutorial-highlight border-brand pointer-events-none absolute z-10001 rounded-md border-[3px]"
 						style={`
-							top: ${rect.top - 8}px;
-							left: ${rect.left - 8}px;
-							width: ${rect.width + 16}px;
-							height: ${rect.height + 16}px;
+							top: ${rect.top - inset.top}px;
+							left: ${rect.left - inset.left}px;
+							width: ${rect.width + inset.left + inset.right}px;
+							height: ${rect.height + inset.top + inset.bottom}px;
 						`}
 					></div>
 				{/key}
@@ -214,7 +387,7 @@
 		{#if currentStep}
 			<div
 				bind:this={tooltipElement}
-				class="pointer-events-auto absolute z-10002 max-w-90 min-w-75"
+				class="tutorial-tooltip-panel pointer-events-auto absolute z-10002 max-w-90 min-w-75"
 				style={Object.entries(tooltipStyles)
 					.map(([key, value]) => `${key}: ${value}`)
 					.join('; ')}
@@ -338,6 +511,10 @@
 {/if}
 
 <style>
+	:global(.tutorial-overlay .share-modal-content) {
+		overflow: visible;
+	}
+
 	.tutorial-highlight {
 		box-shadow:
 			0 0 0 9999px rgba(0, 0, 0, 0.7),

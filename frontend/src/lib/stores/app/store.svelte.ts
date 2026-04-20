@@ -39,9 +39,9 @@ import {
 import * as preferencesApi from '$lib/api/preferences';
 import * as themesApi from '$lib/api/themes';
 import { dialogStore } from '$lib/stores/dialog.svelte';
+import { isLocalId } from '$lib/localId';
 
 import { authStore } from '../auth.svelte';
-import { tutorialStore } from '../tutorial.svelte';
 
 function createAppStore() {
 	const themeExportPreferences = loadThemeExportPreferences();
@@ -398,7 +398,7 @@ function createAppStore() {
 
 			if (!browser || !authStore.state.isAuthenticated) return;
 
-			const remoteThemeIds = uniqueThemeIds.filter((id) => !id.startsWith('local_'));
+			const remoteThemeIds = uniqueThemeIds.filter((id) => !isLocalId(id));
 			if (remoteThemeIds.length === 0) return;
 
 			try {
@@ -975,8 +975,6 @@ function createAppStore() {
 						toast.success('Palette saved: ' + paletteName);
 					}
 				}
-
-				tutorialStore.setCurrentPaletteSaved(true);
 			} catch {
 				toast.error('Could not save the palette. Please try again.');
 			}
@@ -1061,7 +1059,7 @@ function createAppStore() {
 
 		async deletePalette(paletteId: string) {
 			try {
-				const isLocalPalette = paletteId.startsWith('local_');
+				const isLocalPalette = isLocalId(paletteId);
 
 				if (authStore.state.isAuthenticated && !isLocalPalette) {
 					await paletteApi.deletePalette(paletteId);
@@ -1089,7 +1087,7 @@ function createAppStore() {
 
 			try {
 				if (authStore.state.isAuthenticated) {
-					const remotePaletteIds = uniquePaletteIds.filter((id) => !id.startsWith('local_'));
+					const remotePaletteIds = uniquePaletteIds.filter((id) => !isLocalId(id));
 					if (remotePaletteIds.length > 0) {
 						await paletteApi.deletePalettes(remotePaletteIds);
 					}
@@ -1155,7 +1153,7 @@ function createAppStore() {
 				if (stored) {
 					try {
 						const localPalettes = JSON.parse(stored) as PaletteData[];
-						const palettesToSync = localPalettes.filter((palette) => !palette.id || palette.id.startsWith('local_'));
+						const palettesToSync = localPalettes.filter((palette) => !palette.id || isLocalId(palette.id));
 
 						if (palettesToSync.length > 0) {
 							const toastId = toast.loading('Syncing your palettes...');

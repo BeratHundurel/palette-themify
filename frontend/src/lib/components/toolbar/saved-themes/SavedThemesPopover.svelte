@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import { isLocalId } from '$lib/localId';
 	import ActionPillButton from '$lib/components/ui/ActionPillButton.svelte';
 	import ColorSwatch from '$lib/components/ui/ColorSwatch.svelte';
 	import DangerTextButton from '$lib/components/ui/DangerTextButton.svelte';
@@ -108,12 +109,8 @@
 		return item.themeResult.colors.slice(0, 6).map((color) => color.hex);
 	}
 
-	function isLocalTheme(item: SavedThemeItem): boolean {
-		return item.id.startsWith('local_');
-	}
-
 	async function handleThemeShareToggle(item: SavedThemeItem) {
-		if (isLocalTheme(item)) {
+		if (isLocalId(item.id)) {
 			toast.error('Sign in first to share themes.');
 			return;
 		}
@@ -181,7 +178,7 @@
 								<ActionPillButton
 									onclick={() => handleThemeShareToggle(item)}
 									class="px-2"
-									title={isLocalTheme(item)
+									title={isLocalId(item.id)
 										? 'Sign in synced theme required to share'
 										: item.isShared
 											? 'Remove from shared list'

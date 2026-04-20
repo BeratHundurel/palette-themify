@@ -73,7 +73,7 @@
 		<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Theme Appearance</h3>
 		<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 	</div>
-	<div class="grid grid-cols-2 gap-4">
+	<div id="tutorial-theme-appearance-options" class="grid grid-cols-2 gap-4">
 		{#each APPEARANCE_OPTIONS as option (option.value)}
 			<button type="button" onclick={() => onSelect(option.value)} class={getCardClass(option.value)}>
 				<div class="flex items-start justify-between gap-3">

@@ -1,18 +1,17 @@
 <script lang="ts">
 	import { appStore } from '$lib/stores/app/store.svelte';
-	import { popoverStore } from '$lib/stores/popovers.svelte';
-
-	function handleClick(e: MouseEvent) {
-		if (!appStore.state.colors || appStore.state.colors.length === 0) {
-			return;
-		}
-		popoverStore.toggle('themeExport', e);
-	}
+	import { toggleThemeInspector } from '$lib/utils';
 
 	const hasColors = $derived(appStore.state.colors.length > 0);
 </script>
 
-<button onclick={handleClick} disabled={!hasColors} class="toolbar-button-base" title="Export Theme">
+<button
+	onclick={toggleThemeInspector}
+	disabled={!hasColors}
+	class="toolbar-button-base"
+	aria-label="Theme export"
+	title="Open theme export"
+>
 	<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path
 			stroke-linecap="round"

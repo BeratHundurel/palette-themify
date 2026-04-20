@@ -3,6 +3,10 @@
 	import { fade, fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
 
+	const PROMPT_FADE_DURATION_MS = 200;
+	const PANEL_FLY_DURATION_MS = 240;
+	const START_DELAY_MS = 180;
+
 	let showPrompt = $state(false);
 
 	onMount(() => {
@@ -21,7 +25,7 @@
 		showPrompt = false;
 		setTimeout(() => {
 			tutorialStore.start();
-		}, 300);
+		}, START_DELAY_MS);
 	}
 
 	function dismissPrompt() {
@@ -31,7 +35,10 @@
 </script>
 
 {#if showPrompt}
-	<div class="fixed inset-0 z-9998 flex items-center justify-center p-6" transition:fade={{ duration: 300 }}>
+	<div
+		class="fixed inset-0 z-10003 flex items-center justify-center p-6"
+		transition:fade={{ duration: PROMPT_FADE_DURATION_MS }}
+	>
 		<div
 			class="absolute inset-0 cursor-pointer bg-black/70"
 			onclick={dismissPrompt}
@@ -40,12 +47,15 @@
 			tabindex="0"
 			aria-label="Close tutorial prompt"
 		></div>
-		<div class="relative w-full max-w-120" transition:fly={{ y: 30, duration: 400 }}>
+		<div
+			class="prompt-panel custom-scrollbar relative w-full max-w-120"
+			transition:fly={{ y: 24, duration: PANEL_FLY_DURATION_MS }}
+		>
 			<div class="border-brand/50 rounded-xl border bg-zinc-900 p-6">
-				<div class="max-h-[90svh] px-4">
+				<div class="max-h-[90svh] overflow-y-auto px-4">
 					<div class="mb-8 text-center">
 						<div class="mb-4 text-5xl">🎨</div>
-						<h2 class="text-brand mb-2 text-2xl leading-tight font-bold">Welcome to Image to Palette!</h2>
+						<h2 class="text-brand mb-2 text-2xl leading-tight font-bold">Welcome to ThemeSmith!</h2>
 						<p class="m-0 text-base leading-relaxed text-zinc-400">Extract beautiful color palettes from any image</p>
 					</div>
 
@@ -83,10 +93,12 @@
 						<div
 							class="feature-item hover:border-brand/50 flex items-center gap-4 rounded-md border border-zinc-600 bg-zinc-800/50 p-4 transition-[background-color,border-color] duration-300 hover:bg-white/5"
 						>
-							<div class="shrink-0 text-2xl">💾</div>
+							<div class="shrink-0 text-2xl">🧩</div>
 							<div class="flex flex-col gap-0.5">
-								<strong class="text-sm font-semibold text-zinc-300">Save & Apply</strong>
-								<span class="text-xs leading-tight text-zinc-400">Save palettes and apply to new images</span>
+								<strong class="text-sm font-semibold text-zinc-300">Theme Inspector</strong>
+								<span class="text-xs leading-tight text-zinc-400"
+									>Generate, tweak, and export VS Code or Zed themes from your palette</span
+								>
 							</div>
 						</div>
 					</div>
@@ -129,32 +141,13 @@
 {/if}
 
 <style>
-	/* Staggered animations for feature items */
-	.feature-item {
-		animation: slideIn 0.3s ease forwards;
+	.prompt-panel {
+		will-change: opacity, transform;
 	}
 
-	.feature-item:nth-child(1) {
-		animation-delay: 0.1s;
-	}
-	.feature-item:nth-child(2) {
-		animation-delay: 0.3s;
-	}
-	.feature-item:nth-child(3) {
-		animation-delay: 0.5s;
-	}
-	.feature-item:nth-child(4) {
-		animation-delay: 0.7s;
-	}
-
-	@keyframes slideIn {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
+	@media (prefers-reduced-motion: reduce) {
+		.prompt-panel {
+			will-change: auto;
 		}
 	}
 </style>

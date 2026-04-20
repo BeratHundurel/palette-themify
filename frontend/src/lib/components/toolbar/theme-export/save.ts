@@ -16,6 +16,7 @@ type SaveThemeArgs = {
 
 type ExportThemeArgs = SaveThemeArgs & {
 	saveOnCopy: boolean;
+	onExported?: () => void;
 };
 
 function buildSavedTheme({
@@ -113,7 +114,7 @@ export async function saveTheme({ name, editorType, themeResult }: SaveThemeArgs
 	appStore.saveThemeToLocal(saved);
 }
 
-export async function exportTheme({ name, editorType, themeResult, saveOnCopy }: ExportThemeArgs) {
+export async function exportTheme({ name, editorType, themeResult, saveOnCopy, onExported }: ExportThemeArgs) {
 	if (!themeResult) return;
 
 	try {
@@ -129,6 +130,7 @@ export async function exportTheme({ name, editorType, themeResult, saveOnCopy }:
 		}
 
 		toast.success('Theme JSON copied to clipboard!');
+		onExported?.();
 		popoverStore.close('themeExport');
 	} catch {
 		toast.error('Could not copy the theme. Please try again.');

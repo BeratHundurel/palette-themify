@@ -1,8 +1,5 @@
 import { appStore } from './app/store.svelte';
 import { popoverStore } from './popovers.svelte';
-import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
-import { TUTORIAL_APPLY_PALETTE } from '$lib/types/tutorial';
-import type { Color } from '$lib/types/color';
 
 export interface TutorialStep {
 	id: string;
@@ -28,8 +25,8 @@ interface TutorialState {
 const TUTORIAL_STEPS: TutorialStep[] = [
 	{
 		id: 'welcome',
-		title: 'Welcome to Image to Palette! 🎨',
-		description: "Let's do a quick tour. You can skip any step.",
+		title: 'Welcome to ThemeSmith! 🎨',
+		description: "Let's do a quick tour of palette extraction and theme export. You can skip any step.",
 		position: 'center',
 		skipable: true
 	},
@@ -54,81 +51,69 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 		skipable: true
 	},
 	{
-		id: 'selection-tools',
-		title: 'Use Different Selection Tools',
-		description: 'Use another selector from the toolbar and make one more selection.',
-		element: '[role="toolbar"] button[aria-label="Selector 2"]',
-		position: 'left',
-		action: 'drag',
-		condition: () => tutorialStore.state.hasSelectorClicked,
-		skipable: true
-	},
-	{
-		id: 'extract-colors',
-		title: 'Copy Colors from Your Palette',
-		description: 'Great. Click the highlighted color to copy its hex code.',
-		element: '#tutorial-color-swatch',
-		position: 'top',
-		condition: () => tutorialStore.state.hasColorCopied,
-		skipable: true
-	},
-	{
-		id: 'save-palette',
-		title: 'Save Your Current Palette',
-		description: 'Click "Save Palette" to keep this palette for later use.',
-		element: '#save-palette',
+		id: 'open-theme-inspector',
+		title: 'Open Theme Inspector',
+		description: 'Open Theme Inspector to generate a full editor theme from your extracted palette.',
+		element: '#open-theme-inspector',
 		position: 'top',
 		action: 'click',
-		condition: () => tutorialStore.state.hasCurrentPaletteSaved,
+		condition: () => tutorialStore.state.hasThemeInspectorOpened,
 		skipable: true
 	},
 	{
-		id: 'toolbar-features',
-		title: 'Explore the Toolbar',
-		description: 'Open Saved Palettes from the toolbar (🎨). You can drag this toolbar anywhere.',
-		element: 'button[aria-label="Show saved palettes"]',
-		position: 'left',
+		id: 'theme-appearance',
+		title: 'Choose Theme Appearance',
+		description: 'Switch between Dark and Light to see how the same palette adapts to different backgrounds.',
+		element: '#tutorial-theme-appearance-options',
+		position: 'top',
 		action: 'click',
-		condition: () => tutorialStore.state.hasSavedPalettesPopoverOpen,
+		condition: () => tutorialStore.state.hasThemeAppearanceChanged,
 		skipable: true
 	},
 	{
-		id: 'apply-palette',
-		title: 'Apply a Palette',
-		description: 'Apply the highlighted tutorial palette to recolor your current image.',
-		element: '.tutorial-palette-apply',
-		position: 'left',
-		condition: () => tutorialStore.state.hasSavedPaletteApplied,
+		id: 'theme-editor',
+		title: 'Target VS Code or Zed',
+		description: 'Toggle editor type to generate the correct theme schema for your editor.',
+		element: '#tutorial-theme-editor-options',
+		position: 'top',
+		action: 'click',
+		condition: () => tutorialStore.state.hasThemeEditorChanged,
+		skipable: true
+	},
+	{
+		id: 'theme-overrides',
+		title: 'Customize Color Roles',
+		description: 'Edit at least one override to control background, foreground, or syntax accent assignments.',
+		element: '#tutorial-theme-overrides-root',
+		position: 'top',
+		action: 'click',
+		condition: () => tutorialStore.state.hasThemeOverridesEdited,
+		skipable: true
+	},
+	{
+		id: 'theme-copy-json',
+		title: 'Export Theme JSON',
+		description: 'Copy Theme JSON to export your generated theme. Keep Save on copy enabled to store it locally too.',
+		element: '#tutorial-theme-copy-json',
+		position: 'top',
+		action: 'click',
+		condition: () => tutorialStore.state.hasThemeJsonCopied,
 		skipable: true
 	},
 	{
 		id: 'toolbar-themes',
 		title: 'Saved Themes Panel',
-		description: 'This panel stores full editor themes you generate and save.',
-		element: 'button[aria-label="Show saved themes"]',
+		description: 'Open Saved Themes (🧩) to load, save, or share themes you exported.',
+		element: '#tutorial-open-saved-themes',
 		position: 'left',
-		skipable: true
-	},
-	{
-		id: 'toolbar-settings',
-		title: 'Settings Panels',
-		description: 'Use these panels for Wallhaven search and palette apply behavior.',
-		element: 'button[aria-label="Configure Wallhaven search settings"]',
-		position: 'left',
-		skipable: true
-	},
-	{
-		id: 'toolbar-copy-export',
-		title: 'Copy and Export',
-		description: 'Copy palette formats or download your current image from here.',
-		element: 'button[aria-label="Copy Palette"]',
-		position: 'left',
+		action: 'click',
+		condition: () => tutorialStore.state.hasSavedThemesPopoverOpen,
 		skipable: true
 	},
 	{
 		id: 'completion',
 		title: 'Tutorial Complete! 🎉',
-		description: "You're all set. Explore the app and build palettes from any image.",
+		description: "You're all set. Build palettes, generate themes, and export them for your editor.",
 		position: 'center',
 		skipable: false
 	}
@@ -146,25 +131,17 @@ function createTutorialStore() {
 
 	let hasImageUploaded = $state(false);
 	let hasSelection = $state(false);
-	let hasSavedPalette = $state(false);
-	let hasSelectorClicked = $state(false);
-	let hasColorCopied = $state(false);
-	let hasCurrentPaletteSaved = $state(false);
-	let hasSavedPalettesPopoverOpen = $state(false);
-	let hasSavedPaletteApplied = $state(false);
+	let hasThemeInspectorOpened = $state(false);
+	let hasThemeAppearanceChanged = $state(false);
+	let hasThemeEditorChanged = $state(false);
+	let hasThemeOverridesEdited = $state(false);
+	let hasThemeJsonCopied = $state(false);
+	let hasSavedThemesPopoverOpen = $state(false);
 
 	function resetToUploadState(store: typeof appStore) {
 		store.state.image = null;
 		store.state.imageLoaded = false;
 		store.state.colors = [];
-	}
-
-	function clearNonGreenSelections(store: typeof appStore) {
-		store.state.selectors.forEach((selector) => {
-			if (selector.id !== DEFAULT_SELECTOR_ID) {
-				selector.selection = undefined;
-			}
-		});
 	}
 
 	return {
@@ -173,12 +150,12 @@ function createTutorialStore() {
 				...state,
 				hasImageUploaded,
 				hasSelection,
-				hasSavedPalette,
-				hasSelectorClicked,
-				hasColorCopied,
-				hasCurrentPaletteSaved,
-				hasSavedPalettesPopoverOpen,
-				hasSavedPaletteApplied
+				hasThemeInspectorOpened,
+				hasThemeAppearanceChanged,
+				hasThemeEditorChanged,
+				hasThemeOverridesEdited,
+				hasThemeJsonCopied,
+				hasSavedThemesPopoverOpen
 			};
 		},
 
@@ -194,11 +171,14 @@ function createTutorialStore() {
 			state.currentStepIndex = 0;
 			state.completedSteps.clear();
 
-			hasSelectorClicked = false;
-			hasColorCopied = false;
-			hasCurrentPaletteSaved = false;
-			hasSavedPalettesPopoverOpen = false;
-			hasSavedPaletteApplied = false;
+			hasImageUploaded = false;
+			hasSelection = false;
+			hasThemeInspectorOpened = false;
+			hasThemeAppearanceChanged = false;
+			hasThemeEditorChanged = false;
+			hasThemeOverridesEdited = false;
+			hasThemeJsonCopied = false;
+			hasSavedThemesPopoverOpen = false;
 		},
 
 		next() {
@@ -237,27 +217,29 @@ function createTutorialStore() {
 							appStore.redrawCanvas();
 							break;
 
-						case 'selection-tools':
-							hasSelectorClicked = false;
-							clearNonGreenSelections(appStore);
-							appStore.redrawCanvas();
+						case 'open-theme-inspector':
+							hasThemeInspectorOpened = false;
 							break;
 
-						case 'extract-colors':
-							hasColorCopied = false;
+						case 'theme-appearance':
+							hasThemeAppearanceChanged = false;
 							break;
 
-						case 'save-palette':
-							hasCurrentPaletteSaved = false;
+						case 'theme-editor':
+							hasThemeEditorChanged = false;
 							break;
 
-						case 'toolbar-features':
-							hasSavedPalettesPopoverOpen = false;
-							popoverStore.close();
+						case 'theme-overrides':
+							hasThemeOverridesEdited = false;
 							break;
 
-						case 'apply-palette':
-							hasSavedPaletteApplied = false;
+						case 'theme-copy-json':
+							hasThemeJsonCopied = false;
+							break;
+
+						case 'toolbar-themes':
+							hasSavedThemesPopoverOpen = false;
+							popoverStore.close('themes');
 							break;
 					}
 				}
@@ -291,12 +273,12 @@ function createTutorialStore() {
 
 			hasImageUploaded = false;
 			hasSelection = false;
-			hasSavedPalette = false;
-			hasSelectorClicked = false;
-			hasColorCopied = false;
-			hasCurrentPaletteSaved = false;
-			hasSavedPalettesPopoverOpen = false;
-			hasSavedPaletteApplied = false;
+			hasThemeInspectorOpened = false;
+			hasThemeAppearanceChanged = false;
+			hasThemeEditorChanged = false;
+			hasThemeOverridesEdited = false;
+			hasThemeJsonCopied = false;
+			hasSavedThemesPopoverOpen = false;
 
 			localStorage.removeItem('tutorial-completed');
 			localStorage.removeItem('tutorial-skipped');
@@ -329,47 +311,46 @@ function createTutorialStore() {
 			hasSelection = selection;
 		},
 
-		setSelectorClicked(clicked: boolean) {
+		setThemeInspectorOpened(opened: boolean) {
 			const currentStep = this.getCurrentStep();
-			if (currentStep?.id === 'selection-tools') {
-				hasSelectorClicked = clicked;
+			if (currentStep?.id === 'open-theme-inspector') {
+				hasThemeInspectorOpened = opened;
 			}
 		},
 
-		setColorCopied(copied: boolean) {
+		setThemeAppearanceChanged(changed: boolean) {
 			const currentStep = this.getCurrentStep();
-			if (currentStep?.id === 'extract-colors') {
-				hasColorCopied = copied;
+			if (currentStep?.id === 'theme-appearance') {
+				hasThemeAppearanceChanged = changed;
 			}
 		},
 
-		setHasSavedPalette(saved: boolean) {
-			hasSavedPalette = saved;
-		},
-
-		setCurrentPaletteSaved(saved: boolean) {
+		setThemeEditorChanged(changed: boolean) {
 			const currentStep = this.getCurrentStep();
-			if (currentStep?.id === 'save-palette') {
-				hasCurrentPaletteSaved = saved;
+			if (currentStep?.id === 'theme-editor') {
+				hasThemeEditorChanged = changed;
 			}
 		},
 
-		setSavedPalettesPopoverOpen(open: boolean) {
+		setThemeOverridesEdited(edited: boolean) {
 			const currentStep = this.getCurrentStep();
-			if (currentStep?.id === 'toolbar-features') {
-				hasSavedPalettesPopoverOpen = open;
+			if (currentStep?.id === 'theme-overrides') {
+				hasThemeOverridesEdited = edited;
 			}
 		},
 
-		setSavedPaletteApplied(applied: boolean) {
+		setThemeJsonCopied(copied: boolean) {
 			const currentStep = this.getCurrentStep();
-			if (currentStep?.id === 'apply-palette') {
-				hasSavedPaletteApplied = applied;
+			if (currentStep?.id === 'theme-copy-json') {
+				hasThemeJsonCopied = copied;
 			}
 		},
 
-		getTutorialApplyPalette(): Color[] {
-			return TUTORIAL_APPLY_PALETTE;
+		setSavedThemesPopoverOpen(open: boolean) {
+			const currentStep = this.getCurrentStep();
+			if (currentStep?.id === 'toolbar-themes') {
+				hasSavedThemesPopoverOpen = open;
+			}
 		},
 
 		shouldShowTutorial(): boolean {

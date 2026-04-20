@@ -2,8 +2,7 @@
 	import BrandButton from '$lib/components/ui/BrandButton.svelte';
 	import { DEFAULT_SELECTOR_ID } from '$lib/types/selector';
 	import { appStore } from '$lib/stores/app/store.svelte';
-	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import { cn } from '$lib/utils';
+	import { cn, toggleThemeInspector } from '$lib/utils';
 	import { sortColorsByMethod, type SortMethod } from '$lib/colorUtils';
 	import { tick } from 'svelte';
 	import toast from 'svelte-french-toast';
@@ -50,7 +49,6 @@
 		try {
 			await navigator.clipboard.writeText(hex);
 			toast.success('Copied to clipboard');
-			tutorialStore.setColorCopied(true);
 		} catch {
 			toast.error('Could not copy to clipboard. Please try again.');
 		}
@@ -131,8 +129,9 @@
 			<div class="flex items-center gap-4">
 				<BrandButton id="save-palette" class="w-30 text-zinc-300 xl:w-36" onclick={appStore.savePalette}>
 					Save Palette
-
-					<span>🎨</span>
+				</BrandButton>
+				<BrandButton id="open-theme-inspector" class="w-45" onclick={toggleThemeInspector}>
+					Open Theme Inspector
 				</BrandButton>
 			</div>
 		</div>

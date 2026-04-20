@@ -15,13 +15,14 @@
 	import Search from '$lib/components/search/Search.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import ThemeExportPopover from '$lib/components/toolbar/theme-export/ThemeExportPopover.svelte';
-	import { isDesktopApp } from '$lib/platform';
+	import { getDesktopAppDownloadUrl, isDesktopApp } from '$lib/platform';
 	import BrandButton from '$lib/components/ui/BrandButton.svelte';
 	import BrandLinks from '$lib/components/ui/BrandLinks.svelte';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 	import PromptDialog from '$lib/components/ui/PromptDialog.svelte';
 
 	let showAuthModal = $state(false);
+	const desktopAppDownloadUrl = getDesktopAppDownloadUrl();
 
 	onMount(async () => {
 		await authStore.init();
@@ -46,6 +47,15 @@
 		<div class="grid grid-cols-3 items-center gap-4">
 			<div class="flex min-w-0 items-center gap-4 justify-self-start">
 				<TutorialButton />
+				{#if !isDesktopApp}
+					<a
+						href={desktopAppDownloadUrl}
+						download
+						class="border-brand/50 hover:shadow-brand-lg inline-flex w-40 cursor-pointer items-center justify-center rounded-md border bg-zinc-900 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow,color] duration-300"
+					>
+						Download App
+					</a>
+				{/if}
 			</div>
 
 			<div class="flex min-w-0 justify-center">

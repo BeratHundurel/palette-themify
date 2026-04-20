@@ -35,7 +35,7 @@
 		<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Editor Type</h3>
 		<div class="from-brand/50 h-px flex-1 bg-linear-to-r to-transparent"></div>
 	</div>
-	<div class="grid grid-cols-2 gap-6">
+	<div id="tutorial-theme-editor-options" class="grid grid-cols-2 gap-6">
 		{#each EDITOR_OPTIONS as option (option.value)}
 			<button type="button" onclick={() => onSelect(option.value)} class={getCardClass(option.value)}>
 				<div class="flex items-center gap-2">

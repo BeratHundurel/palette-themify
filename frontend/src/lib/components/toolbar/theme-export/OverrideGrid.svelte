@@ -50,7 +50,7 @@
 	}
 </script>
 
-<div>
+<div id="tutorial-theme-overrides-root">
 	<div class="mb-3 flex items-center justify-between gap-4">
 		<div class="flex items-center gap-2">
 			<h3 class="text-brand text-sm font-semibold tracking-wide uppercase">Base Color Overrides</h3>
@@ -78,7 +78,7 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-2 gap-2">
+	<div id="tutorial-theme-overrides-grid" class="grid grid-cols-2 gap-2">
 		{#each overrideFields as field (field.key)}
 			{@const isModified = manualOverrideBadges[field.key] === true}
 			{@const currentValue = getOverrideValue(field.key)}

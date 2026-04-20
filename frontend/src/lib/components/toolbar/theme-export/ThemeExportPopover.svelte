@@ -7,6 +7,7 @@
 	import { isDesktopApp } from '$lib/platform';
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
+	import { tutorialStore } from '$lib/stores/tutorial.svelte';
 	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 	import { cn } from '$lib/utils';
 
@@ -389,7 +390,8 @@
 			name: themeName,
 			editorType,
 			themeResult,
-			saveOnCopy
+			saveOnCopy,
+			onExported: () => tutorialStore.setThemeJsonCopied(true)
 		});
 	}
 
@@ -473,9 +475,13 @@
 					</div>
 				</div>
 
-				<AppearanceSelector selected={themeAppearance} onSelect={handleThemeAppearanceChange} />
+				<div id="tutorial-theme-appearance">
+					<AppearanceSelector selected={themeAppearance} onSelect={handleThemeAppearanceChange} />
+				</div>
 
-				<EditorSelector selected={editorType} onSelect={handleEditorTypeChange} />
+				<div id="tutorial-theme-editor">
+					<EditorSelector selected={editorType} onSelect={handleEditorTypeChange} />
+				</div>
 
 				<SaveBehaviorSection
 					{saveOnCopy}
@@ -484,18 +490,20 @@
 					onAccentBoostChange={handleAccentBoostChange}
 				/>
 
-				<OverrideGrid
-					{overrideFields}
-					{themeOverrides}
-					themeResultExists={Boolean(themeResult)}
-					{manualOverrideBadges}
-					{getOverrideValue}
-					{getOverrideRecommendations}
-					onUpdateOverride={updateThemeOverride}
-					onSwitchOverride={switchThemeOverride}
-					onShuffle={shuffleThemeDistribution}
-					onReset={resetOverrides}
-				/>
+				<div id="tutorial-theme-overrides">
+					<OverrideGrid
+						{overrideFields}
+						{themeOverrides}
+						themeResultExists={Boolean(themeResult)}
+						{manualOverrideBadges}
+						{getOverrideValue}
+						{getOverrideRecommendations}
+						onUpdateOverride={updateThemeOverride}
+						onSwitchOverride={switchThemeOverride}
+						onShuffle={shuffleThemeDistribution}
+						onReset={resetOverrides}
+					/>
+				</div>
 			</div>
 
 			<div class="flex items-center justify-between border-t border-zinc-700 bg-zinc-800/50 px-6 py-5">
@@ -539,6 +547,7 @@
 							</button>
 						{/if}
 						<button
+							id="tutorial-theme-copy-json"
 							type="button"
 							onclick={handleExportTheme}
 							disabled={isExportDisabled}
