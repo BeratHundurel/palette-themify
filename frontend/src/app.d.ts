@@ -4,7 +4,7 @@ import type { EditorThemeType } from '$lib/api/theme';
 // for information about these interfaces
 declare global {
 	interface Window {
-		__IMAGE_TO_PALETTE_DESKTOP__?: {
+		__THEMESMITH_DESKTOP__?: {
 			saveThemeToEditorTarget(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string>;
 		};
 		go?: {

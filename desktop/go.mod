@@ -1,4 +1,4 @@
-module image-to-palette/desktop
+module themesmith/desktop
 
 go 1.26.2
 

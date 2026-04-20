@@ -1,4 +1,5 @@
 import type { EditorThemeType } from '$lib/api/theme';
+import { buildURL } from '$lib/api/base';
 
 export type AppTarget = 'web' | 'desktop';
 type SaveBridgeFn = (editorType: EditorThemeType, themeName: string, themeJSON: string) => Promise<string>;
@@ -8,7 +9,7 @@ let cachedWailsRuntime: Promise<typeof import('@wailsio/runtime')> | null = null
 
 declare global {
 	interface Window {
-		['image-to-palette']?: {
+		['themesmith']?: {
 			desktop?: {
 				ThemeExportService?: {
 					SaveThemeToEditorTarget?: SaveBridgeFn;
@@ -28,7 +29,7 @@ function resolveAppTarget(): AppTarget {
 	}
 
 	if (typeof window !== 'undefined') {
-		if (window.__IMAGE_TO_PALETTE_DESKTOP__) {
+		if (window.__THEMESMITH_DESKTOP__) {
 			return 'desktop';
 		}
 
@@ -88,7 +89,7 @@ async function callWailsFunction(editorType: EditorThemeType, themeName: string,
 }
 
 function resolveWindowWailsBridge(): SaveBridgeFn | null {
-	const wailsBindings = window['image-to-palette'];
+	const wailsBindings = window['themesmith'];
 	if (wailsBindings?.desktop?.ThemeExportService?.SaveThemeToEditorTarget) {
 		return wailsBindings.desktop.ThemeExportService.SaveThemeToEditorTarget;
 	}
@@ -177,6 +178,10 @@ function findFunctionInObject(obj: unknown, fnName: string): SaveBridgeFn | null
 export const appTarget = resolveAppTarget();
 export const isDesktopApp = appTarget === 'desktop';
 
+export function getDesktopAppDownloadUrl(): string {
+	return buildURL('/desktop/download');
+}
+
 export function getDesktopSaveErrorMessage(error: unknown): string {
 	const message = error instanceof Error ? error.message : '';
 
@@ -204,8 +209,8 @@ export async function saveThemeToEditorTarget(args: {
 		throw new Error('Desktop save is only available in desktop builds.');
 	}
 
-	if (typeof window !== 'undefined' && window.__IMAGE_TO_PALETTE_DESKTOP__?.saveThemeToEditorTarget) {
-		return window.__IMAGE_TO_PALETTE_DESKTOP__.saveThemeToEditorTarget(args.editorType, args.themeName, args.themeJSON);
+	if (typeof window !== 'undefined' && window.__THEMESMITH_DESKTOP__?.saveThemeToEditorTarget) {
+		return window.__THEMESMITH_DESKTOP__.saveThemeToEditorTarget(args.editorType, args.themeName, args.themeJSON);
 	}
 
 	return await callWailsFunction(args.editorType, args.themeName, args.themeJSON);

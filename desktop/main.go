@@ -20,8 +20,8 @@ func main() {
 	themeExportService := &ThemeExportService{}
 
 	app := application.New(application.Options{
-		Name:        "image-to-palette",
-		Description: "Desktop app for image-to-palette",
+		Name:        "themesmith",
+		Description: "Desktop app for ThemeSmith",
 		Services: []application.Service{
 			application.NewService(themeExportService),
 		},
@@ -36,7 +36,7 @@ func main() {
 	isMac := runtime.GOOS == "darwin"
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:      "image-to-palette",
+		Title:      "ThemeSmith",
 		Frameless:  !isMac,
 		StartState: application.WindowStateMaximised,
 		Width:      1440,

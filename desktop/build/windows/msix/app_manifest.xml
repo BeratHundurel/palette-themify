@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap3">
   
   <Identity 
-    Name="com.example.imagetopalettedesktop"
-    Publisher="CN=My Company"
-    Version="0.1.0.0" 
+    Name="com.themesmith.desktop"
+    Publisher="CN=ThemeSmith"
+    Version="0.0.1.0" 
     ProcessorArchitecture="x64" />
   
   <Properties>
-    <DisplayName>My Product</DisplayName>
-    <PublisherDisplayName>My Company</PublisherDisplayName>
-    <Description>A image-to-palette-desktop application</Description>
+    <DisplayName>ThemeSmith</DisplayName>
+    <PublisherDisplayName>ThemeSmith</PublisherDisplayName>
+    <Description>Generate editor themes from image palettes</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   
@@ -29,10 +29,10 @@
   </Resources>
   
   <Applications>
-    <Application Id="com.example.imagetopalettedesktop" Executable="image-to-palette-desktop.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="com.themesmith.desktop" Executable="themesmith.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="My Product"
-        Description="A image-to-palette-desktop application"
+        DisplayName="ThemeSmith"
+        Description="Generate editor themes from image palettes"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
@@ -41,7 +41,7 @@
       </uap:VisualElements>
       
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="image-to-palette-desktop.exe" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="themesmith.exe" />
         
         
       </Extensions>

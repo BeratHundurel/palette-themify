@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
 Name=My Product
-Comment=A image-to-palette-desktop application
+Comment=My Product Description
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/image-to-palette-desktop.exe %u
+Exec=/usr/local/bin/ %u
 Terminal=false
 Type=Application
-Icon=image-to-palette-desktop.exe
+Icon=
 Categories=Utility;
-StartupWMClass=image-to-palette-desktop.exe
+StartupWMClass=
 
  

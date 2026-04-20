@@ -8,27 +8,27 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="image-to-palette-desktop.exe"
+        Path="themesmith.exe"
         Arguments=""
-        InstallLocation="C:\Program Files\My Company\My Product">
+        InstallLocation="C:\Program Files\ThemeSmith\ThemeSmith">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
-        PublisherName="CN=My Company"
-        PublisherDisplayName="My Company"
-        Version="0.1.0.0"
-        PackageDescription="A image-to-palette-desktop application">
+        PackageName="ThemeSmith"
+        PackageDisplayName="ThemeSmith"
+        PublisherName="CN=ThemeSmith"
+        PublisherDisplayName="ThemeSmith"
+        Version="0.0.1.0"
+        PackageDescription="Generate editor themes from image palettes">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.imagetopalettedesktop"
-                Description="A image-to-palette-desktop application"
-                DisplayName="My Product"
-                ExecutableName="image-to-palette-desktop.exe"
+                Id="com.themesmith.desktop"
+                Description="Generate editor themes from image palettes"
+                DisplayName="ThemeSmith"
+                ExecutableName="themesmith.exe"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
-            <PublisherDisplayName>My Company</PublisherDisplayName>
-            <Description>A image-to-palette-desktop application</Description>
+            <DisplayName>ThemeSmith</DisplayName>
+            <PublisherDisplayName>ThemeSmith</PublisherDisplayName>
+            <Description>Generate editor themes from image palettes</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="image-to-palette-desktop.msix" />
+    <SaveLocation PackagePath="themesmith.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

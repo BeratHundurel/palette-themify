@@ -17,3 +17,6 @@ build/**
 !build/linux/**
 !build/windows/
 !build/windows/**
+
+# Ignore Windows executables in desktop workspace
+*.exe
