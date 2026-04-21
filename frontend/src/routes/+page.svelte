@@ -48,6 +48,7 @@
 			<div class="flex min-w-0 items-center gap-4 justify-self-start">
 				<TutorialButton />
 				{#if !isDesktopApp}
+					<!-- eslint-disable svelte/no-navigation-without-resolve -->
 					<a
 						href={desktopAppDownloadUrl}
 						download
@@ -55,6 +56,7 @@
 					>
 						Download App
 					</a>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}
 			</div>
 
