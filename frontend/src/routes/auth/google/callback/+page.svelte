@@ -36,8 +36,7 @@
 			const { user } = await getCurrentUser();
 			authStore.setUser(user);
 			await appStore.syncPalettesOnAuth();
-			await appStore.syncPreferencesOnAuth();
-			await appStore.syncSavedThemesOnAuth();
+			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
 			toast.success('Successfully signed in with Google!');
 			window.location.href = '/';
 		} catch {

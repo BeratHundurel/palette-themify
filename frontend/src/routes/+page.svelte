@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/toolbar/Toolbar.svelte';
 	import { Toaster } from 'svelte-french-toast';
-	import { onMount } from 'svelte';
 	import Canvas from '$lib/components/Canvas.svelte';
 	import UploadOverlay from '$lib/components/UploadOverlay.svelte';
 	import PaletteGrid from '$lib/components/PaletteGrid.svelte';
@@ -10,7 +9,6 @@
 	import Tutorial from '$lib/components/tutorial/Tutorial.svelte';
 	import TutorialStart from '$lib/components/tutorial/TutorialStart.svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { appStore } from '$lib/stores/app/store.svelte';
 	import TutorialButton from '$lib/components/tutorial/TutorialButton.svelte';
 	import Search from '$lib/components/search/Search.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
@@ -23,13 +21,6 @@
 
 	let showAuthModal = $state(false);
 	const desktopAppDownloadUrl = getDesktopAppDownloadUrl();
-
-	onMount(async () => {
-		await authStore.init();
-		appStore.loadSavedPalettes();
-		await appStore.syncPreferencesOnAuth();
-		await appStore.syncSavedThemesOnAuth();
-	});
 </script>
 
 <Toaster />

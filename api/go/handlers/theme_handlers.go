@@ -30,6 +30,15 @@ type DeleteThemesRequest struct {
 	IDs []string `json:"ids"`
 }
 
+type SaveThemesBatchRequest struct {
+	Themes []json.RawMessage `json:"themes"`
+}
+
+type SaveThemesBatchResponse struct {
+	Message string           `json:"message"`
+	Themes  []map[string]any `json:"themes"`
+}
+
 func SaveThemeHandler(c *gin.Context) {
 	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
@@ -72,6 +81,55 @@ func SaveThemeHandler(c *gin.Context) {
 	}
 
 	c.JSON(status, gin.H{"message": "Theme saved successfully", "theme": responseTheme})
+}
+
+func SaveThemesBatchHandler(c *gin.Context) {
+	if db.DB == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to save themes"})
+		return
+	}
+
+	var req SaveThemesBatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	if len(req.Themes) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Themes are required"})
+		return
+	}
+
+	responseThemes := make([]map[string]any, 0, len(req.Themes))
+	for _, rawTheme := range req.Themes {
+		payload, info, err := parseThemePayload(rawTheme)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		theme, _, err := saveUserTheme(userID, info.Name, info.EditorType, info.Signature, string(rawTheme))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save theme"})
+			return
+		}
+
+		responseTheme, err := buildThemeResponse(theme, payload)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
+			return
+		}
+
+		responseThemes = append(responseThemes, responseTheme)
+	}
+
+	c.JSON(http.StatusOK, SaveThemesBatchResponse{Message: "Themes saved successfully", Themes: responseThemes})
 }
 
 func UpdateThemeHandler(c *gin.Context) {

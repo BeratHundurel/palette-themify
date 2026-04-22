@@ -71,8 +71,7 @@
 			}
 
 			await appStore.syncPalettesOnAuth();
-			await appStore.syncPreferencesOnAuth();
-			await appStore.syncSavedThemesOnAuth();
+			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
 
 			resetForm();
 			isOpen = false;
@@ -98,8 +97,7 @@
 			}
 
 			await appStore.syncPalettesOnAuth();
-			await appStore.syncPreferencesOnAuth();
-			await appStore.syncSavedThemesOnAuth();
+			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
 			toast.success('Successfully signed in with Google!');
 			resetForm();
 			isOpen = false;

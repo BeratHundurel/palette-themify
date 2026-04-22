@@ -58,6 +58,7 @@ vi.mock('$lib/api/preferences', () => ({
 vi.mock('$lib/api/themes', () => ({
 	getThemes: vi.fn(),
 	saveTheme: vi.fn(),
+	saveThemes: vi.fn(),
 	updateTheme: vi.fn(),
 	deleteTheme: vi.fn()
 }));
@@ -687,17 +688,17 @@ describe('appStore', () => {
 		it('syncs saved themes from local storage to API and refreshes from server', async () => {
 			authStoreMock.state.isAuthenticated = true;
 			localStorage.setItem('savedThemes', JSON.stringify([makeTheme('local-theme-1', 'Local Theme')]));
-			vi.mocked(themesApi.saveTheme).mockResolvedValue({
+			vi.mocked(themesApi.saveThemes).mockResolvedValue({
 				message: 'ok',
-				theme: makeTheme('remote-theme-1', 'Remote Theme')
+				themes: [makeTheme('remote-theme-1', 'Remote Theme')]
 			});
 			vi.mocked(themesApi.getThemes).mockResolvedValue({ themes: [makeTheme('server-theme-1', 'Server Theme')] });
 
 			await appStore.syncSavedThemesOnAuth();
 
-			expect(themesApi.saveTheme).toHaveBeenCalledTimes(1);
-			expect(themesApi.saveTheme).toHaveBeenCalledWith(
-				expect.objectContaining({ id: 'local-theme-1', signature: expect.any(String) })
+			expect(themesApi.saveThemes).toHaveBeenCalledTimes(1);
+			expect(themesApi.saveThemes).toHaveBeenCalledWith(
+				expect.arrayContaining([expect.objectContaining({ id: 'local-theme-1', signature: expect.any(String) })])
 			);
 			expect(themesApi.getThemes).toHaveBeenCalledTimes(1);
 			expect(appStore.state.savedThemes).toEqual([makeTheme('server-theme-1', 'Server Theme')]);

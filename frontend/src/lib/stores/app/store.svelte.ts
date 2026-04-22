@@ -458,20 +458,17 @@ function createAppStore() {
 				const stored = localStorage.getItem('savedThemes');
 				if (stored) {
 					try {
-						const localThemes = loadSavedThemes();
-						await Promise.all(
-							localThemes.map(async (theme) => {
-								try {
-									const response = await themesApi.saveTheme(this.ensureThemeSignature(theme));
-									this.applyThemeResponse(response.theme, theme.id);
-								} catch (error) {
-									console.error('Failed to sync theme:', theme.name, error);
-								}
-							})
-						);
+						const localThemes = loadSavedThemes().map((theme) => this.ensureThemeSignature(theme));
+						if (localThemes.length > 0) {
+							const response = await themesApi.saveThemes(localThemes);
+							response.themes.forEach((theme, index) => {
+								const sourceTheme = localThemes[index];
+								this.applyThemeResponse(theme, sourceTheme?.id);
+							});
+						}
 						localStorage.removeItem('savedThemes');
-					} catch {
-						console.error('Failed to parse local themes');
+					} catch (error) {
+						console.error('Failed to sync local themes:', error);
 					}
 				}
 				await this.loadSavedThemesFromApi();

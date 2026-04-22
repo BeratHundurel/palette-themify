@@ -9,8 +9,7 @@
 		try {
 			await authStore.logout();
 			await appStore.syncPalettesOnAuth();
-			await appStore.syncPreferencesOnAuth();
-			await appStore.syncSavedThemesOnAuth();
+			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
 			await appStore.loadSavedPalettes();
 
 			showDropdown = false;

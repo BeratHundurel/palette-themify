@@ -44,6 +44,7 @@ func NewRouter() *gin.Engine {
 	router.DELETE("/palettes", DeletePalettesBatchHandler)
 
 	router.GET("/themes", GetThemesHandler)
+	router.POST("/themes/batch", SaveThemesBatchHandler)
 	router.POST("/themes", SaveThemeHandler)
 	router.POST("/themes/:id/share", ShareThemeHandler)
 	router.DELETE("/themes/:id/share", UnshareThemeHandler)

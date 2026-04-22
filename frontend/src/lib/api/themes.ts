@@ -11,6 +11,11 @@ export type SavedThemeResponse = {
 	theme: SavedThemeItem;
 };
 
+export type SavedThemesBatchResponse = {
+	message: string;
+	themes: SavedThemeItem[];
+};
+
 export async function getThemes(): Promise<ThemesResponse> {
 	const response = await fetch(buildURL('/themes'), {
 		method: 'GET',
@@ -26,6 +31,17 @@ export async function saveTheme(theme: SavedThemeItem): Promise<SavedThemeRespon
 		method: 'POST',
 		headers: getAuthHeaders(),
 		body: JSON.stringify(theme)
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function saveThemes(themes: SavedThemeItem[]): Promise<SavedThemesBatchResponse> {
+	const response = await fetch(buildURL('/themes/batch'), {
+		method: 'POST',
+		headers: getAuthHeaders(),
+		body: JSON.stringify({ themes })
 	});
 
 	await ensureOk(response);

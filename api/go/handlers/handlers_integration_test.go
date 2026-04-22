@@ -117,6 +117,7 @@ func setupPaletteRouter() *gin.Engine {
 func setupThemeRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	router.POST("/themes/batch", SaveThemesBatchHandler)
 	router.POST("/themes", SaveThemeHandler)
 	router.POST("/themes/:id/share", ShareThemeHandler)
 	router.DELETE("/themes/:id/share", UnshareThemeHandler)
@@ -125,6 +126,71 @@ func setupThemeRouter() *gin.Engine {
 	router.DELETE("/themes/:id", DeleteThemeHandler)
 	router.DELETE("/themes", DeleteThemesBatchHandler)
 	return router
+}
+
+func TestSaveThemesBatchHandler_AuthRequired(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupThemeRouter()
+
+	body, err := json.Marshal(map[string]any{"themes": []any{buildThemePayload("Theme", "vscode", "sig-1")}})
+	if err != nil {
+		t.Fatalf("marshal themes: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/themes/batch", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSaveThemesBatchHandler_SavesAndDedupes(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	user := createTestUser(t)
+	token, err := authpkg.GenerateJWTToken(user)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	router := setupThemeRouter()
+
+	body, err := json.Marshal(map[string]any{
+		"themes": []any{
+			buildThemePayload("Theme One", "vscode", "sig-batch-1"),
+			buildThemePayload("Theme Duplicate", "vscode", "sig-batch-1"),
+			buildThemePayload("Theme Two", "zed", "sig-batch-2"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal themes: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/themes/batch", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp SaveThemesBatchResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	assert.Len(t, resp.Themes, 3)
+
+	var count int64
+	if err := db.DB.Model(&model.Theme{}).Count(&count).Error; err != nil {
+		t.Fatalf("count themes: %v", err)
+	}
+	assert.Equal(t, int64(2), count)
 }
 
 func setupSharedRouter() *gin.Engine {
