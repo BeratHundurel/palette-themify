@@ -1,6 +1,6 @@
 FROM alpine:3.21
 
-ARG ZIG_VERSION=0.15.2
+ARG ZIG_VERSION=0.16.0
 
 RUN apk add --no-cache curl xz tar build-base libc-dev
 

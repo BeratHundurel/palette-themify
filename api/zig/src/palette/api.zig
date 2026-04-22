@@ -95,7 +95,7 @@ fn processRgb24Pixels(
     allocator: std.mem.Allocator,
     pixels: []const zigimg.color.Rgb24,
 ) ExtractError!PaletteResult {
-    var color_map = std.ArrayList(QuantizedColorAndCount){};
+    var color_map = std.ArrayList(QuantizedColorAndCount).empty;
     defer color_map.deinit(allocator);
     color_map.ensureTotalCapacity(allocator, 512) catch return ExtractError.OutOfMemory;
 
@@ -146,7 +146,7 @@ fn processRgba32Pixels(
     allocator: std.mem.Allocator,
     pixels: []const zigimg.color.Rgba32,
 ) ExtractError!PaletteResult {
-    var color_map = std.ArrayList(QuantizedColorAndCount){};
+    var color_map = std.ArrayList(QuantizedColorAndCount).empty;
     defer color_map.deinit(allocator);
     color_map.ensureTotalCapacity(allocator, 512) catch return ExtractError.OutOfMemory;
 
@@ -199,7 +199,7 @@ fn processImageGeneric(
     allocator: std.mem.Allocator,
     img: *zigimg.Image,
 ) ExtractError!PaletteResult {
-    var color_map = std.ArrayList(ColorAndCount){};
+    var color_map = std.ArrayList(ColorAndCount).empty;
     defer color_map.deinit(allocator);
     color_map.ensureTotalCapacity(allocator, 512) catch return ExtractError.OutOfMemory;
 
@@ -295,7 +295,7 @@ pub fn handleExtractPalette(allocator: std.mem.Allocator, request_body: []const 
     var result = try extractPaletteFromBytes(allocator, request_body);
     defer result.deinit();
 
-    var json_array = std.ArrayList(u8){};
+    var json_array = std.ArrayList(u8).empty;
     errdefer json_array.deinit(allocator);
 
     try json_array.appendSlice(allocator, "{\"palette\":[");

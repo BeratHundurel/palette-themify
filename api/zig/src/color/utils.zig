@@ -719,7 +719,7 @@ pub fn selectBackgroundAndForeground(allocator: std.mem.Allocator, colors: []con
     const bg_index = selectBackgroundColor(colors, prefer_dark);
     const fg_index = selectForegroundColor(colors, colors[bg_index], bg_index);
 
-    var remaining = std.ArrayList(usize){};
+    var remaining = std.ArrayList(usize).empty;
     defer remaining.deinit(allocator);
 
     for (0..colors.len) |i| {

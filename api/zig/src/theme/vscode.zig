@@ -536,7 +536,7 @@ pub fn generateOverridableFromVSCodeThemeValue(allocator: std.mem.Allocator, req
     const colors_obj = color_utils.getObjectField(root_obj, "colors") orelse return error.InvalidTheme;
 
     var overrides = request.ThemeOverrides orelse ThemeOverrides{};
-    var colors = std.ArrayList([]const u8){};
+    var colors = std.ArrayList([]const u8).empty;
     defer colors.deinit(allocator);
 
     // ── background ──────────────────────────────────────────────────────────

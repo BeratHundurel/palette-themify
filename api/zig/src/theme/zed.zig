@@ -486,7 +486,7 @@ pub fn generateOverridableFromZedThemeValue(allocator: std.mem.Allocator, reques
     }
 
     var overrides = request.ThemeOverrides orelse ThemeOverrides{};
-    var colors = std.ArrayList([]const u8){};
+    var colors = std.ArrayList([]const u8).empty;
     defer colors.deinit(allocator);
 
     if (color_utils.getStringField(style_obj, "background")) |background| {

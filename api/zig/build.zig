@@ -1,5 +1,4 @@
 const std = @import("std");
-const tokamak = @import("tokamak");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -26,11 +25,15 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const httpz_dependency = b.dependency("httpz", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     mod.addImport("zigimg", zigimg_dependency.module("zigimg"));
     exe.root_module.addImport("zigimg", zigimg_dependency.module("zigimg"));
+    exe.root_module.addImport("httpz", httpz_dependency.module("httpz"));
 
-    tokamak.setup(exe, .{});
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the server");

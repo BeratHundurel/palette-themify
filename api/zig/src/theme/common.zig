@@ -181,7 +181,7 @@ pub fn prepareThemeSelection(
     const improved_colors = try color_utils.selectDiverseColors(allocator, colors, target_palette_size);
     defer allocator.free(improved_colors);
 
-    var palette = std.ArrayList([]const u8){};
+    var palette = std.ArrayList([]const u8).empty;
     defer palette.deinit(allocator);
     try palette.ensureTotalCapacity(allocator, target_palette_size);
     try palette.appendSlice(allocator, improved_colors);

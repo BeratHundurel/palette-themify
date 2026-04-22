@@ -6,6 +6,7 @@ user_palettes
 .zig-cache/
 zig-cache/
 zig-out/
+zig-pkg
 *.log
 Session*.*vim
 commit_msg
