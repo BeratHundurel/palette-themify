@@ -159,3 +159,13 @@ export async function getGoogleDesktopAuthStatus(sessionId: string): Promise<Goo
 
 	return response.json();
 }
+
+export async function exchangeGoogleAuthCode(exchangeCode: string): Promise<AuthResponse> {
+	const response = await fetch(buildURL('/auth/google/exchange', { exchange_code: exchangeCode }), {
+		method: 'GET'
+	});
+
+	await ensureOk(response);
+
+	return response.json();
+}

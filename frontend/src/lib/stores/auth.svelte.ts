@@ -6,6 +6,14 @@ import * as authApi from '$lib/api/auth';
 const GOOGLE_DESKTOP_POLL_INTERVAL_MS = 1200;
 const GOOGLE_DESKTOP_TIMEOUT_MS = 2 * 60 * 1000;
 
+async function openGoogleLoginURL(url: string): Promise<void> {
+	if (typeof window === 'undefined') {
+		throw new Error('Google login is only available in browser contexts.');
+	}
+
+	window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 interface AuthState {
 	user: User | null;
 	isAuthenticated: boolean;
@@ -159,11 +167,3 @@ function createAuthStore() {
 }
 
 export const authStore = createAuthStore();
-
-async function openGoogleLoginURL(url: string): Promise<void> {
-	if (typeof window === 'undefined') {
-		throw new Error('Google login is only available in browser contexts.');
-	}
-
-	window.open(url, '_blank', 'noopener,noreferrer');
-}

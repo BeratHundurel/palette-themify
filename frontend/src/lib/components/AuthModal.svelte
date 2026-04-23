@@ -70,8 +70,11 @@
 				toast.success('Account created successfully!');
 			}
 
-			await appStore.syncPalettesOnAuth();
-			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
+			await Promise.all([
+				appStore.syncPalettesOnAuth(),
+				appStore.syncPreferencesOnAuth(),
+				appStore.syncSavedThemesOnAuth()
+			]);
 
 			resetForm();
 			isOpen = false;
@@ -96,8 +99,12 @@
 				return;
 			}
 
-			await appStore.syncPalettesOnAuth();
-			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
+			await Promise.all([
+				appStore.syncPalettesOnAuth(),
+				appStore.syncPreferencesOnAuth(),
+				appStore.syncSavedThemesOnAuth()
+			]);
+
 			toast.success('Successfully signed in with Google!');
 			resetForm();
 			isOpen = false;

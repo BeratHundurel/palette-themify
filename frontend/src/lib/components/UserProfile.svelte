@@ -8,9 +8,13 @@
 	async function handleLogout() {
 		try {
 			await authStore.logout();
-			await appStore.syncPalettesOnAuth();
-			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
-			await appStore.loadSavedPalettes();
+
+			await Promise.all([
+				appStore.syncPalettesOnAuth(),
+				appStore.syncPreferencesOnAuth(),
+				appStore.syncSavedThemesOnAuth(),
+				appStore.loadSavedPalettes()
+			]);
 
 			showDropdown = false;
 			toast.success('Logged out successfully');

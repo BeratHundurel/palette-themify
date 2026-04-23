@@ -56,12 +56,13 @@ const (
 )
 
 type googleAuthSession struct {
-	Mode        googleAuthMode
-	RedirectURL string
-	ExpiresAt   time.Time
-	Token       string
-	User        *model.User
-	Error       string
+	Mode         googleAuthMode
+	RedirectURL  string
+	ExpiresAt    time.Time
+	Token        string
+	User         *model.User
+	Error        string
+	ExchangeCode string
 }
 
 var (
@@ -183,6 +184,31 @@ func createGoogleAuthSession(mode googleAuthMode, redirectURL string) (string, t
 	}
 
 	return state, expiresAt, nil
+}
+
+func consumeGoogleExchangeCode(code string) (*googleAuthSession, error) {
+	trimmedCode := strings.TrimSpace(code)
+	if trimmedCode == "" {
+		return nil, errors.New("Missing exchange_code parameter")
+	}
+
+	googleAuthSessionsMu.Lock()
+	defer googleAuthSessionsMu.Unlock()
+
+	cleanupExpiredGoogleSessionsLocked(time.Now())
+
+	for sessionID, session := range googleAuthSessions {
+		if session.Mode != googleAuthModeWeb || session.ExchangeCode != trimmedCode {
+			continue
+		}
+
+		sessionCopy := *session
+		delete(googleAuthSessions, sessionID)
+
+		return &sessionCopy, nil
+	}
+
+	return nil, errors.New("Invalid or expired exchange code")
 }
 
 func cleanupExpiredGoogleSessionsLocked(now time.Time) {
@@ -584,7 +610,10 @@ func GoogleCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange code for token"})
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "oauth_exchange_failed")
+		redirectValues.Set("error_description", "Could not verify Google sign in. Please try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 		return
 	}
 
@@ -597,7 +626,10 @@ func GoogleCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "userinfo_fetch_failed")
+		redirectValues.Set("error_description", "Could not fetch your Google profile. Please try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 		return
 	}
 	defer resp.Body.Close()
@@ -610,7 +642,10 @@ func GoogleCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user info"})
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "userinfo_parse_failed")
+		redirectValues.Set("error_description", "Google returned an invalid profile response. Please try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 		return
 	}
 
@@ -621,7 +656,10 @@ func GoogleCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Google email not verified"})
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "email_not_verified")
+		redirectValues.Set("error_description", "Your Google email is not verified. Verify it and try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 		return
 	}
 
@@ -633,7 +671,10 @@ func GoogleCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "user_finalize_failed")
+		redirectValues.Set("error_description", "Could not finalize your account. Please try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 		return
 	}
 
@@ -645,7 +686,10 @@ func GoogleCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "session_token_failed")
+		redirectValues.Set("error_description", "Could not create your session token. Please try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 		return
 	}
 
@@ -665,13 +709,31 @@ func GoogleCallbackHandler(c *gin.Context) {
 		return
 	}
 
+	exchangeCode, err := generateSecureToken(32)
+	if err != nil {
+		googleAuthSessionsMu.Lock()
+		delete(googleAuthSessions, state)
+		googleAuthSessionsMu.Unlock()
+
+		redirectValues := url.Values{}
+		redirectValues.Set("error", "exchange_code_failed")
+		redirectValues.Set("error_description", "Could not complete Google sign in. Please try again.")
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
+		return
+	}
+
 	googleAuthSessionsMu.Lock()
-	delete(googleAuthSessions, state)
+	if currentSession, ok := googleAuthSessions[state]; ok {
+		currentSession.ExchangeCode = exchangeCode
+		currentSession.Token = jwtToken
+		currentSession.User = &safeUser
+		currentSession.Error = ""
+	}
 	googleAuthSessionsMu.Unlock()
 
-	fragment := url.Values{}
-	fragment.Set("token", jwtToken)
-	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s#%s", session.RedirectURL, fragment.Encode()))
+	redirectValues := url.Values{}
+	redirectValues.Set("exchange_code", exchangeCode)
+	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s?%s", session.RedirectURL, redirectValues.Encode()))
 }
 
 func GoogleDesktopStatusHandler(c *gin.Context) {
@@ -714,6 +776,27 @@ func GoogleDesktopStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "completed",
 		"auth":   authResponse,
+	})
+}
+
+func GoogleExchangeCodeHandler(c *gin.Context) {
+	exchangeCode := c.Query("exchange_code")
+
+	session, err := consumeGoogleExchangeCode(exchangeCode)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if session.Token == "" || session.User == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired exchange code"})
+		return
+	}
+
+	c.JSON(http.StatusOK, AuthResponse{
+		Token:   session.Token,
+		User:    *session.User,
+		Message: "Login successful",
 	})
 }
 

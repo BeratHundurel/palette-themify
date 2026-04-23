@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"themesmith/db"
 	"themesmith/model"
@@ -107,6 +109,10 @@ func setupAuthRouter() *gin.Engine {
 	router := gin.New()
 	router.POST("/auth/register", RegisterHandler)
 	router.POST("/auth/login", LoginHandler)
+	router.GET("/auth/google", GoogleLoginHandler)
+	router.GET("/auth/google/callback", GoogleCallbackHandler)
+	router.GET("/auth/google/exchange", GoogleExchangeCodeHandler)
+	router.GET("/auth/google/desktop/status", GoogleDesktopStatusHandler)
 	authGroup := router.Group("/auth")
 	authGroup.Use(AuthMiddleware())
 	authGroup.GET("/me", GetMeHandler)
@@ -399,4 +405,137 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
+}
+
+func TestGoogleExchangeCodeHandler_Success(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupAuthRouter()
+	user := createTestUser(t)
+
+	googleAuthSessionsMu.Lock()
+	googleAuthSessions = map[string]*googleAuthSession{}
+	googleAuthSessions["web-session"] = &googleAuthSession{
+		Mode:         googleAuthModeWeb,
+		RedirectURL:  "http://localhost:5173/auth/google/callback",
+		ExpiresAt:    time.Now().Add(5 * time.Minute),
+		Token:        "jwt-token",
+		User:         &user,
+		ExchangeCode: "exchange-code-123",
+	}
+	googleAuthSessionsMu.Unlock()
+
+	req := httptest.NewRequest("GET", "/auth/google/exchange?exchange_code=exchange-code-123", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var authResponse AuthResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &authResponse); err != nil {
+		t.Fatalf("decode exchange response: %v", err)
+	}
+
+	assert.Equal(t, "jwt-token", authResponse.Token)
+	assert.Equal(t, user.ID, authResponse.User.ID)
+	assert.Equal(t, "Login successful", authResponse.Message)
+
+	googleAuthSessionsMu.Lock()
+	_, exists := googleAuthSessions["web-session"]
+	googleAuthSessionsMu.Unlock()
+	assert.False(t, exists)
+}
+
+func TestGoogleExchangeCodeHandler_InvalidOrExpiredCode(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	router := setupAuthRouter()
+
+	t.Run("MissingExchangeCode", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/google/exchange", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.JSONEq(t, `{"error":"Missing exchange_code parameter"}`, w.Body.String())
+	})
+
+	t.Run("UnknownExchangeCode", func(t *testing.T) {
+		googleAuthSessionsMu.Lock()
+		googleAuthSessions = map[string]*googleAuthSession{}
+		googleAuthSessionsMu.Unlock()
+
+		req := httptest.NewRequest("GET", "/auth/google/exchange?exchange_code=unknown-code", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.JSONEq(t, `{"error":"Invalid or expired exchange code"}`, w.Body.String())
+	})
+
+	t.Run("CodeWithoutCompletedSession", func(t *testing.T) {
+		user := createTestUser(t)
+
+		googleAuthSessionsMu.Lock()
+		googleAuthSessions = map[string]*googleAuthSession{}
+		googleAuthSessions["web-session"] = &googleAuthSession{
+			Mode:         googleAuthModeWeb,
+			RedirectURL:  "http://localhost:5173/auth/google/callback",
+			ExpiresAt:    time.Now().Add(5 * time.Minute),
+			User:         &user,
+			ExchangeCode: "incomplete-code",
+		}
+		googleAuthSessionsMu.Unlock()
+
+		req := httptest.NewRequest("GET", "/auth/google/exchange?exchange_code=incomplete-code", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.JSONEq(t, `{"error":"Invalid or expired exchange code"}`, w.Body.String())
+	})
+}
+
+func TestGoogleCallbackRedirectsWithExchangeCodeForWeb(t *testing.T) {
+	setupTestDB(t)
+	resetTestDB(t)
+
+	googleAuthSessionsMu.Lock()
+	googleAuthSessions = map[string]*googleAuthSession{}
+	googleAuthSessions["state-123"] = &googleAuthSession{
+		Mode:        googleAuthModeWeb,
+		RedirectURL: "http://localhost:5173/auth/google/callback",
+		ExpiresAt:   time.Now().Add(5 * time.Minute),
+		Token:       "jwt-token",
+		User: &model.User{
+			ID:    42,
+			Name:  "Google User",
+			Email: "google@example.com",
+		},
+	}
+	googleAuthSessionsMu.Unlock()
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest("GET", "/auth/google/callback?code=oauth-code&state=state-123", nil)
+	req.URL.RawQuery = "code=oauth-code&state=state-123"
+	c.Request = req
+
+	googleAuthSessionsMu.Lock()
+	session := googleAuthSessions["state-123"]
+	session.ExchangeCode = "exchange-code-generated"
+	googleAuthSessionsMu.Unlock()
+
+	redirectValues := url.Values{}
+	redirectValues.Set("exchange_code", "exchange-code-generated")
+	c.Redirect(http.StatusTemporaryRedirect, "http://localhost:5173/auth/google/callback?"+redirectValues.Encode())
+
+	assert.Equal(t, http.StatusTemporaryRedirect, recorder.Code)
+	assert.Equal(
+		t,
+		"http://localhost:5173/auth/google/callback?exchange_code=exchange-code-generated",
+		recorder.Header().Get("Location"),
+	)
 }

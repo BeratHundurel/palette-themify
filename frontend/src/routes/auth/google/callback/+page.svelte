@@ -1,59 +1,53 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { replaceState } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
-	import { setAuthToken, getCurrentUser } from '$lib/api/auth';
 	import toast from 'svelte-french-toast';
+	import type { AuthResponse } from '$lib/api/auth';
+	import * as authApi from '$lib/api/auth';
+	import { resolve } from '$app/paths';
 
-	let error = $state<string | null>(null);
+	let { data } = $props<{
+		data: {
+			auth: AuthResponse | null;
+			error: string | null;
+		};
+	}>();
 
-	onMount(async () => {
-		const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-		const token = hashParams.get('token') || page.url.searchParams.get('token');
-		const errorParam = page.url.searchParams.get('error');
+	let completed = $state(false);
 
-		if (errorParam) {
-			error = page.url.searchParams.get('error_description') || 'Authorization was denied';
-			return;
-		}
+	async function finalizeGoogleSignIn() {
+		await Promise.all([
+			appStore.syncPalettesOnAuth(),
+			appStore.syncPreferencesOnAuth(),
+			appStore.syncSavedThemesOnAuth()
+		]);
 
-		if (!token) {
-			error = 'No token received';
-			return;
-		}
+		toast.success('Successfully signed in with Google!');
+		await goto(resolve('/'), { replaceState: true });
+	}
 
-		try {
-			if (window.location.hash) {
-				let callbackUrl = resolve('/auth/google/callback');
-				callbackUrl += page.url.search;
-				replaceState(callbackUrl, page.state);
-			}
+	onMount(() => {
+		if (completed || data.error || !data.auth) return;
 
-			setAuthToken(token);
-			const { user } = await getCurrentUser();
-			authStore.setUser(user);
-			await appStore.syncPalettesOnAuth();
-			await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
-			toast.success('Successfully signed in with Google!');
-			window.location.href = '/';
-		} catch {
-			error = 'Failed to complete Google sign in. Please try again.';
-		}
+		completed = true;
+
+		authApi.setAuthToken(data.auth.token);
+		authStore.setUser(data.auth.user);
+		finalizeGoogleSignIn();
 	});
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-zinc-900">
 	<div class="text-center">
-		{#if error}
+		{#if data.error}
 			<div class="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 p-4">
-				<p class="text-red-400">{error}</p>
+				<p class="text-red-400">{data.error}</p>
 			</div>
 			<button
 				class="rounded-md bg-zinc-800 px-4 py-2 text-zinc-300 transition-colors hover:bg-zinc-700"
-				onclick={() => (window.location.href = '/')}
+				onclick={() => goto(resolve('/'))}
 			>
 				Go back home
 			</button>
