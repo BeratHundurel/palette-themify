@@ -25,6 +25,7 @@ func NewRouter() *gin.Engine {
 	router.POST("/auth/login", auth.LoginHandler)
 	router.GET("/auth/google", auth.GoogleLoginHandler)
 	router.GET("/auth/google/callback", auth.GoogleCallbackHandler)
+	router.GET("/auth/google/exchange", auth.GoogleExchangeCodeHandler)
 	router.GET("/auth/google/desktop/status", auth.GoogleDesktopStatusHandler)
 
 	authGroup := router.Group("/auth")
@@ -37,6 +38,7 @@ func NewRouter() *gin.Engine {
 	}
 
 	router.GET("/palettes", GetPalettesHandler)
+	router.POST("/palettes/batch", SavePalettesBatchHandler)
 	router.POST("/palettes", SavePaletteHandler)
 	router.POST("/palettes/:id/share", SharePaletteHandler)
 	router.DELETE("/palettes/:id/share", UnsharePaletteHandler)

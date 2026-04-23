@@ -40,6 +40,7 @@ vi.mock('$lib/stores/dialog.svelte', () => ({
 vi.mock('$lib/api/palette', () => ({
 	extractPalette: vi.fn(),
 	savePalette: vi.fn(),
+	savePalettes: vi.fn(),
 	getPalettes: vi.fn(),
 	deletePalette: vi.fn()
 }));
@@ -541,14 +542,17 @@ describe('appStore', () => {
 					{ ...makePalette('', 'No Id Yet'), id: '' }
 				])
 			);
-			vi.mocked(paletteApi.savePalette).mockResolvedValue({ message: 'ok', name: 'saved' });
+			vi.mocked(paletteApi.savePalettes).mockResolvedValue({ message: 'ok', saved: 2 });
 			const loadSavedPalettesSpy = vi.spyOn(appStore, 'loadSavedPalettes').mockResolvedValue(undefined);
 
 			await appStore.syncPalettesOnAuth();
 
-			expect(paletteApi.savePalette).toHaveBeenCalledTimes(2);
-			expect(paletteApi.savePalette).toHaveBeenNthCalledWith(1, 'Local One', [{ hex: '#112233' }]);
-			expect(paletteApi.savePalette).toHaveBeenNthCalledWith(2, 'No Id Yet', [{ hex: '#112233' }]);
+			expect(paletteApi.savePalettes).toHaveBeenCalledTimes(1);
+			expect(paletteApi.savePalettes).toHaveBeenCalledWith([
+				{ name: 'Local One', palette: [{ hex: '#112233' }] },
+				{ name: 'No Id Yet', palette: [{ hex: '#112233' }] }
+			]);
+			expect(paletteApi.savePalette).not.toHaveBeenCalled();
 			expect(toast.loading).toHaveBeenCalledWith('Syncing your palettes...');
 			expect(toast.success).toHaveBeenCalledWith('Palettes synced successfully', { id: 'toast-id' });
 			expect(localStorage.getItem('savedPalettes')).toBeNull();

@@ -7,9 +7,8 @@ export const ssr = false;
 
 export const load = (async () => {
 	await authStore.init();
-	await appStore.loadSavedPalettes();
 
-	await Promise.all([appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
+	await Promise.all([appStore.loadSavedPalettes(), appStore.syncPreferencesOnAuth(), appStore.syncSavedThemesOnAuth()]);
 
 	return {};
 }) satisfies PageLoad;

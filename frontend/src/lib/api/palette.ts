@@ -10,6 +10,13 @@ import type {
 import { getAuthHeaders } from './auth';
 import { buildURL, buildZigURL, ensureOk, ZIG_API_BASE } from './base';
 
+type SavePalettesBatchRequest = {
+	palettes: Array<{
+		name: string;
+		palette: Color[];
+	}>;
+};
+
 export async function extractPalette(file: Blob | File): Promise<ExtractPaletteResponse> {
 	if (!file) throw new Error('No files provided');
 
@@ -44,6 +51,20 @@ export async function savePalette(name: string, colors: Color[]): Promise<SavePa
 	const payload: SavePaletteRequest = { name, palette: colors };
 
 	const res = await fetch(buildURL('/palettes'), {
+		method: 'POST',
+		headers: getAuthHeaders(),
+		body: JSON.stringify(payload)
+	});
+	await ensureOk(res);
+	return res.json();
+}
+
+export async function savePalettes(
+	palettes: Array<{ name: string; palette: Color[] }>
+): Promise<{ message: string; saved: number }> {
+	const payload: SavePalettesBatchRequest = { palettes };
+
+	const res = await fetch(buildURL('/palettes/batch'), {
 		method: 'POST',
 		headers: getAuthHeaders(),
 		body: JSON.stringify(payload)

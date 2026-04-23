@@ -35,6 +35,15 @@ type SavePaletteRequest struct {
 	Palette []model.Color `json:"palette" binding:"required"`
 }
 
+type SavePalettesBatchItem struct {
+	Name    string        `json:"name" binding:"required"`
+	Palette []model.Color `json:"palette" binding:"required"`
+}
+
+type SavePalettesBatchRequest struct {
+	Palettes []SavePalettesBatchItem `json:"palettes" binding:"required"`
+}
+
 type DeletePalettesRequest struct {
 	IDs []string `json:"ids"`
 }
@@ -65,6 +74,35 @@ func SavePaletteHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Palette saved successfully",
 		"name":    req.Name,
+	})
+}
+
+func SavePalettesBatchHandler(c *gin.Context) {
+	var req SavePalettesBatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.Palettes) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Palettes are required"})
+		return
+	}
+
+	userID, err := auth.GetUserFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required to save palettes"})
+		return
+	}
+
+	if err := saveUserPalettesBatch(userID, req.Palettes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save palettes"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Palettes saved successfully",
+		"saved":   len(req.Palettes),
 	})
 }
 
@@ -194,6 +232,28 @@ func saveUserPalette(userID uint, name string, palette []model.Color) error {
 	}
 
 	return db.DB.Create(&dbPalette).Error
+}
+
+func saveUserPalettesBatch(userID uint, palettes []SavePalettesBatchItem) error {
+	if db.DB == nil {
+		return fmt.Errorf("database not available")
+	}
+
+	dbPalettes := make([]model.Palette, 0, len(palettes))
+	for _, item := range palettes {
+		paletteJSON, err := json.Marshal(item.Palette)
+		if err != nil {
+			return err
+		}
+
+		dbPalettes = append(dbPalettes, model.Palette{
+			UserID:   &userID,
+			JsonData: string(paletteJSON),
+			Name:     item.Name,
+		})
+	}
+
+	return db.DB.Create(&dbPalettes).Error
 }
 
 func getUserPalettes(userID uint) ([]PaletteData, error) {

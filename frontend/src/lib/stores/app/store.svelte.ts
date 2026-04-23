@@ -1155,18 +1155,15 @@ function createAppStore() {
 						if (palettesToSync.length > 0) {
 							const toastId = toast.loading('Syncing your palettes...');
 							try {
-								await Promise.all(
-									palettesToSync.map(async (palette) => {
-										try {
-											await paletteApi.savePalette(palette.name, palette.palette);
-										} catch (err) {
-											console.error('Failed to sync palette:', palette.name, err);
-										}
-									})
+								await paletteApi.savePalettes(
+									palettesToSync.map((palette) => ({
+										name: palette.name,
+										palette: palette.palette
+									}))
 								);
 								toast.success('Palettes synced successfully', { id: toastId });
 							} catch {
-								toast.error('Some palettes could not be synced. Try again later.', { id: toastId });
+								toast.error('Could not sync palettes. Try again later.', { id: toastId });
 							}
 						}
 
