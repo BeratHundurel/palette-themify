@@ -13,7 +13,8 @@
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
 	import type { SavedThemeItem, Theme } from '$lib/types/theme';
-	import { generateOverridable, type EditorThemeType } from '$lib/api/theme';
+	import { generateOverridable } from '$lib/api/theme';
+	import type { EditorThemeType } from '$lib/types/themeApi';
 	import { hydrateThemeExportResponse } from '../theme-export/session';
 
 	async function handleThemeSave(item: SavedThemeItem) {

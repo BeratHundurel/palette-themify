@@ -1,5 +1,5 @@
-import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
 import { appStore } from '$lib/stores/app/store.svelte';
+import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
 import type { ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 
 import { cloneThemeResponse, getThemeVersionKey } from './utils';

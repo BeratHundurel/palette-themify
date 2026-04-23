@@ -15,7 +15,7 @@ import type { Color } from '$lib/types/color';
 import type { PaletteData } from '$lib/types/palette';
 import { DEFAULT_THEME_EXPORT_PREFERENCES, type SavedThemeItem, type ThemeExportPreferences } from '$lib/types/theme';
 import { DEFAULT_WALLHAVEN_SETTINGS, type WallhavenSettings } from '$lib/types/wallhaven';
-import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
+import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
 
 import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/savedThemes';
 import {
@@ -37,7 +37,7 @@ import {
 	saveThemeExportPreferences
 } from '$lib/stores/app/persistence/themeExport';
 import * as preferencesApi from '$lib/api/preferences';
-import * as themesApi from '$lib/api/themes';
+import * as themesApi from '$lib/api/savedThemes';
 import { dialogStore } from '$lib/stores/dialog.svelte';
 import { isLocalId } from '$lib/localId';
 

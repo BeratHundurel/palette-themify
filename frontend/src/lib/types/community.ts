@@ -1,5 +1,5 @@
 import type { Color } from './color';
-import type { EditorThemeType } from '$lib/api/theme';
+import type { EditorThemeType } from '$lib/types/themeApi';
 
 export type CommunityItemKind = 'theme' | 'palette';
 export type CommunityItemSort = 'newest' | 'oldest' | 'name';

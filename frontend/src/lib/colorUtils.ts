@@ -1,7 +1,7 @@
 import toast from 'svelte-french-toast';
+import type { EditorThemeType, ThemeAppearance } from './types/themeApi';
 import type { Color } from './types/color';
 import type { Theme } from './types/theme';
-import type { EditorThemeType, ThemeAppearance } from './api/theme';
 
 export function detectThemeType(theme: Theme): EditorThemeType {
 	if ('themes' in theme && Array.isArray((theme as Record<string, unknown>).themes)) return 'zed';

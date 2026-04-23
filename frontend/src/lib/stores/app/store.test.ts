@@ -55,7 +55,7 @@ vi.mock('$lib/api/preferences', () => ({
 	savePreferences: vi.fn()
 }));
 
-vi.mock('$lib/api/themes', () => ({
+vi.mock('$lib/api/savedThemes', () => ({
 	getThemes: vi.fn(),
 	saveTheme: vi.fn(),
 	saveThemes: vi.fn(),
@@ -78,7 +78,7 @@ vi.mock('svelte-french-toast', () => ({
 import * as paletteApi from '$lib/api/palette';
 import * as preferencesApi from '$lib/api/preferences';
 import * as themeApi from '$lib/api/theme';
-import * as themesApi from '$lib/api/themes';
+import * as themesApi from '$lib/api/savedThemes';
 import { appStore } from '$lib/stores/app/store.svelte';
 import toast from 'svelte-french-toast';
 

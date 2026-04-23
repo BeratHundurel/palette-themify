@@ -1,4 +1,4 @@
-import type { EditorThemeType, ThemeAppearance } from '$lib/api/theme';
+import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
 import type { Color } from './color';
 import type { VSCodeTheme } from './vscode';
 import type { ZedTheme } from './zed';

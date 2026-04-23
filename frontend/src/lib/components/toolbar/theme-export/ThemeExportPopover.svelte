@@ -2,12 +2,13 @@
 	import { onDestroy } from 'svelte';
 	import toast from 'svelte-french-toast';
 
-	import { generateOverridable, generateTheme, type EditorThemeType, type ThemeAppearance } from '$lib/api/theme';
+	import { generateOverridable, generateTheme } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import { isDesktopApp } from '$lib/platform';
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
+	import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
 	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
 	import { cn } from '$lib/utils';
 

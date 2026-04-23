@@ -1,8 +1,8 @@
-import type { EditorThemeType } from '$lib/api/theme';
 import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 import { appStore } from '$lib/stores/app/store.svelte';
 import { dialogStore } from '$lib/stores/dialog.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
+import type { EditorThemeType } from '$lib/types/themeApi';
 import type { SavedThemeItem, ThemeGenerationResponse } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
 

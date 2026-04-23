@@ -5,11 +5,12 @@
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import toast, { Toaster } from 'svelte-french-toast';
 
-	import { generateOverridable, type EditorThemeType } from '$lib/api/theme';
+	import { generateOverridable } from '$lib/api/theme';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import { hydrateThemeExportResponse } from '$lib/components/toolbar/theme-export/session';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
+	import type { EditorThemeType } from '$lib/types/themeApi';
 	import BrandLinks from '$lib/components/ui/BrandLinks.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import type { CommunityItem, CommunityItemSort } from '$lib/types/community';

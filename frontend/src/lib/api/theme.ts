@@ -1,27 +1,8 @@
 import type { Color } from '$lib/types/color';
 import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
+import type { ApplyParams, EditorThemeType, GenerateThemeRequest, ThemeAppearance } from '$lib/types/themeApi';
 
 import { buildURL, buildZigURL, ensureOk } from './base';
-
-export type ApplyParams = {
-	luminosity: number;
-	nearest: number;
-	power: number;
-	maxDistance: number;
-};
-
-export type GenerateThemeRequest = {
-	colors: Color[];
-	type: EditorThemeType;
-	name?: string;
-	overrides?: ThemeOverrides | null;
-	appearance?: ThemeAppearance | null;
-	boostCoefficient?: number | null;
-};
-
-export type ThemeAppearance = 'dark' | 'light';
-export type EditorThemeType = 'vscode' | 'zed';
-export type AccentBoostCoefficient = number;
 
 export async function generateTheme(
 	colors: Color[],

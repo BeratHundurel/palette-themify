@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import type { ThemeAppearance } from '$lib/api/theme';
+	import type { ThemeAppearance } from '$lib/types/themeApi';
 
 	type AppearanceOption = {
 		value: ThemeAppearance;

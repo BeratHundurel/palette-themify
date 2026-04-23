@@ -9,7 +9,7 @@ vi.mock('./auth', () => ({
 	}))
 }));
 
-import { saveThemes } from './themes';
+import { saveThemes } from './savedThemes';
 
 function makeTheme(id: string): SavedThemeItem {
 	return {
