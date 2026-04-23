@@ -46,7 +46,7 @@
 	function getSwitchableLabel(key: keyof ThemeOverrides): string {
 		const field = overrideFields.find((overrideField) => overrideField.key === key);
 		if (!field) return String(key).toUpperCase();
-		return `${field.label} (${String(key).toUpperCase()})`;
+		return field.label;
 	}
 </script>
 
