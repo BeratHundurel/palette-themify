@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IMAGE } from '$lib/types/image';
 import { DEFAULT_THEME_EXPORT_PREFERENCES } from '$lib/types/theme';
-import type { SavedThemeItem } from '$lib/types/theme';
+import type { ThemeItem } from '$lib/types/theme';
 
 const { authStoreMock, dialogStoreMock } = vi.hoisted(() => ({
 	authStoreMock: {
@@ -46,6 +46,11 @@ vi.mock('$lib/api/palette', () => ({
 }));
 
 vi.mock('$lib/api/theme', () => ({
+	getThemes: vi.fn(),
+	saveTheme: vi.fn(),
+	saveThemes: vi.fn(),
+	updateTheme: vi.fn(),
+	deleteTheme: vi.fn(),
 	applyPaletteBlob: vi.fn(),
 	generateTheme: vi.fn(),
 	generateOverridable: vi.fn()
@@ -54,14 +59,6 @@ vi.mock('$lib/api/theme', () => ({
 vi.mock('$lib/api/preferences', () => ({
 	getPreferences: vi.fn(),
 	savePreferences: vi.fn()
-}));
-
-vi.mock('$lib/api/savedThemes', () => ({
-	getThemes: vi.fn(),
-	saveTheme: vi.fn(),
-	saveThemes: vi.fn(),
-	updateTheme: vi.fn(),
-	deleteTheme: vi.fn()
 }));
 
 vi.mock('$lib/api/wallhaven', () => ({
@@ -79,7 +76,6 @@ vi.mock('svelte-french-toast', () => ({
 import * as paletteApi from '$lib/api/palette';
 import * as preferencesApi from '$lib/api/preferences';
 import * as themeApi from '$lib/api/theme';
-import * as themesApi from '$lib/api/savedThemes';
 import { appStore } from '$lib/stores/app/store.svelte';
 import toast from 'svelte-french-toast';
 
@@ -159,14 +155,14 @@ function makePalette(id: string, name: string) {
 	};
 }
 
-function makeTheme(id: string, name = `Theme ${id}`): SavedThemeItem {
+function makeTheme(id: string, name = `Theme ${id}`): ThemeItem {
 	return {
 		id,
 		name,
 		editorType: 'vscode' as const,
 		createdAt: '2026-01-01T00:00:00.000Z',
 		themeResult: {
-			theme: { name } as unknown as SavedThemeItem['themeResult']['theme'],
+			theme: { name } as unknown as ThemeItem['themeResult']['theme'],
 			themeOverrides: {},
 			rawThemeOverrides: {},
 			colors: [{ hex: '#112233' }],
@@ -495,7 +491,7 @@ describe('appStore', () => {
 			authStoreMock.state.isAuthenticated = true;
 			appStore.state.colors = [{ hex: '#112233' }];
 			dialogStoreMock.prompt.mockResolvedValue('Remote Sunset');
-			vi.mocked(paletteApi.savePalette).mockResolvedValue({ message: 'ok', name: 'Remote Sunset' });
+			vi.mocked(paletteApi.savePalette).mockResolvedValue(undefined);
 			const loadSavedPalettesSpy = vi.spyOn(appStore, 'loadSavedPalettes').mockResolvedValue(undefined);
 
 			await appStore.savePalette();
@@ -542,7 +538,7 @@ describe('appStore', () => {
 					{ ...makePalette('', 'No Id Yet'), id: '' }
 				])
 			);
-			vi.mocked(paletteApi.savePalettes).mockResolvedValue({ message: 'ok', saved: 2 });
+			vi.mocked(paletteApi.savePalettes).mockResolvedValue(undefined);
 			const loadSavedPalettesSpy = vi.spyOn(appStore, 'loadSavedPalettes').mockResolvedValue(undefined);
 
 			await appStore.syncPalettesOnAuth();
@@ -595,7 +591,7 @@ describe('appStore', () => {
 
 		it('deletes remote palette through API when authenticated', async () => {
 			authStoreMock.state.isAuthenticated = true;
-			vi.mocked(paletteApi.deletePalette).mockResolvedValue({ message: 'ok' });
+			vi.mocked(paletteApi.deletePalette).mockResolvedValue(undefined);
 			const loadSavedPalettesSpy = vi.spyOn(appStore, 'loadSavedPalettes').mockResolvedValue(undefined);
 
 			await appStore.deletePalette('remote_99');
@@ -656,31 +652,30 @@ describe('appStore', () => {
 
 			await appStore.persistThemeChange(makeTheme('theme-1'), 'create');
 
-			expect(themesApi.saveTheme).not.toHaveBeenCalled();
-			expect(themesApi.updateTheme).not.toHaveBeenCalled();
-			expect(themesApi.deleteTheme).not.toHaveBeenCalled();
+			expect(themeApi.saveTheme).not.toHaveBeenCalled();
+			expect(themeApi.updateTheme).not.toHaveBeenCalled();
+			expect(themeApi.deleteTheme).not.toHaveBeenCalled();
 		});
 
 		it('routes create/update/delete theme persistence to API when authenticated', async () => {
 			authStoreMock.state.isAuthenticated = true;
 			const applyThemeResponseSpy = vi.spyOn(appStore, 'applyThemeResponse').mockImplementation(() => {});
-			vi.mocked(themesApi.saveTheme).mockResolvedValue({ message: 'ok', theme: makeTheme('remote-create', 'Created') });
-			vi.mocked(themesApi.updateTheme).mockResolvedValue({
-				message: 'ok',
+			vi.mocked(themeApi.saveTheme).mockResolvedValue({ theme: makeTheme('remote-create', 'Created') });
+			vi.mocked(themeApi.updateTheme).mockResolvedValue({
 				theme: makeTheme('remote-update', 'Updated')
 			});
-			vi.mocked(themesApi.deleteTheme).mockResolvedValue({ message: 'ok' });
+			vi.mocked(themeApi.deleteTheme).mockResolvedValue();
 
 			await appStore.persistThemeChange(makeTheme('theme-local-create', 'Local Create'), 'create');
 			await appStore.persistThemeChange(makeTheme('theme-local-update', 'Local Update'), 'update', 'theme-update-id');
 			await appStore.persistThemeChange(null, 'delete', 'theme-delete-id');
 
-			expect(themesApi.saveTheme).toHaveBeenCalledTimes(1);
-			expect(themesApi.updateTheme).toHaveBeenCalledWith(
+			expect(themeApi.saveTheme).toHaveBeenCalledTimes(1);
+			expect(themeApi.updateTheme).toHaveBeenCalledWith(
 				'theme-update-id',
 				expect.objectContaining({ id: 'theme-local-update', signature: expect.any(String) })
 			);
-			expect(themesApi.deleteTheme).toHaveBeenCalledWith('theme-delete-id');
+			expect(themeApi.deleteTheme).toHaveBeenCalledWith('theme-delete-id');
 			expect(applyThemeResponseSpy).toHaveBeenNthCalledWith(
 				1,
 				expect.objectContaining({ id: 'remote-create' }),
@@ -692,19 +687,18 @@ describe('appStore', () => {
 		it('syncs saved themes from local storage to API and refreshes from server', async () => {
 			authStoreMock.state.isAuthenticated = true;
 			localStorage.setItem('savedThemes', JSON.stringify([makeTheme('local-theme-1', 'Local Theme')]));
-			vi.mocked(themesApi.saveThemes).mockResolvedValue({
-				message: 'ok',
+			vi.mocked(themeApi.saveThemes).mockResolvedValue({
 				themes: [makeTheme('remote-theme-1', 'Remote Theme')]
 			});
-			vi.mocked(themesApi.getThemes).mockResolvedValue({ themes: [makeTheme('server-theme-1', 'Server Theme')] });
+			vi.mocked(themeApi.getThemes).mockResolvedValue({ themes: [makeTheme('server-theme-1', 'Server Theme')] });
 
 			await appStore.syncSavedThemesOnAuth();
 
-			expect(themesApi.saveThemes).toHaveBeenCalledTimes(1);
-			expect(themesApi.saveThemes).toHaveBeenCalledWith(
+			expect(themeApi.saveThemes).toHaveBeenCalledTimes(1);
+			expect(themeApi.saveThemes).toHaveBeenCalledWith(
 				expect.arrayContaining([expect.objectContaining({ id: 'local-theme-1', signature: expect.any(String) })])
 			);
-			expect(themesApi.getThemes).toHaveBeenCalledTimes(1);
+			expect(themeApi.getThemes).toHaveBeenCalledTimes(1);
 			expect(appStore.state.savedThemes).toEqual([makeTheme('server-theme-1', 'Server Theme')]);
 			const persisted = JSON.parse(localStorage.getItem('savedThemes') as string);
 			expect(persisted[0].id).toBe('server-theme-1');
@@ -719,13 +713,13 @@ describe('appStore', () => {
 			const persisted = JSON.parse(localStorage.getItem('savedThemes') as string);
 			expect(persisted).toHaveLength(1);
 			expect(persisted[0].id).toBe('theme-memory-1');
-			expect(themesApi.getThemes).not.toHaveBeenCalled();
+			expect(themeApi.getThemes).not.toHaveBeenCalled();
 		});
 
 		it('falls back to empty saved themes when API fetch fails', async () => {
 			appStore.state.savedThemes = [makeTheme('existing-theme', 'Existing')];
 			vi.spyOn(console, 'error').mockImplementation(() => {});
-			vi.mocked(themesApi.getThemes).mockRejectedValue(new Error('api down'));
+			vi.mocked(themeApi.getThemes).mockRejectedValue(new Error('api down'));
 
 			await appStore.loadSavedThemesFromApi();
 
@@ -735,7 +729,7 @@ describe('appStore', () => {
 		it('keeps execution safe when remote theme sync throws', async () => {
 			authStoreMock.state.isAuthenticated = true;
 			vi.spyOn(console, 'error').mockImplementation(() => {});
-			vi.mocked(themesApi.saveTheme).mockRejectedValue(new Error('network down'));
+			vi.mocked(themeApi.saveTheme).mockRejectedValue(new Error('network down'));
 
 			await expect(appStore.persistThemeChange(makeTheme('theme-crash-1'), 'create')).resolves.toBeUndefined();
 

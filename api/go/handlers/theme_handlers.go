@@ -3,8 +3,6 @@ package handlers
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"themesmith/auth"
@@ -13,30 +11,58 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"gorm.io/datatypes"
+	"gorm.io/gorm/clause"
 )
 
-type GetThemesResponse struct {
-	Themes []json.RawMessage `json:"themes"`
+type ThemeDTO struct {
+	ID          uint           `json:"id"`
+	Name        string         `json:"name"`
+	EditorType  string         `json:"editorType"`
+	Signature   string         `json:"signature"`
+	ThemeResult datatypes.JSON `json:"themeResult"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	IsShared    bool           `json:"isShared"`
+	SharedAt    *time.Time     `json:"sharedAt"`
 }
 
-type themePayload struct {
-	Name       string
-	EditorType string
-	Signature  string
+type SaveThemeDTO struct {
+	Name        string         `json:"name"`
+	EditorType  string         `json:"editorType"`
+	Signature   string         `json:"signature"`
+	ThemeResult datatypes.JSON `json:"themeResult"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	IsShared    bool           `json:"isShared"`
+	SharedAt    *time.Time     `json:"sharedAt"`
+}
+
+type ThemeRequest struct {
+	Theme ThemeDTO `json:"theme"`
+}
+
+type ThemeResponse struct {
+	Theme ThemeDTO `json:"theme"`
+}
+
+type ThemesRequest struct {
+	Themes []ThemeDTO `json:"themes"`
+}
+
+type ThemesSaveRequest struct {
+	Themes []SaveThemeDTO `json:"themes"`
+}
+
+type ThemesResponse struct {
+	Themes []ThemeDTO `json:"themes"`
+}
+
+type UpdateThemeRequest struct {
+	ThemeId string   `json:"themeId"`
+	Theme   ThemeDTO `json:"theme"`
 }
 
 type DeleteThemesRequest struct {
 	IDs []string `json:"ids"`
-}
-
-type SaveThemesBatchRequest struct {
-	Themes []json.RawMessage `json:"themes"`
-}
-
-type SaveThemesBatchResponse struct {
-	Message string           `json:"message"`
-	Themes  []map[string]any `json:"themes"`
 }
 
 func SaveThemeHandler(c *gin.Context) {
@@ -51,36 +77,36 @@ func SaveThemeHandler(c *gin.Context) {
 		return
 	}
 
-	body, err := c.GetRawData()
-	if err != nil {
+	var themeSaveDTO SaveThemeDTO
+	if err := c.ShouldBindJSON(&themeSaveDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid theme payload"})
 		return
 	}
 
-	payload, info, err := parseThemePayload(body)
+	themeModel := modelFromSaveThemeDTO(themeSaveDTO, &userID)
+	err = db.DB.
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "user_id"},
+				{Name: "editor_type"},
+				{Name: "signature"},
+			},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"name",
+				"json_data",
+				"updated_at",
+			}),
+		}).
+		Create(&themeModel).Error
+
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	theme, created, err := saveUserTheme(userID, info.Name, info.EditorType, info.Signature, string(body))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save theme"})
-		return
-	}
+	themeDTO := themeDTOFromModel(themeModel)
 
-	responseTheme, err := buildThemeResponse(theme, payload)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
-		return
-	}
-
-	status := http.StatusCreated
-	if !created {
-		status = http.StatusOK
-	}
-
-	c.JSON(status, gin.H{"message": "Theme saved successfully", "theme": responseTheme})
+	c.JSON(http.StatusCreated, ThemeResponse{Theme: themeDTO})
 }
 
 func SaveThemesBatchHandler(c *gin.Context) {
@@ -95,7 +121,7 @@ func SaveThemesBatchHandler(c *gin.Context) {
 		return
 	}
 
-	var req SaveThemesBatchRequest
+	var req ThemesSaveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 		return
@@ -106,41 +132,49 @@ func SaveThemesBatchHandler(c *gin.Context) {
 		return
 	}
 
-	responseThemes := make([]map[string]any, 0, len(req.Themes))
-	for _, rawTheme := range req.Themes {
-		payload, info, err := parseThemePayload(rawTheme)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	themeModels := modelsFromSaveThemeDTOs(req.Themes, &userID)
 
-		theme, _, err := saveUserTheme(userID, info.Name, info.EditorType, info.Signature, string(rawTheme))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save theme"})
-			return
-		}
+	seen := map[string]bool{}
+	unique := make([]model.Theme, 0, len(themeModels))
 
-		responseTheme, err := buildThemeResponse(theme, payload)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
-			return
-		}
+	for _, t := range themeModels {
+		key := fmt.Sprintf("%v|%s|%s", *t.UserID, t.EditorType, t.Signature)
 
-		responseThemes = append(responseThemes, responseTheme)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		unique = append(unique, t)
 	}
 
-	c.JSON(http.StatusOK, SaveThemesBatchResponse{Message: "Themes saved successfully", Themes: responseThemes})
+	err = db.DB.
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "user_id"},
+				{Name: "editor_type"},
+				{Name: "signature"},
+			},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"name",
+				"json_data",
+				"updated_at",
+			}),
+		}).
+		Create(&unique).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	themeDTOs := themeDTOsFromModels(unique)
+
+	c.JSON(http.StatusOK, ThemesResponse{Themes: themeDTOs})
 }
 
 func UpdateThemeHandler(c *gin.Context) {
 	if db.DB == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
-		return
-	}
-
-	themeID := c.Param("id")
-	if themeID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Theme ID is required"})
 		return
 	}
 
@@ -150,31 +184,34 @@ func UpdateThemeHandler(c *gin.Context) {
 		return
 	}
 
-	body, err := c.GetRawData()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid theme payload"})
+	themeID := c.Param("id")
+	if themeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Theme ID is required"})
 		return
 	}
 
-	payload, info, err := parseThemePayload(body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var themeDTO ThemeDTO
+	if err := c.ShouldBindJSON(&themeDTO); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 		return
 	}
 
-	theme, err := updateUserTheme(userID, themeID, info.Name, info.EditorType, info.Signature, string(body))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	themeModel := modelFromThemeDTO(themeDTO, &userID)
+	result := db.DB.Where("id = ? AND user_id = ?", themeID, userID).Updates(&themeModel)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update theme"})
 		return
 	}
 
-	responseTheme, err := buildThemeResponse(theme, payload)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Theme not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Theme updated successfully", "theme": responseTheme})
+	themeDTO = themeDTOFromModel(themeModel)
+
+	c.JSON(http.StatusOK, ThemeResponse{Theme: themeDTO})
 }
 
 func GetThemesHandler(c *gin.Context) {
@@ -189,13 +226,14 @@ func GetThemesHandler(c *gin.Context) {
 		return
 	}
 
-	themes, err := getUserThemes(userID)
-	if err != nil {
+	var dbThemes []model.Theme
+	if err := db.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&dbThemes).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch themes"})
 		return
 	}
 
-	c.JSON(http.StatusOK, GetThemesResponse{Themes: themes})
+	themeDTOs := themeDTOsFromModels(dbThemes)
+	c.JSON(http.StatusOK, ThemesResponse{Themes: themeDTOs})
 }
 
 func DeleteThemeHandler(c *gin.Context) {
@@ -216,12 +254,18 @@ func DeleteThemeHandler(c *gin.Context) {
 		return
 	}
 
-	if err := deleteUserTheme(userID, themeID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	result := db.DB.Where("id = ? AND user_id = ?", themeID, userID).Delete(&model.Theme{})
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Theme deleted successfully"})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Theme not found"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func DeleteThemesBatchHandler(c *gin.Context) {
@@ -247,13 +291,12 @@ func DeleteThemesBatchHandler(c *gin.Context) {
 		return
 	}
 
-	deletedCount, err := deleteUserThemes(userID, req.IDs)
-	if err != nil {
+	if err := db.DB.Where("id IN ? AND user_id = ?", req.IDs, userID).Delete(&model.Theme{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Themes deleted successfully", "deleted": deletedCount})
+	c.Status(http.StatusNoContent)
 }
 
 func ShareThemeHandler(c *gin.Context) {
@@ -274,19 +317,13 @@ func ShareThemeHandler(c *gin.Context) {
 		return
 	}
 
-	theme, err := setThemeShared(userID, themeID, true)
+	dto, err := setThemeShared(themeID, userID, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	responseTheme, err := buildThemeResponse(theme, nil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Theme shared successfully", "theme": responseTheme})
+	c.JSON(http.StatusOK, dto)
 }
 
 func UnshareThemeHandler(c *gin.Context) {
@@ -307,192 +344,31 @@ func UnshareThemeHandler(c *gin.Context) {
 		return
 	}
 
-	theme, err := setThemeShared(userID, themeID, false)
+	dto, err := setThemeShared(themeID, userID, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	responseTheme, err := buildThemeResponse(theme, nil)
+	c.JSON(http.StatusOK, dto)
+}
+
+func setThemeShared(themeID string, userID uint, isShared bool) (ThemeDTO, error) {
+	var theme model.Theme
+	err := db.DB.Model(&model.Theme{}).
+		Where("id = ? AND user_id = ?", themeID, userID).
+		Clauses(clause.Returning{}).
+		Updates(map[string]any{
+			"is_shared": isShared,
+			"shared_at": time.Now().UTC(),
+		}).
+		Scan(&theme).Error
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build theme response"})
-		return
+		return ThemeDTO{}, err
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Theme unshared successfully", "theme": responseTheme})
-}
-
-func saveUserTheme(userID uint, name string, editorType string, signature string, jsonData string) (model.Theme, bool, error) {
-	if db.DB == nil {
-		return model.Theme{}, false, fmt.Errorf("database not available")
-	}
-
-	var theme model.Theme
-	err := db.DB.Where("user_id = ? AND editor_type = ? AND signature = ?", userID, editorType, signature).First(&theme).Error
-	if err == nil {
-		theme.Name = name
-		theme.JsonData = jsonData
-		theme.UpdatedAt = time.Now().UTC()
-		if err := db.DB.Save(&theme).Error; err != nil {
-			return model.Theme{}, false, err
-		}
-		return theme, false, nil
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return model.Theme{}, false, err
-	}
-
-	newTheme := model.Theme{
-		UserID:     &userID,
-		Name:       name,
-		EditorType: editorType,
-		Signature:  signature,
-		JsonData:   jsonData,
-	}
-
-	if err := db.DB.Create(&newTheme).Error; err != nil {
-		return model.Theme{}, false, err
-	}
-
-	return newTheme, true, nil
-}
-
-func updateUserTheme(userID uint, themeID string, name string, editorType string, signature string, jsonData string) (model.Theme, error) {
-	if db.DB == nil {
-		return model.Theme{}, fmt.Errorf("database not available")
-	}
-
-	var theme model.Theme
-	if err := db.DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
-		return model.Theme{}, fmt.Errorf("theme not found or unauthorized")
-	}
-
-	theme.Name = name
-	theme.EditorType = editorType
-	theme.Signature = signature
-	theme.JsonData = jsonData
-	theme.UpdatedAt = time.Now().UTC()
-
-	if err := db.DB.Save(&theme).Error; err != nil {
-		return model.Theme{}, err
-	}
-
-	return theme, nil
-}
-
-func getUserThemes(userID uint) ([]json.RawMessage, error) {
-	if db.DB == nil {
-		return nil, fmt.Errorf("database not available")
-	}
-
-	var dbThemes []model.Theme
-	if err := db.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&dbThemes).Error; err != nil {
-		return nil, err
-	}
-
-	themes := make([]json.RawMessage, 0, len(dbThemes))
-	for _, dbTheme := range dbThemes {
-		payload, err := decodeThemePayload(dbTheme.JsonData)
-		if err != nil {
-			continue
-		}
-		payload["id"] = fmt.Sprintf("%d", dbTheme.ID)
-		payload["name"] = dbTheme.Name
-		payload["editorType"] = dbTheme.EditorType
-		payload["signature"] = dbTheme.Signature
-		payload["isShared"] = dbTheme.IsShared
-		payload["sharedAt"] = dbTheme.SharedAt
-		encoded, err := json.Marshal(payload)
-		if err != nil {
-			continue
-		}
-		themes = append(themes, json.RawMessage(encoded))
-	}
-
-	return themes, nil
-}
-
-func deleteUserTheme(userID uint, themeID string) error {
-	if db.DB == nil {
-		return fmt.Errorf("database not available")
-	}
-
-	var theme model.Theme
-	if err := db.DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
-		return fmt.Errorf("theme not found or unauthorized")
-	}
-
-	return db.DB.Delete(&theme).Error
-}
-
-func deleteUserThemes(userID uint, themeIDs []string) (int64, error) {
-	if db.DB == nil {
-		return 0, fmt.Errorf("database not available")
-	}
-
-	result := db.DB.Where("id IN ? AND user_id = ?", themeIDs, userID).Delete(&model.Theme{})
-	if result.Error != nil {
-		return 0, result.Error
-	}
-
-	return result.RowsAffected, nil
-}
-
-func setThemeShared(userID uint, themeID string, shared bool) (model.Theme, error) {
-	if db.DB == nil {
-		return model.Theme{}, fmt.Errorf("database not available")
-	}
-
-	var theme model.Theme
-	if err := db.DB.Where("id = ? AND user_id = ?", themeID, userID).First(&theme).Error; err != nil {
-		return model.Theme{}, fmt.Errorf("theme not found or unauthorized")
-	}
-
-	theme.IsShared = shared
-	if shared {
-		now := time.Now().UTC()
-		theme.SharedAt = &now
-	} else {
-		theme.SharedAt = nil
-	}
-	theme.UpdatedAt = time.Now().UTC()
-
-	if err := db.DB.Save(&theme).Error; err != nil {
-		return model.Theme{}, err
-	}
-
-	return theme, nil
-}
-
-func parseThemePayload(body []byte) (map[string]any, themePayload, error) {
-	var payload map[string]any
-	if err := json.Unmarshal(body, &payload); err != nil {
-		return nil, themePayload{}, fmt.Errorf("invalid theme payload")
-	}
-
-	name, _ := payload["name"].(string)
-	editorType, _ := payload["editorType"].(string)
-	signature, _ := payload["signature"].(string)
-
-	if name == "" {
-		return nil, themePayload{}, fmt.Errorf("theme name is required")
-	}
-	if editorType == "" {
-		return nil, themePayload{}, fmt.Errorf("theme editor type is required")
-	}
-	if signature == "" {
-		return nil, themePayload{}, fmt.Errorf("theme signature is required")
-	}
-
-	signature = normalizeThemeSignature(signature)
-
-	info := themePayload{
-		Name:       name,
-		EditorType: editorType,
-		Signature:  signature,
-	}
-
-	return payload, info, nil
+	return themeDTOFromModel(theme), nil
 }
 
 func normalizeThemeSignature(signature string) string {
@@ -504,29 +380,68 @@ func normalizeThemeSignature(signature string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func decodeThemePayload(raw string) (map[string]any, error) {
-	var payload map[string]any
-	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
-		return nil, err
+func themeDTOFromModel(theme model.Theme) ThemeDTO {
+	return ThemeDTO{
+		ID:          theme.ID,
+		Name:        theme.Name,
+		EditorType:  theme.EditorType,
+		Signature:   theme.Signature,
+		ThemeResult: theme.JsonData,
+		IsShared:    theme.IsShared,
+		SharedAt:    theme.SharedAt,
+		CreatedAt:   theme.CreatedAt,
 	}
-	return payload, nil
 }
 
-func buildThemeResponse(theme model.Theme, payload map[string]any) (map[string]any, error) {
-	if payload == nil {
-		decoded, err := decodeThemePayload(theme.JsonData)
-		if err != nil {
-			return nil, err
-		}
-		payload = decoded
+func themeDTOsFromModels(themes []model.Theme) []ThemeDTO {
+	result := make([]ThemeDTO, len(themes))
+	for i, theme := range themes {
+		result[i] = themeDTOFromModel(theme)
 	}
+	return result
+}
 
-	payload["id"] = fmt.Sprintf("%d", theme.ID)
-	payload["name"] = theme.Name
-	payload["editorType"] = theme.EditorType
-	payload["signature"] = theme.Signature
-	payload["isShared"] = theme.IsShared
-	payload["sharedAt"] = theme.SharedAt
+func modelFromThemeDTO(dto ThemeDTO, userID *uint) model.Theme {
+	return model.Theme{
+		ID:         dto.ID,
+		UserID:     userID,
+		Name:       dto.Name,
+		EditorType: dto.EditorType,
+		Signature:  normalizeThemeSignature(dto.Signature),
+		JsonData:   dto.ThemeResult,
+		IsShared:   dto.IsShared,
+		SharedAt:   dto.SharedAt,
+		CreatedAt:  dto.CreatedAt,
+		UpdatedAt:  time.Now().UTC(),
+	}
+}
 
-	return payload, nil
+func modelsFromThemeDTOs(dtos []ThemeDTO, userID *uint) []model.Theme {
+	result := make([]model.Theme, len(dtos))
+	for i, dto := range dtos {
+		result[i] = modelFromThemeDTO(dto, userID)
+	}
+	return result
+}
+
+func modelFromSaveThemeDTO(dto SaveThemeDTO, userID *uint) model.Theme {
+	return model.Theme{
+		UserID:     userID,
+		Name:       dto.Name,
+		EditorType: dto.EditorType,
+		Signature:  normalizeThemeSignature(dto.Signature),
+		JsonData:   dto.ThemeResult,
+		IsShared:   dto.IsShared,
+		SharedAt:   dto.SharedAt,
+		CreatedAt:  dto.CreatedAt,
+		UpdatedAt:  time.Now().UTC(),
+	}
+}
+
+func modelsFromSaveThemeDTOs(dtos []SaveThemeDTO, userID *uint) []model.Theme {
+	result := make([]model.Theme, len(dtos))
+	for i, dto := range dtos {
+		result[i] = modelFromSaveThemeDTO(dto, userID)
+	}
+	return result
 }

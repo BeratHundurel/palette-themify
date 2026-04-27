@@ -1,7 +1,10 @@
-import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
 import type { Color } from './color';
 import type { VSCodeTheme } from './vscode';
 import type { ZedTheme } from './zed';
+
+export type ThemeAppearance = 'dark' | 'light';
+export type EditorThemeType = 'vscode' | 'zed';
+export type AccentBoostCoefficient = number;
 
 export type Theme = VSCodeTheme | ZedTheme;
 
@@ -20,7 +23,7 @@ export type ThemeOverrides = {
 	constants?: string;
 };
 
-export type ThemeGenerationResponse = {
+export type ThemeGenerationResult = {
 	theme: Theme;
 	themeOverrides: ThemeOverrides;
 	rawThemeOverrides: ThemeOverrides;
@@ -28,11 +31,35 @@ export type ThemeGenerationResponse = {
 	boostCoefficient: number;
 };
 
-export type ThemeVersionMap = Record<string, ThemeGenerationResponse>;
+export type ThemeVersionMap = Record<string, ThemeGenerationResult>;
+
+export type ApplyParams = {
+	luminosity: number;
+	nearest: number;
+	power: number;
+	maxDistance: number;
+};
+
+export type GenerateThemeRequest = {
+	colors: Color[];
+	type: EditorThemeType;
+	name?: string;
+	overrides?: ThemeOverrides | null;
+	appearance?: ThemeAppearance | null;
+	boostCoefficient?: number | null;
+};
+
+export type ThemeResponse<TThemeItem> = {
+	theme: TThemeItem;
+};
+
+export type ThemesResponse<TThemeItem> = {
+	themes: TThemeItem[];
+};
 
 export interface ThemeExportState {
 	themeName: string;
-	themeResult: ThemeGenerationResponse | null;
+	themeResult: ThemeGenerationResult | null;
 	saveOnCopy: boolean;
 	editorType: EditorThemeType;
 	appearance: ThemeAppearance;
@@ -53,11 +80,11 @@ export type ThemeExportPreferences = {
 	boostCoefficient: number;
 };
 
-export type SavedThemeItem = {
+export type ThemeItem = {
 	id: string;
 	name: string;
 	editorType: EditorThemeType;
-	themeResult: ThemeGenerationResponse;
+	themeResult: ThemeGenerationResult;
 	createdAt: string;
 	signature?: string;
 	isShared?: boolean;

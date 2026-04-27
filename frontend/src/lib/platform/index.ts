@@ -1,5 +1,5 @@
 import { buildURL } from '$lib/api/base';
-import type { EditorThemeType } from '$lib/types/themeApi';
+import type { EditorThemeType } from '$lib/types/theme';
 
 export type AppTarget = 'web' | 'desktop';
 type SaveBridgeFn = (editorType: EditorThemeType, themeName: string, themeJSON: string) => Promise<string>;

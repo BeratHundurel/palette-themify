@@ -1,8 +1,98 @@
 import type { Color } from '$lib/types/color';
-import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
-import type { ApplyParams, EditorThemeType, GenerateThemeRequest, ThemeAppearance } from '$lib/types/themeApi';
+import type {
+	Theme,
+	ThemeGenerationResult,
+	ThemeItem,
+	ThemeOverrides,
+	ThemeResponse,
+	ThemesResponse
+} from '$lib/types/theme';
+import type { ApplyParams, EditorThemeType, GenerateThemeRequest, ThemeAppearance } from '$lib/types/theme';
+import { getAuthHeaders } from './auth';
 
 import { buildURL, buildZigURL, ensureOk } from './base';
+
+export async function getThemes(): Promise<ThemesResponse<ThemeItem>> {
+	const response = await fetch(buildURL('/themes'), {
+		method: 'GET',
+		headers: getAuthHeaders()
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function saveTheme(theme: ThemeItem): Promise<ThemeResponse<ThemeItem>> {
+	const response = await fetch(buildURL('/themes'), {
+		method: 'POST',
+		headers: getAuthHeaders(),
+		body: JSON.stringify(theme)
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function saveThemes(themes: ThemeItem[]): Promise<ThemesResponse<ThemeItem>> {
+	const response = await fetch(buildURL('/themes/batch'), {
+		method: 'POST',
+		headers: getAuthHeaders(),
+		body: JSON.stringify({ themes })
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function updateTheme(themeId: string, theme: ThemeItem): Promise<ThemeResponse<ThemeItem>> {
+	const response = await fetch(buildURL(`/themes/${themeId}`), {
+		method: 'PUT',
+		headers: getAuthHeaders(),
+		body: JSON.stringify(theme)
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function deleteTheme(themeId: string): Promise<void> {
+	const response = await fetch(buildURL(`/themes/${themeId}`), {
+		method: 'DELETE',
+		headers: getAuthHeaders()
+	});
+
+	await ensureOk(response);
+}
+
+export async function deleteThemes(themeIds: string[]): Promise<void> {
+	const response = await fetch(buildURL('/themes'), {
+		method: 'DELETE',
+		headers: getAuthHeaders(),
+		body: JSON.stringify({ ids: themeIds })
+	});
+
+	await ensureOk(response);
+}
+
+export async function shareTheme(themeId: string): Promise<ThemeItem> {
+	const response = await fetch(buildURL(`/themes/${themeId}/share`), {
+		method: 'POST',
+		headers: getAuthHeaders()
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
+
+export async function unshareTheme(themeId: string): Promise<ThemeItem> {
+	const response = await fetch(buildURL(`/themes/${themeId}/share`), {
+		method: 'DELETE',
+		headers: getAuthHeaders()
+	});
+
+	await ensureOk(response);
+	return response.json();
+}
 
 export async function generateTheme(
 	colors: Color[],
@@ -11,7 +101,7 @@ export async function generateTheme(
 	overrides?: ThemeOverrides | null,
 	appearance?: ThemeAppearance | null,
 	boostCoefficient?: number | null
-): Promise<ThemeGenerationResponse> {
+): Promise<ThemeGenerationResult> {
 	const payload: GenerateThemeRequest = { colors, type, name, overrides, appearance, boostCoefficient };
 
 	const res = await fetch(buildZigURL('/generate-theme'), {
@@ -29,7 +119,7 @@ export async function generateOverridable(
 	themeType: EditorThemeType = 'zed',
 	appearance?: ThemeAppearance | null,
 	boostCoefficient?: number | null
-): Promise<ThemeGenerationResponse> {
+): Promise<ThemeGenerationResult> {
 	const payload = {
 		theme,
 		themeType,

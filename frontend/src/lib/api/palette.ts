@@ -2,20 +2,13 @@ import type { Color } from '$lib/types/color';
 import type {
 	SavePaletteRequest,
 	GetPalettesResponse,
-	SavePaletteResult,
 	ExtractPaletteResponse,
-	PaletteData
+	SavePalettesBatchRequest,
+	PaletteDTO
 } from '$lib/types/palette';
 
 import { getAuthHeaders } from './auth';
 import { buildURL, buildZigURL, ensureOk, ZIG_API_BASE } from './base';
-
-type SavePalettesBatchRequest = {
-	palettes: Array<{
-		name: string;
-		palette: Color[];
-	}>;
-};
 
 export async function extractPalette(file: Blob | File): Promise<ExtractPaletteResponse> {
 	if (!file) throw new Error('No files provided');
@@ -47,7 +40,7 @@ export async function extractPalette(file: Blob | File): Promise<ExtractPaletteR
 	}
 }
 
-export async function savePalette(name: string, colors: Color[]): Promise<SavePaletteResult> {
+export async function savePalette(name: string, colors: Color[]): Promise<void> {
 	const payload: SavePaletteRequest = { name, palette: colors };
 
 	const res = await fetch(buildURL('/palettes'), {
@@ -56,12 +49,9 @@ export async function savePalette(name: string, colors: Color[]): Promise<SavePa
 		body: JSON.stringify(payload)
 	});
 	await ensureOk(res);
-	return res.json();
 }
 
-export async function savePalettes(
-	palettes: Array<{ name: string; palette: Color[] }>
-): Promise<{ message: string; saved: number }> {
+export async function savePalettes(palettes: Array<{ name: string; palette: Color[] }>): Promise<void> {
 	const payload: SavePalettesBatchRequest = { palettes };
 
 	const res = await fetch(buildURL('/palettes/batch'), {
@@ -69,8 +59,8 @@ export async function savePalettes(
 		headers: getAuthHeaders(),
 		body: JSON.stringify(payload)
 	});
+
 	await ensureOk(res);
-	return res.json();
 }
 
 export async function getPalettes(): Promise<GetPalettesResponse> {
@@ -82,26 +72,24 @@ export async function getPalettes(): Promise<GetPalettesResponse> {
 	return res.json();
 }
 
-export async function deletePalette(id: string): Promise<{ message: string }> {
+export async function deletePalette(id: string): Promise<void> {
 	const res = await fetch(buildURL(`/palettes/${id}`), {
 		method: 'DELETE',
 		headers: getAuthHeaders()
 	});
 	await ensureOk(res);
-	return res.json();
 }
 
-export async function deletePalettes(ids: string[]): Promise<{ message: string; deleted: number }> {
+export async function deletePalettes(ids: string[]): Promise<void> {
 	const res = await fetch(buildURL('/palettes'), {
 		method: 'DELETE',
 		headers: getAuthHeaders(),
 		body: JSON.stringify({ ids })
 	});
 	await ensureOk(res);
-	return res.json();
 }
 
-export async function sharePalette(id: string): Promise<{ message: string; palette: PaletteData }> {
+export async function sharePalette(id: string): Promise<PaletteDTO> {
 	const res = await fetch(buildURL(`/palettes/${id}/share`), {
 		method: 'POST',
 		headers: getAuthHeaders()
@@ -110,7 +98,7 @@ export async function sharePalette(id: string): Promise<{ message: string; palet
 	return res.json();
 }
 
-export async function unsharePalette(id: string): Promise<{ message: string; palette: PaletteData }> {
+export async function unsharePalette(id: string): Promise<PaletteDTO> {
 	const res = await fetch(buildURL(`/palettes/${id}/share`), {
 		method: 'DELETE',
 		headers: getAuthHeaders()

@@ -33,15 +33,19 @@ type SharedItem struct {
 	ID         string         `json:"id"`
 	Kind       SharedItemKind `json:"kind"`
 	Name       string         `json:"name"`
-	Palette    []model.Color  `json:"palette"`
+	Palette    []Color        `json:"palette"`
 	SharedAt   time.Time      `json:"sharedAt"`
 	CreatedAt  time.Time      `json:"createdAt"`
 	EditorType string         `json:"editorType,omitempty"`
-	Theme      any            `json:"theme,omitempty"`
+	Theme      ThemeDTO       `json:"theme"`
 }
 
 type SharedItemsResponse struct {
 	Items []SharedItem `json:"items"`
+}
+
+type ColorsFromJSON struct {
+	Colors []Color `json:"colors"`
 }
 
 func GetSharedItemsHandler(c *gin.Context) {
@@ -92,7 +96,8 @@ func listSharedPalettes(query string, limit int) ([]SharedItem, error) {
 		if row.SharedAt == nil {
 			continue
 		}
-		var colors []model.Color
+
+		var colors []Color
 		if err := json.Unmarshal([]byte(row.JsonData), &colors); err != nil {
 			continue
 		}
@@ -127,13 +132,19 @@ func listSharedThemes(query string, limit int) ([]SharedItem, error) {
 			continue
 		}
 
-		payload, err := decodeThemePayload(row.JsonData)
+		themeDTO := themeDTOFromModel(row)
+
+		var colors ColorsFromJSON
+		err := json.Unmarshal(themeDTO.ThemeResult, &colors)
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 
-		palette := extractPaletteFromThemePayload(payload)
-		itemTheme := extractThemeObject(payload)
+		var palette []Color
+		if len(colors.Colors) > 0 {
+			palette = colors.Colors
+		}
 
 		items = append(items, SharedItem{
 			ID:         fmt.Sprintf("theme:%d", row.ID),
@@ -143,51 +154,11 @@ func listSharedThemes(query string, limit int) ([]SharedItem, error) {
 			SharedAt:   *row.SharedAt,
 			CreatedAt:  row.CreatedAt,
 			EditorType: row.EditorType,
-			Theme:      itemTheme,
+			Theme:      themeDTO,
 		})
 	}
 
 	return items, nil
-}
-
-func extractPaletteFromThemePayload(payload map[string]any) []model.Color {
-	themeResult, ok := payload["themeResult"].(map[string]any)
-	if !ok {
-		return nil
-	}
-
-	colorsRaw, ok := themeResult["colors"].([]any)
-	if !ok {
-		return nil
-	}
-
-	colors := make([]model.Color, 0, len(colorsRaw))
-	for _, raw := range colorsRaw {
-		obj, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		hex, _ := obj["hex"].(string)
-		if hex == "" {
-			continue
-		}
-		colors = append(colors, model.Color{Hex: hex})
-	}
-
-	return colors
-}
-
-func extractThemeObject(payload map[string]any) any {
-	themeResult, ok := payload["themeResult"].(map[string]any)
-	if !ok {
-		return payload["theme"]
-	}
-
-	if theme, exists := themeResult["theme"]; exists {
-		return theme
-	}
-
-	return payload["theme"]
 }
 
 func sortSharedItems(items []SharedItem, sortBy SharedItemSort) {

@@ -10,11 +10,10 @@
 	import { hydrateThemeExportResponse } from '$lib/components/toolbar/theme-export/session';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
-	import type { EditorThemeType } from '$lib/types/themeApi';
+	import type { EditorThemeType } from '$lib/types/theme';
 	import BrandLinks from '$lib/components/ui/BrandLinks.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import type { CommunityItem, CommunityItemSort } from '$lib/types/community';
-	import type { Theme } from '$lib/types/theme';
 
 	type SharedPageData = {
 		items: CommunityItem[];
@@ -107,7 +106,7 @@
 			return;
 		}
 
-		const theme = item.theme as Theme;
+		const theme = item.theme.themeResult.theme;
 		const editorType = (item.editorType as EditorThemeType | undefined) ?? detectThemeType(theme);
 		const appearance = detectThemeAppearance(theme);
 

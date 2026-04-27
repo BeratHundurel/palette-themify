@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"themesmith/auth"
@@ -9,11 +8,13 @@ import (
 	"themesmith/model"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PreferencesResponse struct {
-	Preferences json.RawMessage `json:"preferences"`
+	Preferences datatypes.JSON `json:"preferences"`
 }
 
 func GetPreferencesHandler(c *gin.Context) {
@@ -38,7 +39,7 @@ func GetPreferencesHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, PreferencesResponse{Preferences: json.RawMessage(prefs.JsonData)})
+	c.JSON(http.StatusOK, PreferencesResponse{Preferences: prefs.JsonData})
 }
 
 func SavePreferencesHandler(c *gin.Context) {
@@ -53,34 +54,30 @@ func SavePreferencesHandler(c *gin.Context) {
 		return
 	}
 
-	var payload json.RawMessage
+	var payload datatypes.JSON
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var prefs model.UserPreferences
-	if err := db.DB.Where("user_id = ?", userID).First(&prefs).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
-			return
-		}
-
-		prefs = model.UserPreferences{
-			UserID:   userID,
-			JsonData: string(payload),
-		}
-		if err := db.DB.Create(&prefs).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
-			return
-		}
-	} else {
-		prefs.JsonData = string(payload)
-		if err := db.DB.Save(&prefs).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
-			return
-		}
+	prefs := model.UserPreferences{
+		UserID:   userID,
+		JsonData: payload,
 	}
 
-	c.JSON(http.StatusOK, PreferencesResponse{Preferences: json.RawMessage(prefs.JsonData)})
+	err = db.DB.
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}},
+			DoUpdates: clause.AssignmentColumns([]string{"json_data"}),
+		}).
+		Create(&prefs).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
+		return
+	}
+
+	c.JSON(http.StatusOK, PreferencesResponse{
+		Preferences: prefs.JsonData,
+	})
 }

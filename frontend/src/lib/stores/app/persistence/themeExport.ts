@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
+import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
 import { DEFAULT_THEME_EXPORT_PREFERENCES, type ThemeExportPreferences } from '$lib/types/theme';
 
 const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';

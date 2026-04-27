@@ -7,17 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateColorHex(t *testing.T) {
-	color := createColor(255, 107, 53)
-	assert.Equal(t, "#FF6B35", color.Hex)
-
-	color = createColor(0, 0, 0)
-	assert.Equal(t, "#000000", color.Hex)
-
-	color = createColor(255, 255, 255)
-	assert.Equal(t, "#FFFFFF", color.Hex)
-}
-
 func TestHexToRGBA(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -256,12 +245,4 @@ func TestExtractColors(t *testing.T) {
 	assert.Equal(t, color.RGBA{255, 0, 0, 255}, result[0])
 	assert.Equal(t, color.RGBA{0, 255, 0, 255}, result[1])
 	assert.Equal(t, color.RGBA{0, 0, 255, 255}, result[2])
-}
-
-func TestMinInt(t *testing.T) {
-	assert.Equal(t, 1, minInt(1, 2))
-	assert.Equal(t, 1, minInt(2, 1))
-	assert.Equal(t, 0, minInt(0, 5))
-	assert.Equal(t, -5, minInt(-5, 10))
-	assert.Equal(t, 5, minInt(5, 5))
 }

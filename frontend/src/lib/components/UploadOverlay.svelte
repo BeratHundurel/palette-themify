@@ -4,7 +4,7 @@
 	import { hydrateThemeExportResponse } from '$lib/components/toolbar/theme-export/session';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { appStore } from '$lib/stores/app/store.svelte';
-	import type { EditorThemeType } from '$lib/types/themeApi';
+	import type { EditorThemeType } from '$lib/types/theme';
 	import type { Theme } from '$lib/types/theme';
 	import { cn } from '$lib/utils';
 	import toast from 'svelte-french-toast';

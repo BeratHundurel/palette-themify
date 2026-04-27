@@ -1,5 +1,6 @@
 import type { Color } from './color';
-import type { EditorThemeType } from '$lib/types/themeApi';
+import type { EditorThemeType } from '$lib/types/theme';
+import type { ThemeItem } from './theme';
 
 export type CommunityItemKind = 'theme' | 'palette';
 export type CommunityItemSort = 'newest' | 'oldest' | 'name';
@@ -12,7 +13,7 @@ export type CommunityItem = {
 	sharedAt: string;
 	createdAt: string;
 	editorType?: EditorThemeType;
-	theme?: unknown;
+	theme?: ThemeItem;
 };
 
 export type CommunityItemsResponse = {

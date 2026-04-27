@@ -1,5 +1,5 @@
 import toast from 'svelte-french-toast';
-import type { EditorThemeType, ThemeAppearance } from './types/themeApi';
+import type { EditorThemeType, ThemeAppearance } from './types/theme';
 import type { Color } from './types/color';
 import type { Theme } from './types/theme';
 

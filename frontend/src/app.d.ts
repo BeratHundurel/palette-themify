@@ -1,4 +1,4 @@
-import type { EditorThemeType } from '$lib/types/themeApi';
+import type { EditorThemeType } from '$lib/types/theme';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces

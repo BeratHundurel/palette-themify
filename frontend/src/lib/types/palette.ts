@@ -1,6 +1,6 @@
 import type { Color } from './color';
 
-export type PaletteData = {
+export type PaletteDTO = {
 	id: string;
 	name: string;
 	palette: Color[];
@@ -11,7 +11,7 @@ export type PaletteData = {
 };
 
 export type GetPalettesResponse = {
-	palettes: PaletteData[];
+	palettes: PaletteDTO[];
 };
 
 export type ExtractPaletteResponse = {
@@ -23,7 +23,9 @@ export type SavePaletteRequest = {
 	palette: Color[];
 };
 
-export type SavePaletteResult = {
-	message: string;
-	name: string;
+export type SavePalettesBatchRequest = {
+	palettes: Array<{
+		name: string;
+		palette: Color[];
+	}>;
 };

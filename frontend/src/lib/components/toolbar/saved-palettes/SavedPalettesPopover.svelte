@@ -12,7 +12,7 @@
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import toast from 'svelte-french-toast';
 	import type { Color } from '$lib/types/color';
-	import type { PaletteData } from '$lib/types/palette';
+	import type { PaletteDTO } from '$lib/types/palette';
 
 	let displayPalettes = $derived(appStore.state.savedPalettes);
 
@@ -66,7 +66,7 @@
 		await appStore.deletePalettes(palettesToDelete.map((palette) => palette.id));
 	}
 
-	async function handlePaletteShareToggle(item: PaletteData) {
+	async function handlePaletteShareToggle(item: PaletteDTO) {
 		if (item.isSystem) {
 			toast.error('System palettes cannot be shared. Save a copy first.');
 			return;
@@ -81,7 +81,7 @@
 			return;
 		}
 
-		await appStore.setPaletteShared(item.id, !item.isShared);
+		await appStore.setPaletteShared(item);
 	}
 </script>
 

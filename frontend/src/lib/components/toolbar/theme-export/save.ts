@@ -2,8 +2,8 @@ import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } fro
 import { appStore } from '$lib/stores/app/store.svelte';
 import { dialogStore } from '$lib/stores/dialog.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
-import type { EditorThemeType } from '$lib/types/themeApi';
-import type { SavedThemeItem, ThemeGenerationResponse } from '$lib/types/theme';
+import type { EditorThemeType } from '$lib/types/theme';
+import type { ThemeItem, ThemeGenerationResult } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
 
 import { normalizeThemeName, validateThemeName } from './utils';
@@ -11,7 +11,7 @@ import { normalizeThemeName, validateThemeName } from './utils';
 type SaveThemeArgs = {
 	name: string;
 	editorType: EditorThemeType;
-	themeResult: ThemeGenerationResponse | null;
+	themeResult: ThemeGenerationResult | null;
 };
 
 type ExportThemeArgs = SaveThemeArgs & {
@@ -28,8 +28,8 @@ function buildSavedTheme({
 	id?: string;
 	name: string;
 	editorType: EditorThemeType;
-	themeResult: ThemeGenerationResponse;
-}): SavedThemeItem {
+	themeResult: ThemeGenerationResult;
+}): ThemeItem {
 	return {
 		id: id ?? `local_${Date.now()}`,
 		name,

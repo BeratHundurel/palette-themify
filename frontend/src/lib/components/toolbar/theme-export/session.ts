@@ -1,6 +1,6 @@
 import { appStore } from '$lib/stores/app/store.svelte';
-import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
-import type { ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
+import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
+import type { ThemeGenerationResult, ThemeOverrides } from '$lib/types/theme';
 
 import { cloneThemeResponse, getThemeVersionKey } from './utils';
 
@@ -8,11 +8,7 @@ export function clearThemeVersions() {
 	appStore.state.themeExport.themeVersions = {};
 }
 
-export function cacheThemeVersion(
-	response: ThemeGenerationResponse,
-	type: EditorThemeType,
-	appearance: ThemeAppearance
-) {
+export function cacheThemeVersion(response: ThemeGenerationResult, type: EditorThemeType, appearance: ThemeAppearance) {
 	appStore.state.themeExport.themeVersions = {
 		...appStore.state.themeExport.themeVersions,
 		[getThemeVersionKey(type, appearance)]: cloneThemeResponse(response)
@@ -20,7 +16,7 @@ export function cacheThemeVersion(
 }
 
 export function setActiveThemeResponse(
-	response: ThemeGenerationResponse,
+	response: ThemeGenerationResult,
 	type: EditorThemeType,
 	appearance: ThemeAppearance
 ) {
@@ -35,7 +31,7 @@ export function setActiveThemeResponse(
 export function getCachedThemeVersion(
 	type: EditorThemeType,
 	appearance: ThemeAppearance
-): ThemeGenerationResponse | null {
+): ThemeGenerationResult | null {
 	return appStore.state.themeExport.themeVersions[getThemeVersionKey(type, appearance)] ?? null;
 }
 
@@ -83,7 +79,7 @@ export function resetThemeExportOverrideState(overrides: ThemeOverrides = {}) {
 }
 
 export function hydrateThemeExportResponse(
-	response: ThemeGenerationResponse,
+	response: ThemeGenerationResult,
 	type: EditorThemeType,
 	appearance: ThemeAppearance
 ) {

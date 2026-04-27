@@ -7,8 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"themesmith/model"
 )
 
 type weightedColor struct {
@@ -144,17 +142,4 @@ func ShepardsMethodColor(originalRGBA color.RGBA, paletteRGBAs []color.RGBA, nea
 		return closest[0].Color
 	}
 	return blendColors(extractColors(closest), weights)
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func createColor(r, g, b uint8) model.Color {
-	return model.Color{
-		Hex: fmt.Sprintf("#%02X%02X%02X", r, g, b),
-	}
 }

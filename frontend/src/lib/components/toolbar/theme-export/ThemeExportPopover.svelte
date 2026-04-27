@@ -8,8 +8,8 @@
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
-	import type { Theme, ThemeGenerationResponse, ThemeOverrides } from '$lib/types/theme';
+	import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
+	import type { Theme, ThemeGenerationResult, ThemeOverrides } from '$lib/types/theme';
 	import { cn } from '$lib/utils';
 
 	import AppearanceSelector from './AppearanceSelector.svelte';
@@ -135,7 +135,7 @@
 
 		updateThemeNameInTheme(themeResult.theme, name);
 
-		for (const response of Object.values(appStore.state.themeExport.themeVersions) as ThemeGenerationResponse[]) {
+		for (const response of Object.values(appStore.state.themeExport.themeVersions) as ThemeGenerationResult[]) {
 			updateThemeNameInTheme(response.theme, name);
 		}
 	}
@@ -172,7 +172,7 @@
 
 		try {
 			isGenerating = true;
-			let response: ThemeGenerationResponse;
+			let response: ThemeGenerationResult;
 
 			if (hasPaletteColors) {
 				response = await generateTheme(

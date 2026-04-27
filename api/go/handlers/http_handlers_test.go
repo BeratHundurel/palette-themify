@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"themesmith/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +48,7 @@ func TestSavePaletteHandler_InvalidRequest(t *testing.T) {
 
 	t.Run("MissingName", func(t *testing.T) {
 		palette := map[string]any{
-			"palette": []model.Color{{Hex: "#FF0000"}},
+			"palette": []Color{{Hex: "#FF0000"}},
 		}
 		paletteJSON, _ := json.Marshal(palette)
 
@@ -188,7 +187,7 @@ func TestApplyPaletteHandler(t *testing.T) {
 		t.Fatalf("encode test image: %v", err)
 	}
 
-	palette := []model.Color{{Hex: "#FF0000"}, {Hex: "#00FF00"}, {Hex: "#0000FF"}}
+	palette := []Color{{Hex: "#FF0000"}, {Hex: "#00FF00"}, {Hex: "#0000FF"}}
 	paletteJSON, _ := json.Marshal(palette)
 
 	body := &bytes.Buffer{}

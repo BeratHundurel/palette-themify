@@ -12,10 +12,10 @@ import { DEFAULT_APPLY_PALETTE_SETTINGS, type ApplyPaletteSettings } from '$lib/
 import type { AppPreferences, AppPreferencesPayload } from '$lib/types/appPreferences';
 import type { AppState } from '$lib/stores/app/appState';
 import type { Color } from '$lib/types/color';
-import type { PaletteData } from '$lib/types/palette';
-import { DEFAULT_THEME_EXPORT_PREFERENCES, type SavedThemeItem, type ThemeExportPreferences } from '$lib/types/theme';
+import type { PaletteDTO } from '$lib/types/palette';
+import { DEFAULT_THEME_EXPORT_PREFERENCES, type ThemeItem, type ThemeExportPreferences } from '$lib/types/theme';
 import { DEFAULT_WALLHAVEN_SETTINGS, type WallhavenSettings } from '$lib/types/wallhaven';
-import type { EditorThemeType, ThemeAppearance } from '$lib/types/themeApi';
+import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
 
 import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/savedThemes';
 import {
@@ -37,7 +37,7 @@ import {
 	saveThemeExportPreferences
 } from '$lib/stores/app/persistence/themeExport';
 import * as preferencesApi from '$lib/api/preferences';
-import * as themesApi from '$lib/api/savedThemes';
+import * as themesApi from '$lib/api/theme';
 import { dialogStore } from '$lib/stores/dialog.svelte';
 import { isLocalId } from '$lib/localId';
 
@@ -361,14 +361,14 @@ function createAppStore() {
 			state.themeExport.backupColors = null;
 		},
 
-		saveThemeToLocal(theme: SavedThemeItem) {
+		saveThemeToLocal(theme: ThemeItem) {
 			const preparedTheme = this.ensureThemeSignature(theme);
 			state.savedThemes = [preparedTheme, ...state.savedThemes];
 			saveSavedThemes(state.savedThemes);
 			this.persistThemeChange(preparedTheme, 'create');
 		},
 
-		replaceSavedTheme(themeId: string, theme: SavedThemeItem) {
+		replaceSavedTheme(themeId: string, theme: ThemeItem) {
 			const index = state.savedThemes.findIndex((item) => item.id === themeId);
 			const preparedTheme = this.ensureThemeSignature(theme);
 			if (index === -1) {
@@ -412,24 +412,26 @@ function createAppStore() {
 			}
 		},
 
-		async setThemeShared(themeId: string, shared: boolean) {
+		async setThemeShared(item: ThemeItem) {
 			if (!browser || !authStore.state.isAuthenticated) {
 				toast.error('Sign in to share themes.');
 				return;
 			}
 
 			try {
-				const response = shared ? await themesApi.shareTheme(themeId) : await themesApi.unshareTheme(themeId);
-				this.applyThemeResponse(response.theme);
-				toast.success(shared ? 'Theme shared' : 'Theme removed from shared list');
+				const response = await (item.isShared ? themesApi.unshareTheme(item.id) : themesApi.shareTheme(item.id));
+				this.applyThemeResponse(response, item.id);
+				toast.success(response.isShared ? 'Theme shared' : 'Theme removed from shared list');
 			} catch {
 				toast.error(
-					shared ? 'Could not share the theme. Please try again.' : 'Could not unshare the theme. Please try again.'
+					item.isShared
+						? 'Could not share the theme. Please try again.'
+						: 'Could not unshare the theme. Please try again.'
 				);
 			}
 		},
 
-		async persistThemeChange(theme: SavedThemeItem | null, action: 'create' | 'update' | 'delete', themeId?: string) {
+		async persistThemeChange(theme: ThemeItem | null, action: 'create' | 'update' | 'delete', themeId?: string) {
 			if (!browser) return;
 			if (!authStore.state.isAuthenticated) return;
 			const preparedTheme = theme ? this.ensureThemeSignature(theme) : null;
@@ -490,7 +492,7 @@ function createAppStore() {
 			}
 		},
 
-		applyThemeResponse(theme: SavedThemeItem, sourceThemeId?: string) {
+		applyThemeResponse(theme: ThemeItem, sourceThemeId?: string) {
 			const preparedTheme = this.ensureThemeSignature(theme);
 			const preparedResultSignature = this.getThemeSignature(preparedTheme.themeResult);
 			const existingIndex = state.savedThemes.findIndex(
@@ -510,7 +512,7 @@ function createAppStore() {
 			saveSavedThemes(state.savedThemes);
 		},
 
-		ensureThemeSignature(theme: SavedThemeItem): SavedThemeItem {
+		ensureThemeSignature(theme: ThemeItem): ThemeItem {
 			if (theme.signature) return theme;
 			const signature = this.getThemeSignature(theme.themeResult);
 			return {
@@ -519,7 +521,7 @@ function createAppStore() {
 			};
 		},
 
-		getThemeSignature(themeResult: SavedThemeItem['themeResult'] | null): string {
+		getThemeSignature(themeResult: ThemeItem['themeResult'] | null): string {
 			if (!themeResult) return '';
 			try {
 				return JSON.stringify(themeResult);
@@ -951,12 +953,12 @@ function createAppStore() {
 
 			try {
 				if (authStore.state.isAuthenticated) {
-					const data = await paletteApi.savePalette(paletteName, state.colors);
-					toast.success('Palette saved: ' + data.name);
+					await paletteApi.savePalette(paletteName, state.colors);
+					toast.success('Palette saved: ' + paletteName);
 					await appStore.loadSavedPalettes();
 				} else {
 					if (browser) {
-						const newPalette: PaletteData = {
+						const newPalette: PaletteDTO = {
 							id: `local_${Date.now()}`,
 							name: paletteName,
 							palette: state.colors,
@@ -1039,7 +1041,7 @@ function createAppStore() {
 					const stored = localStorage.getItem('savedPalettes');
 					if (stored) {
 						try {
-							const localPalettes = JSON.parse(stored) as PaletteData[];
+							const localPalettes = JSON.parse(stored) as PaletteDTO[];
 							state.savedPalettes = localPalettes;
 						} catch {
 							state.savedPalettes = [];
@@ -1066,7 +1068,7 @@ function createAppStore() {
 					if (browser) {
 						const stored = localStorage.getItem('savedPalettes');
 						const palettes = stored ? JSON.parse(stored) : [];
-						const filtered = palettes.filter((p: PaletteData) => p.id !== paletteId);
+						const filtered = palettes.filter((p: PaletteDTO) => p.id !== paletteId);
 						localStorage.setItem('savedPalettes', JSON.stringify(filtered));
 					}
 					await appStore.loadSavedPalettes();
@@ -1092,7 +1094,7 @@ function createAppStore() {
 					if (browser) {
 						const stored = localStorage.getItem('savedPalettes');
 						if (stored) {
-							const palettes = JSON.parse(stored) as PaletteData[];
+							const palettes = JSON.parse(stored) as PaletteDTO[];
 							const filtered = palettes.filter((p) => !uniquePaletteIds.includes(p.id));
 							localStorage.setItem('savedPalettes', JSON.stringify(filtered));
 						}
@@ -1105,7 +1107,7 @@ function createAppStore() {
 
 				if (browser) {
 					const stored = localStorage.getItem('savedPalettes');
-					const palettes = stored ? (JSON.parse(stored) as PaletteData[]) : [];
+					const palettes = stored ? (JSON.parse(stored) as PaletteDTO[]) : [];
 					const filtered = palettes.filter((p) => !uniquePaletteIds.includes(p.id));
 					localStorage.setItem('savedPalettes', JSON.stringify(filtered));
 				}
@@ -1116,28 +1118,33 @@ function createAppStore() {
 			}
 		},
 
-		async setPaletteShared(paletteId: string, shared: boolean) {
+		async setPaletteShared(palette: PaletteDTO) {
 			if (!browser || !authStore.state.isAuthenticated) {
 				toast.error('Sign in to share palettes.');
 				return;
 			}
 
 			try {
-				const response = shared ? await paletteApi.sharePalette(paletteId) : await paletteApi.unsharePalette(paletteId);
+				const updatedPalette = await (palette.isShared
+					? paletteApi.unsharePalette(palette.id)
+					: paletteApi.sharePalette(palette.id));
 
 				state.savedPalettes = state.savedPalettes.map((item) =>
-					item.id === paletteId
+					item.id === palette.id
 						? {
 								...item,
-								isShared: response.palette.isShared,
-								sharedAt: response.palette.sharedAt
+								id: updatedPalette.id,
+								isShared: updatedPalette.isShared,
+								sharedAt: updatedPalette.sharedAt
 							}
 						: item
 				);
-				toast.success(shared ? 'Palette shared' : 'Palette removed from shared list');
+				toast.success(palette.isShared ? 'Palette shared' : 'Palette removed from shared list');
 			} catch {
 				toast.error(
-					shared ? 'Could not share the palette. Please try again.' : 'Could not unshare the palette. Please try again.'
+					palette.isShared
+						? 'Could not share the palette. Please try again.'
+						: 'Could not unshare the palette. Please try again.'
 				);
 			}
 		},
@@ -1149,7 +1156,7 @@ function createAppStore() {
 				const stored = localStorage.getItem('savedPalettes');
 				if (stored) {
 					try {
-						const localPalettes = JSON.parse(stored) as PaletteData[];
+						const localPalettes = JSON.parse(stored) as PaletteDTO[];
 						const palettesToSync = localPalettes.filter((palette) => !palette.id || isLocalId(palette.id));
 
 						if (palettesToSync.length > 0) {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SavedThemeItem } from '$lib/types/theme';
+import type { ThemeItem } from '$lib/types/theme';
 
 vi.mock('./auth', () => ({
 	getAuthHeaders: vi.fn(() => ({
@@ -9,16 +9,16 @@ vi.mock('./auth', () => ({
 	}))
 }));
 
-import { saveThemes } from './savedThemes';
+import { saveThemes } from './theme';
 
-function makeTheme(id: string): SavedThemeItem {
+function makeTheme(id: string): ThemeItem {
 	return {
 		id,
 		name: `Theme ${id}`,
 		editorType: 'vscode',
 		createdAt: '2026-01-01T00:00:00.000Z',
 		themeResult: {
-			theme: { name: `Theme ${id}` } as SavedThemeItem['themeResult']['theme'],
+			theme: { name: `Theme ${id}` } as ThemeItem['themeResult']['theme'],
 			themeOverrides: {},
 			rawThemeOverrides: {},
 			colors: [{ hex: '#112233' }],

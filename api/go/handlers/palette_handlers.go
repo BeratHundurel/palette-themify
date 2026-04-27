@@ -18,30 +18,31 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
+	"gorm.io/gorm/clause"
 )
 
-type PaletteData struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	Palette   []model.Color `json:"palette"`
-	CreatedAt time.Time     `json:"createdAt"`
-	IsSystem  bool          `json:"isSystem"`
-	IsShared  bool          `json:"isShared"`
-	SharedAt  *time.Time    `json:"sharedAt"`
+type Color struct {
+	Hex string `json:"hex"`
+}
+
+type PaletteDTO struct {
+	ID        uint       `json:"id"`
+	Name      string     `json:"name"`
+	Palette   []Color    `json:"palette"`
+	CreatedAt time.Time  `json:"createdAt"`
+	IsSystem  bool       `json:"isSystem"`
+	IsShared  bool       `json:"isShared"`
+	SharedAt  *time.Time `json:"sharedAt"`
 }
 
 type SavePaletteRequest struct {
-	Name    string        `json:"name" binding:"required"`
-	Palette []model.Color `json:"palette" binding:"required"`
-}
-
-type SavePalettesBatchItem struct {
-	Name    string        `json:"name" binding:"required"`
-	Palette []model.Color `json:"palette" binding:"required"`
+	Name    string  `json:"name" binding:"required"`
+	Palette []Color `json:"palette" binding:"required"`
 }
 
 type SavePalettesBatchRequest struct {
-	Palettes []SavePalettesBatchItem `json:"palettes" binding:"required"`
+	Palettes []SavePaletteRequest `json:"palettes" binding:"required"`
 }
 
 type DeletePalettesRequest struct {
@@ -49,7 +50,7 @@ type DeletePalettesRequest struct {
 }
 
 type GetPalettesResponse struct {
-	Palettes []PaletteData `json:"palettes"`
+	Palettes []PaletteDTO `json:"palettes"`
 }
 
 func SavePaletteHandler(c *gin.Context) {
@@ -71,10 +72,7 @@ func SavePaletteHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Palette saved successfully",
-		"name":    req.Name,
-	})
+	c.Status(http.StatusCreated)
 }
 
 func SavePalettesBatchHandler(c *gin.Context) {
@@ -100,10 +98,7 @@ func SavePalettesBatchHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Palettes saved successfully",
-		"saved":   len(req.Palettes),
-	})
+	c.Status(http.StatusCreated)
 }
 
 func GetPalettesHandler(c *gin.Context) {
@@ -141,7 +136,7 @@ func DeletePaletteHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Palette deleted successfully"})
+	c.Status(http.StatusOK)
 }
 
 func DeletePalettesBatchHandler(c *gin.Context) {
@@ -162,13 +157,13 @@ func DeletePalettesBatchHandler(c *gin.Context) {
 		return
 	}
 
-	deletedCount, err := deleteUserPalettes(userID, req.IDs)
+	err = deleteUserPalettes(userID, req.IDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Palettes deleted successfully", "deleted": deletedCount})
+	c.Status(http.StatusOK)
 }
 
 func SharePaletteHandler(c *gin.Context) {
@@ -190,7 +185,7 @@ func SharePaletteHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Palette shared successfully", "palette": palette})
+	c.JSON(http.StatusOK, palette)
 }
 
 func UnsharePaletteHandler(c *gin.Context) {
@@ -212,10 +207,10 @@ func UnsharePaletteHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Palette unshared successfully", "palette": palette})
+	c.JSON(http.StatusOK, palette)
 }
 
-func saveUserPalette(userID uint, name string, palette []model.Color) error {
+func saveUserPalette(userID uint, name string, palette []Color) error {
 	if db.DB == nil {
 		return fmt.Errorf("database not available")
 	}
@@ -227,14 +222,14 @@ func saveUserPalette(userID uint, name string, palette []model.Color) error {
 
 	dbPalette := model.Palette{
 		UserID:   &userID,
-		JsonData: string(paletteJSON),
+		JsonData: datatypes.JSON(paletteJSON),
 		Name:     name,
 	}
 
 	return db.DB.Create(&dbPalette).Error
 }
 
-func saveUserPalettesBatch(userID uint, palettes []SavePalettesBatchItem) error {
+func saveUserPalettesBatch(userID uint, palettes []SavePaletteRequest) error {
 	if db.DB == nil {
 		return fmt.Errorf("database not available")
 	}
@@ -248,7 +243,7 @@ func saveUserPalettesBatch(userID uint, palettes []SavePalettesBatchItem) error 
 
 		dbPalettes = append(dbPalettes, model.Palette{
 			UserID:   &userID,
-			JsonData: string(paletteJSON),
+			JsonData: datatypes.JSON(paletteJSON),
 			Name:     item.Name,
 		})
 	}
@@ -256,7 +251,7 @@ func saveUserPalettesBatch(userID uint, palettes []SavePalettesBatchItem) error 
 	return db.DB.Create(&dbPalettes).Error
 }
 
-func getUserPalettes(userID uint) ([]PaletteData, error) {
+func getUserPalettes(userID uint) ([]PaletteDTO, error) {
 	if db.DB == nil {
 		return nil, fmt.Errorf("database not available")
 	}
@@ -265,19 +260,20 @@ func getUserPalettes(userID uint) ([]PaletteData, error) {
 	err := db.DB.Where("user_id = ?", userID).
 		Order("created_at DESC").
 		Find(&dbPalettes).Error
+
 	if err != nil {
 		return nil, err
 	}
 
-	palettes := make([]PaletteData, len(dbPalettes))
+	palettes := make([]PaletteDTO, len(dbPalettes))
 	for i, dbPalette := range dbPalettes {
-		var colors []model.Color
+		var colors []Color
 		if err := json.Unmarshal([]byte(dbPalette.JsonData), &colors); err != nil {
 			continue
 		}
 
-		palettes[i] = PaletteData{
-			ID:        fmt.Sprintf("%d", dbPalette.ID),
+		palettes[i] = PaletteDTO{
+			ID:        dbPalette.ID,
 			Name:      dbPalette.Name,
 			Palette:   colors,
 			CreatedAt: dbPalette.CreatedAt,
@@ -295,16 +291,27 @@ func deleteUserPalette(userID uint, paletteID string) error {
 		return fmt.Errorf("database not available")
 	}
 
-	var palette model.Palette
-	if err := db.DB.Where("id = ? AND user_id = ?", paletteID, userID).First(&palette).Error; err != nil {
-		return fmt.Errorf("palette not found or unauthorized")
+	result := db.DB.
+		Where("id = ? AND user_id = ? AND is_system = ?", paletteID, userID, false).
+		Delete(&model.Palette{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete palette: %w", result.Error)
 	}
 
-	if palette.IsSystem {
-		return fmt.Errorf("cannot delete system palettes")
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("palette not found, unauthorized, or system palette")
 	}
 
-	result := db.DB.Delete(&palette)
+	return nil
+}
+
+func deleteUserPalettes(userID uint, paletteIDs []string) error {
+	if db.DB == nil {
+		return fmt.Errorf("database not available")
+	}
+
+	result := db.DB.Where("id IN ? AND user_id = ? AND is_system = ?", paletteIDs, userID, false).Delete(&model.Palette{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -312,55 +319,39 @@ func deleteUserPalette(userID uint, paletteID string) error {
 	return nil
 }
 
-func deleteUserPalettes(userID uint, paletteIDs []string) (int64, error) {
+func setPaletteShared(userID uint, paletteID string, shared bool) (PaletteDTO, error) {
 	if db.DB == nil {
-		return 0, fmt.Errorf("database not available")
+		return PaletteDTO{}, fmt.Errorf("database not available")
 	}
 
-	result := db.DB.Where("id IN ? AND user_id = ? AND is_system = ?", paletteIDs, userID, false).Delete(&model.Palette{})
-	if result.Error != nil {
-		return 0, result.Error
+	now := time.Now().UTC()
+	var palette model.Palette
+	err := db.DB.Model(&model.Palette{}).
+		Where("id = ? AND user_id = ?", paletteID, userID).
+		Clauses(clause.Returning{}).
+		Updates(map[string]any{
+			"is_shared": shared,
+			"shared_at": &now,
+		}).
+		Scan(&palette).Error
+
+	if err != nil {
+		return PaletteDTO{}, err
 	}
 
-	return result.RowsAffected, nil
-}
-
-func setPaletteShared(userID uint, paletteID string, shared bool) (PaletteData, error) {
-	if db.DB == nil {
-		return PaletteData{}, fmt.Errorf("database not available")
+	var colors []Color
+	if err := json.Unmarshal([]byte(palette.JsonData), &colors); err != nil {
+		return PaletteDTO{}, err
 	}
 
-	var dbPalette model.Palette
-	if err := db.DB.Where("id = ? AND user_id = ?", paletteID, userID).First(&dbPalette).Error; err != nil {
-		return PaletteData{}, fmt.Errorf("palette not found or unauthorized")
-	}
-
-	dbPalette.IsShared = shared
-	if shared {
-		now := time.Now().UTC()
-		dbPalette.SharedAt = &now
-	} else {
-		dbPalette.SharedAt = nil
-	}
-	dbPalette.UpdatedAt = time.Now().UTC()
-
-	if err := db.DB.Save(&dbPalette).Error; err != nil {
-		return PaletteData{}, err
-	}
-
-	var colors []model.Color
-	if err := json.Unmarshal([]byte(dbPalette.JsonData), &colors); err != nil {
-		return PaletteData{}, err
-	}
-
-	return PaletteData{
-		ID:        fmt.Sprintf("%d", dbPalette.ID),
-		Name:      dbPalette.Name,
+	return PaletteDTO{
+		ID:        palette.ID,
+		Name:      palette.Name,
 		Palette:   colors,
-		CreatedAt: dbPalette.CreatedAt,
-		IsSystem:  dbPalette.IsSystem,
-		IsShared:  dbPalette.IsShared,
-		SharedAt:  dbPalette.SharedAt,
+		CreatedAt: palette.CreatedAt,
+		IsSystem:  palette.IsSystem,
+		IsShared:  palette.IsShared,
+		SharedAt:  palette.SharedAt,
 	}, nil
 }
 
@@ -417,8 +408,8 @@ func processImageWithShepardsMethod(
 }
 
 type ExtractResult struct {
-	Palette []model.Color `json:"palette,omitempty"`
-	Error   string        `json:"error,omitempty"`
+	Palette []Color `json:"palette,omitempty"`
+	Error   string  `json:"error,omitempty"`
 }
 
 func ApplyPaletteHandler(c *gin.Context) {
@@ -446,7 +437,7 @@ func ApplyPaletteHandler(c *gin.Context) {
 
 	var hexes []string
 	if err := json.Unmarshal([]byte(paletteStr), &hexes); err != nil {
-		var objs []model.Color
+		var objs []Color
 		if err2 := json.Unmarshal([]byte(paletteStr), &objs); err2 != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid palette JSON"})
 			return

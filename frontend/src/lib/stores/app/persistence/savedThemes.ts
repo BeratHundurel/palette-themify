@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type { SavedThemeItem } from '$lib/types/theme';
+import type { ThemeItem } from '$lib/types/theme';
 
 const SAVED_THEMES_STORAGE_KEY = 'savedThemes';
 const DEFAULT_BOOST_COEFFICIENT = 1;
@@ -8,7 +8,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
 }
 
-function normalizeSavedThemeItem(value: unknown): SavedThemeItem | null {
+function normalizeSavedThemeItem(value: unknown): ThemeItem | null {
 	if (!isRecord(value)) return null;
 
 	const id = typeof value.id === 'string' ? value.id : null;
@@ -35,7 +35,7 @@ function normalizeSavedThemeItem(value: unknown): SavedThemeItem | null {
 		name,
 		editorType,
 		themeResult: {
-			theme: themeResult.theme as SavedThemeItem['themeResult']['theme'],
+			theme: themeResult.theme as ThemeItem['themeResult']['theme'],
 			themeOverrides,
 			rawThemeOverrides,
 			colors,
@@ -46,14 +46,14 @@ function normalizeSavedThemeItem(value: unknown): SavedThemeItem | null {
 	};
 }
 
-export function loadSavedThemes(): SavedThemeItem[] {
+export function loadSavedThemes(): ThemeItem[] {
 	if (!browser) return [];
 	try {
 		const stored = localStorage.getItem(SAVED_THEMES_STORAGE_KEY);
 		if (!stored) return [];
 		const parsed = JSON.parse(stored) as unknown;
 		if (!Array.isArray(parsed)) return [];
-		return parsed.map((item) => normalizeSavedThemeItem(item)).filter((item): item is SavedThemeItem => item !== null);
+		return parsed.map((item) => normalizeSavedThemeItem(item)).filter((item): item is ThemeItem => item !== null);
 	} catch {
 		return [];
 	}
@@ -64,7 +64,7 @@ export function clearSavedThemes() {
 	localStorage.removeItem(SAVED_THEMES_STORAGE_KEY);
 }
 
-export function saveSavedThemes(themes: SavedThemeItem[]) {
+export function saveSavedThemes(themes: ThemeItem[]) {
 	if (!browser) return;
 	localStorage.setItem(SAVED_THEMES_STORAGE_KEY, JSON.stringify(themes));
 }

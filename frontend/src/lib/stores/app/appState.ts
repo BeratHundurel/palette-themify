@@ -1,9 +1,9 @@
 import type { SortMethod } from '$lib/colorUtils';
 import type { ApplyPaletteSettings } from '$lib/types/applyPaletteSettings';
 import type { Color } from '$lib/types/color';
-import type { PaletteData } from '$lib/types/palette';
+import type { PaletteDTO } from '$lib/types/palette';
 import type { Selector } from '$lib/types/selector';
-import type { SavedThemeItem, ThemeExportState } from '$lib/types/theme';
+import type { ThemeItem, ThemeExportState } from '$lib/types/theme';
 import type { WallhavenResult, WallhavenSettings } from '$lib/types/wallhaven';
 
 export interface AppState {
@@ -33,10 +33,10 @@ export interface AppState {
 	selectors: Selector[];
 	activeSelectorId: string;
 	newFilterColor: string;
-	savedPalettes: PaletteData[];
+	savedPalettes: PaletteDTO[];
 	sortMethod: SortMethod;
 	applyPaletteSettings: ApplyPaletteSettings;
 	themeExport: ThemeExportState;
-	savedThemes: SavedThemeItem[];
+	savedThemes: ThemeItem[];
 	paletteVersion: number;
 }

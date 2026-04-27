@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import type { EditorThemeType } from '$lib/types/themeApi';
+	import type { EditorThemeType } from '$lib/types/theme';
 
 	type EditorOption = {
 		value: EditorThemeType;

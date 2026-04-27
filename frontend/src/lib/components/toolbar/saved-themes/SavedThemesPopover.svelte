@@ -12,12 +12,12 @@
 	import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } from '$lib/platform';
 	import { detectThemeAppearance, detectThemeType } from '$lib/colorUtils';
 	import toast from 'svelte-french-toast';
-	import type { SavedThemeItem, Theme } from '$lib/types/theme';
+	import type { ThemeItem, Theme } from '$lib/types/theme';
 	import { generateOverridable } from '$lib/api/theme';
-	import type { EditorThemeType } from '$lib/types/themeApi';
+	import type { EditorThemeType } from '$lib/types/theme';
 	import { hydrateThemeExportResponse } from '../theme-export/session';
 
-	async function handleThemeSave(item: SavedThemeItem) {
+	async function handleThemeSave(item: ThemeItem) {
 		if (!isDesktopApp) return;
 
 		try {
@@ -53,11 +53,11 @@
 		}
 	}
 
-	function hasStoredRawOverrides(item: SavedThemeItem): boolean {
+	function hasStoredRawOverrides(item: ThemeItem): boolean {
 		return 'rawThemeOverrides' in item.themeResult && typeof item.themeResult.rawThemeOverrides === 'object';
 	}
 
-	function loadSavedThemeResult(item: SavedThemeItem) {
+	function loadSavedThemeResult(item: ThemeItem) {
 		const resolvedAppearance = detectThemeAppearance(item.themeResult.theme);
 
 		appStore.resetThemeExportSession();
@@ -70,7 +70,7 @@
 		popoverStore.state.current = 'themeExport';
 	}
 
-	async function handleSavedThemeLoad(item: SavedThemeItem) {
+	async function handleSavedThemeLoad(item: ThemeItem) {
 		if (hasStoredRawOverrides(item)) {
 			loadSavedThemeResult(item);
 			return;
@@ -106,17 +106,17 @@
 		await appStore.deleteThemes(themeIds);
 	}
 
-	function getPreviewColors(item: SavedThemeItem): string[] {
-		return item.themeResult.colors.slice(0, 6).map((color) => color.hex);
+	function getPreviewColors(item: ThemeItem): string[] {
+		return item.themeResult.colors?.slice(0, 6).map((color) => color.hex) ?? [];
 	}
 
-	async function handleThemeShareToggle(item: SavedThemeItem) {
+	async function handleThemeShareToggle(item: ThemeItem) {
 		if (isLocalId(item.id)) {
 			toast.error('Sign in first to share themes.');
 			return;
 		}
 
-		await appStore.setThemeShared(item.id, !item.isShared);
+		await appStore.setThemeShared(item);
 	}
 </script>
 
