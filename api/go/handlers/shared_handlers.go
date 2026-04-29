@@ -1,24 +1,15 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	gsort "sort"
 	"strconv"
 	"strings"
 	"themesmith/db"
-	"themesmith/model"
 	"time"
 
 	"github.com/gin-gonic/gin"
-)
-
-type SharedItemKind string
-
-const (
-	SharedItemKindTheme   SharedItemKind = "theme"
-	SharedItemKindPalette SharedItemKind = "palette"
+	"gorm.io/datatypes"
 )
 
 type SharedItemSort string
@@ -29,23 +20,19 @@ const (
 	SharedItemSortName   SharedItemSort = "name"
 )
 
-type SharedItem struct {
-	ID         string         `json:"id"`
-	Kind       SharedItemKind `json:"kind"`
-	Name       string         `json:"name"`
-	Palette    []Color        `json:"palette"`
-	SharedAt   time.Time      `json:"sharedAt"`
-	CreatedAt  time.Time      `json:"createdAt"`
-	EditorType string         `json:"editorType,omitempty"`
-	Theme      ThemeDTO       `json:"theme"`
+type sharedItemView struct {
+	Kind       string         `json:"kind" gorm:"column:kind"`
+	ItemID     uint           `json:"itemId" gorm:"column:item_id"`
+	Name       string         `json:"name" gorm:"column:name"`
+	JsonData   datatypes.JSON `json:"jsonData" gorm:"column:json_data"`
+	SharedAt   time.Time      `json:"sharedAt" gorm:"column:shared_at"`
+	CreatedAt  time.Time      `json:"createdAt" gorm:"column:created_at"`
+	EditorType *string        `json:"editorType,omitempty" gorm:"column:editor_type"`
+	Signature  *string        `json:"signature,omitempty" gorm:"column:signature"`
 }
 
 type SharedItemsResponse struct {
-	Items []SharedItem `json:"items"`
-}
-
-type ColorsFromJSON struct {
-	Colors []Color `json:"colors"`
+	Items []sharedItemView `json:"items"`
 }
 
 func GetSharedItemsHandler(c *gin.Context) {
@@ -58,141 +45,69 @@ func GetSharedItemsHandler(c *gin.Context) {
 	sort := parseSharedSort(c.Query("sort"))
 	limit := parsePositiveInt(c.Query("limit"), 100)
 
-	palettes, err := listSharedPalettes(query, limit)
+	items, err := listSharedItems(query, sort, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch shared palettes"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch shared items"})
 		return
-	}
-
-	themes, err := listSharedThemes(query, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch shared themes"})
-		return
-	}
-
-	items := append(palettes, themes...)
-	sortSharedItems(items, sort)
-
-	if len(items) > limit {
-		items = items[:limit]
 	}
 
 	c.JSON(http.StatusOK, SharedItemsResponse{Items: items})
 }
 
-func listSharedPalettes(query string, limit int) ([]SharedItem, error) {
-	q := db.DB.Where("is_shared = ?", true)
+func listSharedItems(query string, sort SharedItemSort, limit int) ([]sharedItemView, error) {
+	paletteFilter := "WHERE is_shared = true AND shared_at IS NOT NULL"
+	themeFilter := "WHERE is_shared = true AND shared_at IS NOT NULL"
+	args := make([]any, 0, 3)
 	if query != "" {
-		q = q.Where("name ILIKE ?", "%"+query+"%")
+		paletteFilter += " AND name ILIKE ?"
+		args = append(args, "%"+query+"%")
+		themeFilter += " AND name ILIKE ?"
+		args = append(args, "%"+query+"%")
 	}
 
-	var rows []model.Palette
-	if err := q.Order("shared_at DESC").Limit(limit).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-
-	items := make([]SharedItem, 0, len(rows))
-	for _, row := range rows {
-		if row.SharedAt == nil {
-			continue
-		}
-
-		var colors []Color
-		if err := json.Unmarshal([]byte(row.JsonData), &colors); err != nil {
-			continue
-		}
-
-		items = append(items, SharedItem{
-			ID:        fmt.Sprintf("palette:%d", row.ID),
-			Kind:      SharedItemKindPalette,
-			Name:      row.Name,
-			Palette:   colors,
-			SharedAt:  *row.SharedAt,
-			CreatedAt: row.CreatedAt,
-		})
-	}
-
-	return items, nil
-}
-
-func listSharedThemes(query string, limit int) ([]SharedItem, error) {
-	q := db.DB.Where("is_shared = ?", true)
-	if query != "" {
-		q = q.Where("name ILIKE ?", "%"+query+"%")
-	}
-
-	var rows []model.Theme
-	if err := q.Order("shared_at DESC").Limit(limit).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-
-	items := make([]SharedItem, 0, len(rows))
-	for _, row := range rows {
-		if row.SharedAt == nil {
-			continue
-		}
-
-		themeDTO := themeDTOFromModel(row)
-
-		var colors ColorsFromJSON
-		err := json.Unmarshal(themeDTO.ThemeResult, &colors)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		var palette []Color
-		if len(colors.Colors) > 0 {
-			palette = colors.Colors
-		}
-
-		items = append(items, SharedItem{
-			ID:         fmt.Sprintf("theme:%d", row.ID),
-			Kind:       SharedItemKindTheme,
-			Name:       row.Name,
-			Palette:    palette,
-			SharedAt:   *row.SharedAt,
-			CreatedAt:  row.CreatedAt,
-			EditorType: row.EditorType,
-			Theme:      themeDTO,
-		})
-	}
-
-	return items, nil
-}
-
-func sortSharedItems(items []SharedItem, sortBy SharedItemSort) {
-	switch sortBy {
+	orderBy := "shared_at DESC, lower(name) ASC"
+	switch sort {
 	case SharedItemSortOldest:
-		gsort.Slice(items, func(i, j int) bool {
-			a := items[i]
-			b := items[j]
-			if a.SharedAt.Equal(b.SharedAt) {
-				return strings.ToLower(a.Name) < strings.ToLower(b.Name)
-			}
-			return a.SharedAt.Before(b.SharedAt)
-		})
+		orderBy = "shared_at ASC, lower(name) ASC"
 	case SharedItemSortName:
-		gsort.Slice(items, func(i, j int) bool {
-			a := items[i]
-			b := items[j]
-			nameA := strings.ToLower(strings.TrimSpace(a.Name))
-			nameB := strings.ToLower(strings.TrimSpace(b.Name))
-			if nameA == nameB {
-				return a.SharedAt.After(b.SharedAt)
-			}
-			return nameA < nameB
-		})
-	default:
-		gsort.Slice(items, func(i, j int) bool {
-			a := items[i]
-			b := items[j]
-			if a.SharedAt.Equal(b.SharedAt) {
-				return strings.ToLower(a.Name) < strings.ToLower(b.Name)
-			}
-			return a.SharedAt.After(b.SharedAt)
-		})
+		orderBy = "lower(name) ASC, shared_at DESC"
 	}
+
+	querySQL := fmt.Sprintf(`
+		SELECT * FROM (
+			SELECT 'palette' AS kind,
+				id AS item_id,
+				name,
+				json_data,
+				shared_at,
+				created_at,
+				NULL::text AS editor_type,
+				NULL::text AS signature
+			FROM palettes
+			%s
+			UNION ALL
+			SELECT 'theme' AS kind,
+				id AS item_id,
+				name,
+				json_data,
+				shared_at,
+				created_at,
+				editor_type,
+				signature
+			FROM themes
+			%s
+		) AS shared_items
+		ORDER BY %s
+		LIMIT ?`, paletteFilter, themeFilter, orderBy)
+
+	args = append(args, limit)
+
+	var rows []sharedItemView
+	if err := db.DB.Raw(querySQL, args...).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func parseSharedSort(raw string) SharedItemSort {

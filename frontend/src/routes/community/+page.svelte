@@ -13,7 +13,12 @@
 	import type { EditorThemeType } from '$lib/types/theme';
 	import BrandLinks from '$lib/components/ui/BrandLinks.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
-	import type { CommunityItem, CommunityItemSort } from '$lib/types/community';
+	import {
+		parseCommunityPalette,
+		parseCommunityTheme,
+		type CommunityItem,
+		type CommunityItemSort
+	} from '$lib/types/community';
 
 	type SharedPageData = {
 		items: CommunityItem[];
@@ -86,7 +91,8 @@
 
 	async function importAsTheme(item: CommunityItem) {
 		if (item.kind === 'palette') {
-			if (!item.palette || item.palette.length === 0) {
+			const palette = parseCommunityPalette(item.jsonData);
+			if (!palette) {
 				toast.error('This shared palette has no colors.');
 				return;
 			}
@@ -95,18 +101,18 @@
 			appStore.state.colors = [];
 			appStore.state.image = null;
 			appStore.state.imageLoaded = false;
-			appStore.state.themeExport.backupColors = item.palette.map((color) => ({ hex: color.hex }));
+			appStore.state.themeExport.backupColors = palette.map((color) => ({ hex: color.hex }));
 			await goto(resolve('/'));
 			popoverStore.state.current = 'themeExport';
 			return;
 		}
 
-		if (!item.theme || typeof item.theme !== 'object') {
+		const themeResult = parseCommunityTheme(item.jsonData);
+		if (!themeResult) {
 			toast.error('This shared theme is not importable.');
 			return;
 		}
-
-		const theme = item.theme.themeResult.theme;
+		const theme = themeResult.theme;
 		const editorType = (item.editorType as EditorThemeType | undefined) ?? detectThemeType(theme);
 		const appearance = detectThemeAppearance(theme);
 
@@ -180,13 +186,13 @@
 			</button>
 		</div>
 
-		{#if items.length === 0}
+		{#if !items || items.length === 0}
 			<p class="rounded-md border border-zinc-800 bg-zinc-900/60 px-4 py-6 text-center text-sm text-zinc-400">
 				{hasLoadError ? 'Could not load shared items. Please try again.' : 'No shared items found for this filter.'}
 			</p>
 		{:else}
 			<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-				{#each items as item (item.id)}
+				{#each items as item (item.kind + ':' + item.itemId)}
 					<li class="rounded-xl border border-zinc-700 bg-zinc-900/80 p-3">
 						<div class="mb-2 flex items-center justify-between gap-2">
 							<p class="truncate text-sm font-semibold" title={item.name}>{item.name}</p>
@@ -196,8 +202,8 @@
 						</div>
 
 						<div class="mb-2 flex flex-wrap gap-1">
-							{#if item.palette.length > 0}
-								{#each item.palette.slice(0, 12) as color, index (item.id + '-' + index)}
+							{#if parseCommunityPalette(item.jsonData)}
+								{#each parseCommunityPalette(item.jsonData)?.slice(0, 12) ?? [] as color, index (item.kind + ':' + item.itemId + '-' + index)}
 									<div
 										title={color.hex}
 										class="h-6 w-6 rounded-md border border-zinc-700"

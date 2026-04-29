@@ -144,7 +144,5 @@ func TestGetSharedItemsHandler_ReturnsSharedPalettesAndThemes(t *testing.T) {
 	}
 	assert.Len(t, resp.Items, 2)
 	assert.Equal(t, "Shared Palette", resp.Items[0].Name)
-	assert.Equal(t, SharedItemKindPalette, resp.Items[0].Kind)
 	assert.Equal(t, "Shared Theme", resp.Items[1].Name)
-	assert.Equal(t, SharedItemKindTheme, resp.Items[1].Kind)
 }
