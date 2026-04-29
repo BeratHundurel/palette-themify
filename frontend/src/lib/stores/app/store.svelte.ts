@@ -39,7 +39,7 @@ import {
 import * as preferencesApi from '$lib/api/preferences';
 import * as themesApi from '$lib/api/theme';
 import { dialogStore } from '$lib/stores/dialog.svelte';
-import { isLocalId } from '$lib/localId';
+import { isLocalId } from '$lib/utils';
 
 import { authStore } from '../auth.svelte';
 

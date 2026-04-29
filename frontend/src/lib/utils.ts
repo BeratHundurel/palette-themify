@@ -17,6 +17,13 @@ export function toggleThemeInspector(e: MouseEvent) {
 	popoverStore.toggle('themeExport', e);
 }
 
+export const LOCAL_ITEM_PREFIX = 'local_';
+
+export function isLocalId(id: string | number): boolean {
+	const strId = String(id);
+	return strId.startsWith(LOCAL_ITEM_PREFIX);
+}
+
 /**
  * Responsive canvas sizing
  * Returns the appropriate max width for the canvas based on viewport

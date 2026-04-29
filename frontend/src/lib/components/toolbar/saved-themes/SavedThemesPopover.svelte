@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { isLocalId } from '$lib/localId';
+	import { isLocalId } from '$lib/utils';
 	import ActionPillButton from '$lib/components/ui/ActionPillButton.svelte';
 	import ColorSwatch from '$lib/components/ui/ColorSwatch.svelte';
 	import DangerTextButton from '$lib/components/ui/DangerTextButton.svelte';
