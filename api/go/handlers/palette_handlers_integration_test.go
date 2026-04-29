@@ -13,6 +13,7 @@ import (
 	"themesmith/model"
 
 	"github.com/stretchr/testify/assert"
+	"gorm.io/datatypes"
 )
 
 func TestSavePaletteHandler_AuthRequired(t *testing.T) {
@@ -23,7 +24,7 @@ func TestSavePaletteHandler_AuthRequired(t *testing.T) {
 
 	reqBody, err := json.Marshal(SavePaletteRequest{
 		Name:    "My Palette",
-		Palette: []Color{{Hex: "#FF0000"}},
+		Palette: datatypes.JSON(`[{"hex": "#FF0000"}]`),
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -52,7 +53,7 @@ func TestSavePaletteHandler_Success(t *testing.T) {
 
 	reqBody, err := json.Marshal(SavePaletteRequest{
 		Name:    "My Palette",
-		Palette: []Color{{Hex: "#FF0000"}, {Hex: "#00FF00"}},
+		Palette: datatypes.JSON(`[{"hex": "#FF0000"}, {"hex": "#00FF00"}]`),
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -101,7 +102,7 @@ func TestGetPalettesHandler_ReturnsSavedPalettes(t *testing.T) {
 	resetTestDB(t)
 
 	user := createTestUser(t)
-	if err := saveUserPalette(user.ID, "Saved", []Color{{Hex: "#112233"}}); err != nil {
+	if err := saveUserPalette(user.ID, "Saved", datatypes.JSON(`[{"hex": "#112233"}]`)); err != nil {
 		t.Fatalf("save palette: %v", err)
 	}
 
@@ -125,7 +126,7 @@ func TestGetPalettesHandler_ReturnsSavedPalettes(t *testing.T) {
 	}
 	if assert.Len(t, resp.Palettes, 1) {
 		assert.Equal(t, "Saved", resp.Palettes[0].Name)
-		assert.Equal(t, "#112233", resp.Palettes[0].Palette[0].Hex)
+		assert.JSONEq(t, `[{"hex":"#112233"}]`, string(resp.Palettes[0].Palette))
 	}
 }
 
@@ -149,7 +150,7 @@ func TestDeletePaletteHandler_Success(t *testing.T) {
 	resetTestDB(t)
 
 	user := createTestUser(t)
-	if err := saveUserPalette(user.ID, "To Delete", []Color{{Hex: "#FF0000"}}); err != nil {
+	if err := saveUserPalette(user.ID, "To Delete", datatypes.JSON(`[{"hex": "#FF0000"}]`)); err != nil {
 		t.Fatalf("save palette: %v", err)
 	}
 
@@ -208,7 +209,7 @@ func TestDeletePaletteHandler_CannotDeleteOtherUsersPalette(t *testing.T) {
 	resetTestDB(t)
 
 	user1 := createTestUser(t)
-	if err := saveUserPalette(user1.ID, "User1 Palette", []Color{{Hex: "#FF0000"}}); err != nil {
+	if err := saveUserPalette(user1.ID, "User1 Palette", datatypes.JSON(`[{"hex": "#FF0000"}]`)); err != nil {
 		t.Fatalf("save palette: %v", err)
 	}
 
@@ -254,10 +255,10 @@ func TestDeletePalettesBatchHandler_RemovesOnlyNonSystemRequested(t *testing.T) 
 	resetTestDB(t)
 
 	user := createTestUser(t)
-	if err := saveUserPalette(user.ID, "Palette 1", []Color{{Hex: "#FF0000"}}); err != nil {
+	if err := saveUserPalette(user.ID, "Palette 1", datatypes.JSON(`[{"hex": "#FF0000"}]`)); err != nil {
 		t.Fatalf("save palette1: %v", err)
 	}
-	if err := saveUserPalette(user.ID, "Palette 2", []Color{{Hex: "#00FF00"}}); err != nil {
+	if err := saveUserPalette(user.ID, "Palette 2", datatypes.JSON(`[{"hex": "#00FF00"}]`)); err != nil {
 		t.Fatalf("save palette2: %v", err)
 	}
 
@@ -379,7 +380,7 @@ func TestDeletePalettesBatchHandler_IgnoresOtherUsersIDs(t *testing.T) {
 	resetTestDB(t)
 
 	owner := createTestUser(t)
-	if err := saveUserPalette(owner.ID, "Owner Palette", []Color{{Hex: "#AA0000"}}); err != nil {
+	if err := saveUserPalette(owner.ID, "Owner Palette", datatypes.JSON(`[{"hex": "#AA0000"}]`)); err != nil {
 		t.Fatalf("save owner palette: %v", err)
 	}
 
@@ -392,7 +393,7 @@ func TestDeletePalettesBatchHandler_IgnoresOtherUsersIDs(t *testing.T) {
 	if err := db.DB.Create(&otherUser).Error; err != nil {
 		t.Fatalf("create other user: %v", err)
 	}
-	if err := saveUserPalette(otherUser.ID, "Other Palette", []Color{{Hex: "#00AA00"}}); err != nil {
+	if err := saveUserPalette(otherUser.ID, "Other Palette", datatypes.JSON(`[{"hex": "#00AA00"}]`)); err != nil {
 		t.Fatalf("save other palette: %v", err)
 	}
 

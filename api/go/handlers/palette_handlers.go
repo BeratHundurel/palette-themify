@@ -27,18 +27,18 @@ type Color struct {
 }
 
 type PaletteDTO struct {
-	ID        uint       `json:"id"`
-	Name      string     `json:"name"`
-	Palette   []Color    `json:"palette"`
-	CreatedAt time.Time  `json:"createdAt"`
-	IsSystem  bool       `json:"isSystem"`
-	IsShared  bool       `json:"isShared"`
-	SharedAt  *time.Time `json:"sharedAt"`
+	ID        uint           `json:"id"`
+	Name      string         `json:"name"`
+	Palette   datatypes.JSON `json:"palette"`
+	CreatedAt time.Time      `json:"createdAt"`
+	IsSystem  bool           `json:"isSystem"`
+	IsShared  bool           `json:"isShared"`
+	SharedAt  *time.Time     `json:"sharedAt"`
 }
 
 type SavePaletteRequest struct {
-	Name    string  `json:"name" binding:"required"`
-	Palette []Color `json:"palette" binding:"required"`
+	Name    string         `json:"name" binding:"required"`
+	Palette datatypes.JSON `json:"palette" binding:"required"`
 }
 
 type SavePalettesBatchRequest struct {
@@ -210,19 +210,14 @@ func UnsharePaletteHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, palette)
 }
 
-func saveUserPalette(userID uint, name string, palette []Color) error {
+func saveUserPalette(userID uint, name string, palette datatypes.JSON) error {
 	if db.DB == nil {
 		return fmt.Errorf("database not available")
 	}
 
-	paletteJSON, err := json.Marshal(palette)
-	if err != nil {
-		return err
-	}
-
 	dbPalette := model.Palette{
 		UserID:   &userID,
-		JsonData: datatypes.JSON(paletteJSON),
+		JsonData: palette,
 		Name:     name,
 	}
 
@@ -267,15 +262,11 @@ func getUserPalettes(userID uint) ([]PaletteDTO, error) {
 
 	palettes := make([]PaletteDTO, len(dbPalettes))
 	for i, dbPalette := range dbPalettes {
-		var colors []Color
-		if err := json.Unmarshal([]byte(dbPalette.JsonData), &colors); err != nil {
-			continue
-		}
 
 		palettes[i] = PaletteDTO{
 			ID:        dbPalette.ID,
 			Name:      dbPalette.Name,
-			Palette:   colors,
+			Palette:   dbPalette.JsonData,
 			CreatedAt: dbPalette.CreatedAt,
 			IsSystem:  dbPalette.IsSystem,
 			IsShared:  dbPalette.IsShared,
@@ -339,15 +330,10 @@ func setPaletteShared(userID uint, paletteID string, shared bool) (PaletteDTO, e
 		return PaletteDTO{}, err
 	}
 
-	var colors []Color
-	if err := json.Unmarshal([]byte(palette.JsonData), &colors); err != nil {
-		return PaletteDTO{}, err
-	}
-
 	return PaletteDTO{
 		ID:        palette.ID,
 		Name:      palette.Name,
-		Palette:   colors,
+		Palette:   palette.JsonData,
 		CreatedAt: palette.CreatedAt,
 		IsSystem:  palette.IsSystem,
 		IsShared:  palette.IsShared,

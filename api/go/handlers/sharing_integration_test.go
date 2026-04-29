@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gorm.io/datatypes"
 )
 
 func TestShareThemeHandler_SetsSharedFlags(t *testing.T) {
@@ -91,7 +92,7 @@ func TestGetSharedItemsHandler_ReturnsSharedPalettesAndThemes(t *testing.T) {
 	resetTestDB(t)
 
 	user := createTestUser(t)
-	if err := saveUserPalette(user.ID, "Shared Palette", []Color{{Hex: "#112233"}, {Hex: "#445566"}}); err != nil {
+	if err := saveUserPalette(user.ID, "Shared Palette", datatypes.JSON(`[{"hex": "#112233"}, {"hex": "#445566"}]`)); err != nil {
 		t.Fatalf("save palette: %v", err)
 	}
 
