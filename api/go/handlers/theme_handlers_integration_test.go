@@ -400,7 +400,7 @@ func TestDeleteThemesBatchHandler_RemovesOnlyRequestedThemes(t *testing.T) {
 
 	router := setupThemeRouter()
 	body, err := json.Marshal(map[string]any{
-		"ids": []string{fmt.Sprintf("%d", theme1.ID), fmt.Sprintf("%d", theme2.ID)},
+		"ids": []uint{theme1.ID, theme2.ID},
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -454,7 +454,7 @@ func TestDeleteThemesBatchHandler_EmptyIDs(t *testing.T) {
 	}
 
 	router := setupThemeRouter()
-	body, err := json.Marshal(map[string]any{"ids": []string{}})
+	body, err := json.Marshal(map[string]any{"ids": []uint{}})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
 	}
@@ -474,7 +474,7 @@ func TestDeleteThemesBatchHandler_AuthRequired(t *testing.T) {
 	resetTestDB(t)
 
 	router := setupThemeRouter()
-	body, err := json.Marshal(map[string]any{"ids": []string{"1"}})
+	body, err := json.Marshal(map[string]any{"ids": []uint{1}})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
 	}
@@ -514,7 +514,7 @@ func TestDeleteThemesBatchHandler_IgnoresOtherUsersIDs(t *testing.T) {
 
 	router := setupThemeRouter()
 	body, err := json.Marshal(map[string]any{
-		"ids": []string{fmt.Sprintf("%d", ownerTheme.ID), fmt.Sprintf("%d", otherTheme.ID)},
+		"ids": []uint{ownerTheme.ID, otherTheme.ID},
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)

@@ -281,7 +281,7 @@ func TestDeletePalettesBatchHandler_RemovesOnlyNonSystemRequested(t *testing.T) 
 
 	router := setupPaletteRouter()
 	body, err := json.Marshal(map[string]any{
-		"ids": []string{fmt.Sprintf("%d", palettes[0].ID), fmt.Sprintf("%d", palettes[1].ID)},
+		"ids": []uint{palettes[0].ID, palettes[1].ID},
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -341,7 +341,7 @@ func TestDeletePalettesBatchHandler_EmptyIDs(t *testing.T) {
 	}
 
 	router := setupPaletteRouter()
-	body, err := json.Marshal(map[string]any{"ids": []string{}})
+	body, err := json.Marshal(map[string]any{"ids": []uint{}})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
 	}
@@ -361,7 +361,7 @@ func TestDeletePalettesBatchHandler_AuthRequired(t *testing.T) {
 	resetTestDB(t)
 
 	router := setupPaletteRouter()
-	body, err := json.Marshal(map[string]any{"ids": []string{"1"}})
+	body, err := json.Marshal(map[string]any{"ids": []uint{1}})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
 	}
@@ -409,7 +409,7 @@ func TestDeletePalettesBatchHandler_IgnoresOtherUsersIDs(t *testing.T) {
 
 	router := setupPaletteRouter()
 	body, err := json.Marshal(map[string]any{
-		"ids": []string{fmt.Sprintf("%d", ownerPalette.ID), fmt.Sprintf("%d", otherPalette.ID)},
+		"ids": []uint{ownerPalette.ID, otherPalette.ID},
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
