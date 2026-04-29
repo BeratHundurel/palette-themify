@@ -115,7 +115,7 @@ function resetStoreForTest() {
 	appStore.state.imageLoaded = false;
 	appStore.state.isExtracting = false;
 	appStore.state.savedPalettes = [];
-	appStore.state.savedThemes = [];
+	appStore.state.themes = [];
 
 	appStore.state.themeExport.themeResult = null;
 	appStore.state.themeExport.themeName = 'Generated Theme';
@@ -618,9 +618,9 @@ describe('appStore', () => {
 
 			appStore.saveThemeToLocal(theme);
 
-			expect(appStore.state.savedThemes).toHaveLength(1);
-			expect(appStore.state.savedThemes[0].id).toBe('theme-1');
-			expect(appStore.state.savedThemes[0].signature).toBe(JSON.stringify(theme.themeResult));
+			expect(appStore.state.themes).toHaveLength(1);
+			expect(appStore.state.themes[0].id).toBe('theme-1');
+			expect(appStore.state.themes[0].signature).toBe(JSON.stringify(theme.themeResult));
 			const persisted = JSON.parse(localStorage.getItem('savedThemes') as string);
 			expect(persisted[0].id).toBe('theme-1');
 			expect(persistThemeChangeSpy).toHaveBeenCalledWith(
@@ -638,13 +638,13 @@ describe('appStore', () => {
 				...makeTheme('theme-2', 'Incoming'),
 				signature: 'same-signature'
 			};
-			appStore.state.savedThemes = [existing];
+			appStore.state.themes = [existing];
 
 			appStore.applyThemeResponse(incoming);
 
-			expect(appStore.state.savedThemes).toHaveLength(1);
-			expect(appStore.state.savedThemes[0].id).toBe('theme-2');
-			expect(appStore.state.savedThemes[0].name).toBe('Incoming');
+			expect(appStore.state.themes).toHaveLength(1);
+			expect(appStore.state.themes[0].id).toBe('theme-2');
+			expect(appStore.state.themes[0].name).toBe('Incoming');
 		});
 
 		it('skips remote theme persistence when user is unauthenticated', async () => {
@@ -699,14 +699,14 @@ describe('appStore', () => {
 				expect.arrayContaining([expect.objectContaining({ id: 'local-theme-1', signature: expect.any(String) })])
 			);
 			expect(themeApi.getThemes).toHaveBeenCalledTimes(1);
-			expect(appStore.state.savedThemes).toEqual([makeTheme('server-theme-1', 'Server Theme')]);
+			expect(appStore.state.themes).toEqual([makeTheme('server-theme-1', 'Server Theme')]);
 			const persisted = JSON.parse(localStorage.getItem('savedThemes') as string);
 			expect(persisted[0].id).toBe('server-theme-1');
 		});
 
 		it('moves in-memory themes to local storage when logging out', async () => {
 			authStoreMock.state.isAuthenticated = false;
-			appStore.state.savedThemes = [makeTheme('theme-memory-1', 'Memory Theme')];
+			appStore.state.themes = [makeTheme('theme-memory-1', 'Memory Theme')];
 
 			await appStore.syncSavedThemesOnAuth();
 
@@ -717,13 +717,13 @@ describe('appStore', () => {
 		});
 
 		it('falls back to empty saved themes when API fetch fails', async () => {
-			appStore.state.savedThemes = [makeTheme('existing-theme', 'Existing')];
+			appStore.state.themes = [makeTheme('existing-theme', 'Existing')];
 			vi.spyOn(console, 'error').mockImplementation(() => {});
 			vi.mocked(themeApi.getThemes).mockRejectedValue(new Error('api down'));
 
 			await appStore.loadSavedThemesFromApi();
 
-			expect(appStore.state.savedThemes).toEqual([]);
+			expect(appStore.state.themes).toEqual([]);
 		});
 
 		it('keeps execution safe when remote theme sync throws', async () => {

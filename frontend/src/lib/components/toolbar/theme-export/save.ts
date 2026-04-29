@@ -48,7 +48,7 @@ export async function saveTheme({ name, editorType, themeResult }: SaveThemeArgs
 
 	const normalizedName = normalizeThemeName(trimmedName);
 	const signature = appStore.getThemeSignature(themeResult);
-	const existingThemes = appStore.state.savedThemes;
+	const existingThemes = appStore.state.themes;
 
 	const identicalTheme = existingThemes.find((item) => {
 		const existingSignature = item.signature ?? appStore.getThemeSignature(item.themeResult);

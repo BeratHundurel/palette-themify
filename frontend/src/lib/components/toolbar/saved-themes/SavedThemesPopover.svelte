@@ -92,17 +92,17 @@
 	}
 
 	async function handleDeleteAllThemes() {
-		if (appStore.state.savedThemes.length === 0) return;
+		if (appStore.state.themes.length === 0) return;
 
 		const shouldDeleteAll = await dialogStore.confirm({
 			title: 'Delete all saved themes?',
-			message: `This will permanently delete ${appStore.state.savedThemes.length} saved theme${appStore.state.savedThemes.length === 1 ? '' : 's'}.`,
+			message: `This will permanently delete ${appStore.state.themes.length} saved theme${appStore.state.themes.length === 1 ? '' : 's'}.`,
 			confirmLabel: 'Delete all',
 			variant: 'danger'
 		});
 		if (!shouldDeleteAll) return;
 
-		const themeIds = appStore.state.savedThemes.map((item) => item.id);
+		const themeIds = appStore.state.themes.map((item) => item.id);
 		await appStore.deleteThemes(themeIds);
 	}
 
@@ -136,13 +136,13 @@
 		<DangerTextButton
 			onclick={handleDeleteAllThemes}
 			title="Delete all saved themes"
-			disabled={appStore.state.savedThemes.length === 0}
+			disabled={appStore.state.themes.length === 0}
 		>
 			Delete all
 		</DangerTextButton>
 	</div>
 	<div class="scrollable-content custom-scrollbar max-h-72 overflow-y-auto">
-		{#if appStore.state.savedThemes.length === 0}
+		{#if appStore.state.themes.length === 0}
 			<EmptyState>
 				<svg class="mb-3 h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -157,7 +157,7 @@
 			</EmptyState>
 		{:else}
 			<ul class="flex flex-col gap-3">
-				{#each appStore.state.savedThemes as item (item.id)}
+				{#each appStore.state.themes as item (item.id)}
 					<li
 						class="hover:border-brand/50 group relative overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-white/5"
 					>

@@ -37,6 +37,6 @@ export interface AppState {
 	sortMethod: SortMethod;
 	applyPaletteSettings: ApplyPaletteSettings;
 	themeExport: ThemeExportState;
-	savedThemes: ThemeItem[];
+	themes: ThemeItem[];
 	paletteVersion: number;
 }

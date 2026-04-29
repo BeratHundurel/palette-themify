@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { clearSavedThemes, loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/savedThemes';
+import { clearSavedThemes, loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/themes';
 
 const STORAGE_KEY = 'savedThemes';
 

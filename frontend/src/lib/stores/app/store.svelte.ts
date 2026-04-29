@@ -17,7 +17,7 @@ import { DEFAULT_THEME_EXPORT_PREFERENCES, type ThemeItem, type ThemeExportPrefe
 import { DEFAULT_WALLHAVEN_SETTINGS, type WallhavenSettings } from '$lib/types/wallhaven';
 import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
 
-import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/savedThemes';
+import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/themes';
 import {
 	loadWallhavenSettings,
 	parseWallhavenSettings,
@@ -94,7 +94,7 @@ function createAppStore() {
 			loadedThemeOverridesReference: null,
 			backupColors: null
 		},
-		savedThemes: loadSavedThemes(),
+		themes: loadSavedThemes(),
 		paletteVersion: 0
 	});
 
@@ -363,28 +363,28 @@ function createAppStore() {
 
 		saveThemeToLocal(theme: ThemeItem) {
 			const preparedTheme = this.ensureThemeSignature(theme);
-			state.savedThemes = [preparedTheme, ...state.savedThemes];
-			saveSavedThemes(state.savedThemes);
+			state.themes = [preparedTheme, ...state.themes];
+			saveSavedThemes(state.themes);
 			this.persistThemeChange(preparedTheme, 'create');
 		},
 
 		replaceSavedTheme(themeId: string, theme: ThemeItem) {
-			const index = state.savedThemes.findIndex((item) => item.id === themeId);
+			const index = state.themes.findIndex((item) => item.id === themeId);
 			const preparedTheme = this.ensureThemeSignature(theme);
 			if (index === -1) {
-				state.savedThemes = [preparedTheme, ...state.savedThemes];
+				state.themes = [preparedTheme, ...state.themes];
 			} else {
-				const next = [...state.savedThemes];
+				const next = [...state.themes];
 				next[index] = preparedTheme;
-				state.savedThemes = next;
+				state.themes = next;
 			}
-			saveSavedThemes(state.savedThemes);
+			saveSavedThemes(state.themes);
 			this.persistThemeChange(preparedTheme, 'update', themeId);
 		},
 
 		deleteTheme(themeId: string) {
-			state.savedThemes = state.savedThemes.filter((item) => item.id !== themeId);
-			saveSavedThemes(state.savedThemes);
+			state.themes = state.themes.filter((item) => item.id !== themeId);
+			saveSavedThemes(state.themes);
 			this.persistThemeChange(null, 'delete', themeId);
 		},
 
@@ -392,9 +392,9 @@ function createAppStore() {
 			if (themeIds.length === 0) return;
 
 			const uniqueThemeIds = Array.from(new Set(themeIds));
-			const previousThemes = [...state.savedThemes];
-			state.savedThemes = state.savedThemes.filter((item) => !uniqueThemeIds.includes(item.id));
-			saveSavedThemes(state.savedThemes);
+			const previousThemes = [...state.themes];
+			state.themes = state.themes.filter((item) => !uniqueThemeIds.includes(item.id));
+			saveSavedThemes(state.themes);
 
 			if (!browser || !authStore.state.isAuthenticated) return;
 
@@ -404,10 +404,11 @@ function createAppStore() {
 			try {
 				await themesApi.deleteThemes(remoteThemeIds);
 				await this.loadSavedThemesFromApi();
+				toast.success('Themes deleted successfully');
 			} catch (error) {
 				console.error('Failed to sync theme batch delete:', error);
-				state.savedThemes = previousThemes;
-				saveSavedThemes(state.savedThemes);
+				state.themes = previousThemes;
+				saveSavedThemes(state.themes);
 				toast.error('Could not delete the themes. Please try again.');
 			}
 		},
@@ -475,8 +476,8 @@ function createAppStore() {
 				}
 				await this.loadSavedThemesFromApi();
 			} else {
-				if (state.savedThemes.length > 0) {
-					localStorage.setItem('savedThemes', JSON.stringify(state.savedThemes));
+				if (state.themes.length > 0) {
+					localStorage.setItem('savedThemes', JSON.stringify(state.themes));
 				}
 			}
 		},
@@ -484,18 +485,18 @@ function createAppStore() {
 		async loadSavedThemesFromApi() {
 			try {
 				const response = await themesApi.getThemes();
-				state.savedThemes = response.themes;
-				saveSavedThemes(state.savedThemes);
+				state.themes = response.themes;
+				saveSavedThemes(state.themes);
 			} catch (error) {
 				console.error('Failed to load saved themes:', error);
-				state.savedThemes = [];
+				state.themes = [];
 			}
 		},
 
 		applyThemeResponse(theme: ThemeItem, sourceThemeId?: string) {
 			const preparedTheme = this.ensureThemeSignature(theme);
 			const preparedResultSignature = this.getThemeSignature(preparedTheme.themeResult);
-			const existingIndex = state.savedThemes.findIndex(
+			const existingIndex = state.themes.findIndex(
 				(item) =>
 					(sourceThemeId ? item.id === sourceThemeId : false) ||
 					item.id === preparedTheme.id ||
@@ -503,13 +504,13 @@ function createAppStore() {
 					this.getThemeSignature(item.themeResult) === preparedResultSignature
 			);
 			if (existingIndex === -1) {
-				state.savedThemes = [preparedTheme, ...state.savedThemes];
+				state.themes = [preparedTheme, ...state.themes];
 			} else {
-				const next = [...state.savedThemes];
+				const next = [...state.themes];
 				next[existingIndex] = preparedTheme;
-				state.savedThemes = next;
+				state.themes = next;
 			}
-			saveSavedThemes(state.savedThemes);
+			saveSavedThemes(state.themes);
 		},
 
 		ensureThemeSignature(theme: ThemeItem): ThemeItem {

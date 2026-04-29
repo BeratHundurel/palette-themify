@@ -46,7 +46,7 @@ type SavePalettesBatchRequest struct {
 }
 
 type DeletePalettesRequest struct {
-	IDs []string `json:"ids"`
+	IDs []uint `json:"ids"`
 }
 
 type GetPalettesResponse struct {
@@ -297,7 +297,7 @@ func deleteUserPalette(userID uint, paletteID string) error {
 	return nil
 }
 
-func deleteUserPalettes(userID uint, paletteIDs []string) error {
+func deleteUserPalettes(userID uint, paletteIDs []uint) error {
 	if db.DB == nil {
 		return fmt.Errorf("database not available")
 	}

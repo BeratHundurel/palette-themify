@@ -62,7 +62,7 @@ type UpdateThemeRequest struct {
 }
 
 type DeleteThemesRequest struct {
-	IDs []string `json:"ids"`
+	IDs []uint `json:"ids"`
 }
 
 func SaveThemeHandler(c *gin.Context) {
