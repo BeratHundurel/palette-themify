@@ -183,7 +183,8 @@ export function getDesktopAppDownloadUrl(): string {
 }
 
 export function getDesktopSaveErrorMessage(error: unknown): string {
-	const message = error instanceof Error ? error.message : '';
+	const message = getErrorMessage(error);
+	const normalizedMessage = message.toLowerCase();
 
 	if (message.includes('Desktop save bridge is not available')) {
 		return 'Could not connect to the desktop bridge. Please restart the app and try again.';
@@ -197,7 +198,43 @@ export function getDesktopSaveErrorMessage(error: unknown): string {
 		return 'This action is only available from the desktop app window.';
 	}
 
+	if (
+		normalizedMessage.includes('permission denied') ||
+		normalizedMessage.includes('access is denied') ||
+		normalizedMessage.includes('operation not permitted') ||
+		normalizedMessage.includes('read-only file system')
+	) {
+		return 'ThemeSmith does not have permission to update the editor theme folder. Check the folder permissions or security software, then try again.';
+	}
+
+	if (normalizedMessage.includes('no space left') || normalizedMessage.includes('disk is full')) {
+		return 'The theme could not be installed because the destination drive is full.';
+	}
+
+	if (normalizedMessage.includes('file name too long') || normalizedMessage.includes('path too long')) {
+		return 'The editor theme path is too long. Try a shorter theme name.';
+	}
+
+	if (normalizedMessage.includes('failed to parse existing vs code package.json')) {
+		return 'The ThemeSmith VS Code manifest is invalid. Rename its package.json inside the themesmith-local extension folder, then try again.';
+	}
+
+	if (normalizedMessage.includes('theme json is invalid')) {
+		return 'The generated theme data is invalid and was not installed.';
+	}
+
+	if (normalizedMessage.includes('unsupported os')) {
+		return 'Installing themes for this editor is not supported on your operating system.';
+	}
+
 	return 'Could not save the theme to your editor. Please try again.';
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	if (typeof error === 'string') return error;
+	if (isRecord(error) && typeof error.message === 'string') return error.message;
+	return '';
 }
 
 export async function saveThemeToEditorTarget(args: {

@@ -166,7 +166,7 @@ export async function exportThemeToEditorFolder({ name, editorType, themeResult,
 			});
 		}
 
-		toast.success('Theme saved to editor folder');
+		toast.success('Theme installed. Reload your editor if it is already open.');
 		popoverStore.close('themeExport');
 	} catch (error) {
 		console.error('Error saving theme to editor folder:', error);

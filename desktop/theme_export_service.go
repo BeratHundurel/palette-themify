@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,9 +40,18 @@ type generatedThemeMeta struct {
 	Type string `json:"type"`
 }
 
+type fileSnapshot struct {
+	content []byte
+	mode    fs.FileMode
+	exists  bool
+}
+
 func (s *ThemeExportService) SaveThemeToEditorTarget(editorType string, themeName string, themeJSON string) (string, error) {
 	if strings.TrimSpace(themeJSON) == "" {
 		return "", errors.New("theme JSON cannot be empty")
+	}
+	if !json.Valid([]byte(themeJSON)) {
+		return "", errors.New("theme JSON is invalid")
 	}
 
 	switch strings.ToLower(strings.TrimSpace(editorType)) {
@@ -57,7 +69,10 @@ func saveThemeToVSCode(themeName string, themeJSON string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not resolve user home directory: %w", err)
 	}
+	return saveThemeToVSCodeAt(home, themeName, themeJSON)
+}
 
+func saveThemeToVSCodeAt(home string, themeName string, themeJSON string) (string, error) {
 	resolvedThemeName := sanitizeThemeName(themeName)
 	if resolvedThemeName == "" {
 		resolvedThemeName = "generated-theme"
@@ -66,16 +81,27 @@ func saveThemeToVSCode(themeName string, themeJSON string) (string, error) {
 	extensionDirectory := filepath.Join(home, ".vscode", "extensions", "themesmith-local")
 	themesDirectory := filepath.Join(extensionDirectory, "themes")
 	if err := os.MkdirAll(themesDirectory, 0o755); err != nil {
-		return "", fmt.Errorf("failed to create VS Code theme directory: %w", err)
+		return "", filesystemError("create VS Code theme directory", themesDirectory, err)
 	}
 
 	themeFileName := resolvedThemeName + ".json"
 	themeFilePath := filepath.Join(themesDirectory, themeFileName)
-	if err := os.WriteFile(themeFilePath, prettyJSON(themeJSON, "    "), 0o644); err != nil {
-		return "", fmt.Errorf("failed to write VS Code theme file: %w", err)
+	themeSnapshot, err := snapshotFile(themeFilePath)
+	if err != nil {
+		return "", filesystemError("read existing VS Code theme file", themeFilePath, err)
+	}
+	if err := writeFileSafely(themeFilePath, prettyJSON(themeJSON, "    "), 0o644); err != nil {
+		return "", filesystemError("write VS Code theme file", themeFilePath, err)
 	}
 
-	if err := updateVSCodePackageJSON(extensionDirectory, themeName, themeFileName, inferVSCodeUITheme(themeJSON)); err != nil {
+	themeLabel := strings.TrimSpace(themeName)
+	if themeLabel == "" {
+		themeLabel = "Generated Theme"
+	}
+	if err := updateVSCodePackageJSON(extensionDirectory, themeLabel, themeFileName, inferVSCodeUITheme(themeJSON)); err != nil {
+		if rollbackErr := restoreFile(themeFilePath, themeSnapshot); rollbackErr != nil {
+			return "", errors.Join(err, fmt.Errorf("failed to roll back VS Code theme file: %w", rollbackErr))
+		}
 		return "", err
 	}
 
@@ -94,12 +120,12 @@ func saveThemeToZed(themeName string, themeJSON string) (string, error) {
 	}
 
 	if err := os.MkdirAll(targetDirectory, 0o755); err != nil {
-		return "", fmt.Errorf("failed to create Zed theme directory: %w", err)
+		return "", filesystemError("create Zed theme directory", targetDirectory, err)
 	}
 
 	filePath := filepath.Join(targetDirectory, resolvedThemeName+".json")
-	if err := os.WriteFile(filePath, prettyJSON(themeJSON, "    "), 0o644); err != nil {
-		return "", fmt.Errorf("failed to write Zed theme file: %w", err)
+	if err := writeFileSafely(filePath, prettyJSON(themeJSON, "    "), 0o644); err != nil {
+		return "", filesystemError("write Zed theme file", filePath, err)
 	}
 
 	return filePath, nil
@@ -111,21 +137,25 @@ func resolveZedThemeDirectory() (string, error) {
 		return "", fmt.Errorf("could not resolve user home directory: %w", err)
 	}
 
-	switch runtime.GOOS {
+	return resolveZedThemeDirectoryFor(runtime.GOOS, home, os.LookupEnv)
+}
+
+func resolveZedThemeDirectoryFor(goos string, home string, lookupEnv func(string) (string, bool)) (string, error) {
+	switch goos {
 	case "windows":
-		if appData, ok := os.LookupEnv("APPDATA"); ok && strings.TrimSpace(appData) != "" {
+		if appData, ok := lookupEnv("APPDATA"); ok && strings.TrimSpace(appData) != "" {
 			return filepath.Join(appData, "Zed", "themes"), nil
 		}
 		return filepath.Join(home, "AppData", "Roaming", "Zed", "themes"), nil
 	case "darwin":
-		return filepath.Join(home, "Library", "Application Support", "Zed", "themes"), nil
+		return filepath.Join(home, ".config", "zed", "themes"), nil
 	case "linux":
-		if xdgConfigHome, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok && strings.TrimSpace(xdgConfigHome) != "" {
+		if xdgConfigHome, ok := lookupEnv("XDG_CONFIG_HOME"); ok && strings.TrimSpace(xdgConfigHome) != "" {
 			return filepath.Join(xdgConfigHome, "zed", "themes"), nil
 		}
 		return filepath.Join(home, ".config", "zed", "themes"), nil
 	default:
-		return "", fmt.Errorf("unsupported OS for Zed target: %s", runtime.GOOS)
+		return "", fmt.Errorf("unsupported OS for Zed target: %s", goos)
 	}
 }
 
@@ -149,7 +179,8 @@ func updateVSCodePackageJSON(extensionDirectory string, themeLabel string, theme
 	replaced := false
 
 	for _, entry := range packageData.Contributes.Themes {
-		if strings.EqualFold(strings.TrimSpace(entry.Label), strings.TrimSpace(themeLabel)) {
+		if strings.EqualFold(strings.TrimSpace(entry.Label), strings.TrimSpace(themeLabel)) ||
+			strings.EqualFold(filepath.Clean(entry.Path), filepath.Clean("./themes/"+themeFileName)) {
 			filteredThemes = append(filteredThemes, vscodeThemeEntry{
 				Label:   themeLabel,
 				UITheme: uiTheme,
@@ -178,8 +209,8 @@ func updateVSCodePackageJSON(extensionDirectory string, themeLabel string, theme
 	}
 
 	encoded = append(encoded, '\n')
-	if err := os.WriteFile(packagePath, encoded, 0o644); err != nil {
-		return fmt.Errorf("failed to write VS Code package.json: %w", err)
+	if err := writeFileSafely(packagePath, encoded, 0o644); err != nil {
+		return filesystemError("write VS Code extension manifest", packagePath, err)
 	}
 
 	return nil
@@ -237,6 +268,96 @@ func prettyJSON(raw string, indent string) []byte {
 	return encoded
 }
 
+func writeFileSafely(path string, content []byte, mode fs.FileMode) (returnErr error) {
+	temporaryFile, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+"-*")
+	if err != nil {
+		return err
+	}
+	temporaryPath := temporaryFile.Name()
+	temporaryFileOpen := true
+	defer func() {
+		if temporaryFileOpen {
+			if closeErr := temporaryFile.Close(); returnErr == nil && closeErr != nil {
+				returnErr = closeErr
+			}
+		}
+		if removeErr := os.Remove(temporaryPath); returnErr == nil && removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			returnErr = removeErr
+		}
+	}()
+
+	if err := temporaryFile.Chmod(mode); err != nil {
+		return err
+	}
+	if _, err := temporaryFile.Write(content); err != nil {
+		return err
+	}
+	if err := temporaryFile.Sync(); err != nil {
+		return err
+	}
+	if err := temporaryFile.Close(); err != nil {
+		return err
+	}
+	temporaryFileOpen = false
+
+	// Chmod clears the read-only attribute on Windows for themes previously created by another tool.
+	if _, err := os.Stat(path); err == nil {
+		if err := os.Chmod(path, mode); err != nil {
+			return err
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	if err := os.Rename(temporaryPath, path); err != nil {
+		return err
+	}
+
+	written, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(written, content) {
+		return errors.New("saved file verification failed")
+	}
+
+	return nil
+}
+
+func snapshotFile(path string) (fileSnapshot, error) {
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return fileSnapshot{}, nil
+	}
+	if err != nil {
+		return fileSnapshot{}, err
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return fileSnapshot{}, err
+	}
+
+	return fileSnapshot{content: content, mode: info.Mode().Perm(), exists: true}, nil
+}
+
+func restoreFile(path string, snapshot fileSnapshot) error {
+	if snapshot.exists {
+		return writeFileSafely(path, snapshot.content, snapshot.mode)
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+func filesystemError(action string, path string, err error) error {
+	if errors.Is(err, fs.ErrPermission) {
+		return fmt.Errorf("permission denied: cannot %s at %q: %w", action, path, err)
+	}
+	return fmt.Errorf("failed to %s at %q: %w", action, path, err)
+}
+
 func sanitizeThemeName(name string) string {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
@@ -267,5 +388,27 @@ func sanitizeThemeName(name string) string {
 		sanitized = strings.ReplaceAll(sanitized, "--", "-")
 	}
 
+	if isWindowsReservedFileName(sanitized) {
+		sanitized = "theme-" + sanitized
+	}
+
+	const maxRunes = 80
+	runes := []rune(sanitized)
+	if len(runes) > maxRunes {
+		digest := sha256.Sum256([]byte(sanitized))
+		suffix := fmt.Sprintf("-%x", digest[:5])
+		sanitized = string(runes[:maxRunes-len(suffix)]) + suffix
+	}
+
 	return sanitized
+}
+
+func isWindowsReservedFileName(name string) bool {
+	switch strings.ToUpper(name) {
+	case "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9":
+		return true
+	default:
+		return false
+	}
 }

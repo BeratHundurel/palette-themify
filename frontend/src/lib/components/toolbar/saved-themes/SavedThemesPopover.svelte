@@ -27,7 +27,7 @@
 				themeName: item.name,
 				themeJSON: themeJson
 			});
-			toast.success('Theme saved to editor folder');
+			toast.success('Theme installed. Reload your editor if it is already open.');
 			popoverStore.close('themes');
 		} catch (error) {
 			console.error('Error saving theme to editor folder:', error);
