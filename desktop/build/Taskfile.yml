@@ -116,7 +116,7 @@ tasks:
     summary: Runs the frontend in development mode
     dir: ../frontend
     cmds:
-      - npm run dev -- --port {{.VITE_PORT}} --strictPort
+      - npm run dev -- --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
     env:
       VITE_APP_TARGET: desktop
 
