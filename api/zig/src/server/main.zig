@@ -2,8 +2,8 @@ const std = @import("std");
 const httpz = @import("httpz");
 const palette_api = @import("palette_themify_api").palette_api;
 
-const PORT: u16 = 8089;
-const MAX_BODY_SIZE: usize = 50 * 1024 * 1024;
+const DEFAULT_PORT: u16 = 8089;
+const DEFAULT_MAX_BODY_SIZE_MB: usize = 50;
 
 const ApiHandler = struct {
     pub fn notFound(_: *ApiHandler, _: *httpz.Request, res: *httpz.Response) !void {
@@ -107,19 +107,24 @@ fn generateOverridable(_: *ApiHandler, req: *httpz.Request, res: *httpz.Response
 
 pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.smp_allocator;
+    const port = try environmentUnsigned(u16, init.environ_map, "PORT", DEFAULT_PORT);
+    const max_body_size_mb = try environmentUnsigned(usize, init.environ_map, "MAX_BODY_SIZE_MB", DEFAULT_MAX_BODY_SIZE_MB);
+    if (max_body_size_mb == 0 or max_body_size_mb > 1024) return error.InvalidMaxBodySize;
+    const max_body_size = max_body_size_mb * 1024 * 1024;
+    const cors_origin = init.environ_map.get("ALLOWED_ORIGIN") orelse "*";
 
-    std.log.info("Zig Palette API starting on http://localhost:{d}", .{PORT});
+    std.log.info("Zig Palette API starting on port {d}", .{port});
 
     var handler = ApiHandler{};
     var server = try httpz.Server(*ApiHandler).init(init.io, allocator, .{
-        .address = .all(PORT),
-        .request = .{ .max_body_size = MAX_BODY_SIZE },
+        .address = .all(port),
+        .request = .{ .max_body_size = max_body_size },
     }, &handler);
     defer server.stop();
     defer server.deinit();
 
     const cors = try server.middleware(httpz.middleware.Cors, .{
-        .origin = "*",
+        .origin = cors_origin,
         .methods = "GET, POST, PUT, DELETE, OPTIONS",
         .headers = "Content-Type, Authorization, Accept",
         .max_age = "86400",
@@ -132,4 +137,14 @@ pub fn main(init: std.process.Init) !void {
     router.post("/generate-overridable", generateOverridable, .{});
 
     try server.listen();
+}
+
+fn environmentUnsigned(
+    comptime T: type,
+    environment: *const std.process.Environ.Map,
+    name: []const u8,
+    fallback: T,
+) !T {
+    const raw_value = environment.get(name) orelse return fallback;
+    return std.fmt.parseUnsigned(T, raw_value, 10) catch error.InvalidEnvironmentVariable;
 }

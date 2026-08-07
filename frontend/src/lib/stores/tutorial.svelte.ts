@@ -72,8 +72,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 	},
 	{
 		id: 'theme-editor',
-		title: 'Target VS Code or Zed',
-		description: 'Toggle editor type to generate the correct theme schema for your editor.',
+		title: 'Target a VS Code-family editor or Zed',
+		description: 'Choose the shared VS Code-family format or the separate Zed schema.',
 		element: '#tutorial-theme-editor-options',
 		position: 'top',
 		action: 'click',

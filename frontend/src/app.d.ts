@@ -1,16 +1,28 @@
-import type { EditorThemeType } from '$lib/types/theme';
+import type { EditorInstallTarget } from '$lib/types/theme';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
+	interface ImportMetaEnv {
+		readonly VITE_API_BASE_URL?: string;
+		readonly VITE_ZIG_API_BASE_URL?: string;
+		readonly VITE_TELEMETRY_ENABLED?: string;
+		readonly VITE_APP_ENV?: string;
+		readonly VITE_APP_TARGET?: 'web' | 'desktop';
+	}
+
+	interface ImportMeta {
+		readonly env: ImportMetaEnv;
+	}
+
 	interface Window {
 		__THEMESMITH_DESKTOP__?: {
-			saveThemeToEditorTarget(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string>;
+			saveThemeToEditorTarget(target: EditorInstallTarget, themeName: string, themeJSON: string): Promise<string>;
 		};
 		go?: {
 			main?: {
 				ThemeExportService?: {
-					SaveThemeToEditorTarget(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string>;
+					SaveThemeToEditorTarget(target: EditorInstallTarget, themeName: string, themeJSON: string): Promise<string>;
 				};
 			};
 		};

@@ -46,7 +46,7 @@ type fileSnapshot struct {
 	exists  bool
 }
 
-func (s *ThemeExportService) SaveThemeToEditorTarget(editorType string, themeName string, themeJSON string) (string, error) {
+func (s *ThemeExportService) SaveThemeToEditorTarget(editorTarget string, themeName string, themeJSON string) (string, error) {
 	if strings.TrimSpace(themeJSON) == "" {
 		return "", errors.New("theme JSON cannot be empty")
 	}
@@ -54,31 +54,39 @@ func (s *ThemeExportService) SaveThemeToEditorTarget(editorType string, themeNam
 		return "", errors.New("theme JSON is invalid")
 	}
 
-	switch strings.ToLower(strings.TrimSpace(editorType)) {
-	case "vscode":
-		return saveThemeToVSCode(themeName, themeJSON)
+	target := strings.ToLower(strings.TrimSpace(editorTarget))
+	switch target {
+	case "vscode", "cursor", "antigravity":
+		return saveThemeToVSCodeFamily(target, themeName, themeJSON)
 	case "zed":
 		return saveThemeToZed(themeName, themeJSON)
 	default:
-		return "", fmt.Errorf("unsupported editor type: %s", editorType)
+		return "", fmt.Errorf("unsupported editor target: %s", editorTarget)
 	}
 }
 
-func saveThemeToVSCode(themeName string, themeJSON string) (string, error) {
+func saveThemeToVSCodeFamily(target string, themeName string, themeJSON string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("could not resolve user home directory: %w", err)
 	}
-	return saveThemeToVSCodeAt(home, themeName, themeJSON)
+	return saveThemeToVSCodeFamilyAt(home, target, themeName, themeJSON)
 }
 
 func saveThemeToVSCodeAt(home string, themeName string, themeJSON string) (string, error) {
+	return saveThemeToVSCodeFamilyAt(home, "vscode", themeName, themeJSON)
+}
+
+func saveThemeToVSCodeFamilyAt(home string, target string, themeName string, themeJSON string) (string, error) {
 	resolvedThemeName := sanitizeThemeName(themeName)
 	if resolvedThemeName == "" {
 		resolvedThemeName = "generated-theme"
 	}
 
-	extensionDirectory := filepath.Join(home, ".vscode", "extensions", "themesmith-local")
+	extensionDirectory, err := resolveVSCodeFamilyExtensionDirectory(home, target)
+	if err != nil {
+		return "", err
+	}
 	themesDirectory := filepath.Join(extensionDirectory, "themes")
 	if err := os.MkdirAll(themesDirectory, 0o755); err != nil {
 		return "", filesystemError("create VS Code theme directory", themesDirectory, err)
@@ -106,6 +114,22 @@ func saveThemeToVSCodeAt(home string, themeName string, themeJSON string) (strin
 	}
 
 	return extensionDirectory, nil
+}
+
+func resolveVSCodeFamilyExtensionDirectory(home string, target string) (string, error) {
+	var editorDirectory string
+	switch strings.ToLower(strings.TrimSpace(target)) {
+	case "vscode":
+		editorDirectory = ".vscode"
+	case "cursor":
+		editorDirectory = ".cursor"
+	case "antigravity":
+		editorDirectory = ".antigravity-ide"
+	default:
+		return "", fmt.Errorf("unsupported VS Code family target: %s", target)
+	}
+
+	return filepath.Join(home, editorDirectory, "extensions", "themesmith-local"), nil
 }
 
 func saveThemeToZed(themeName string, themeJSON string) (string, error) {

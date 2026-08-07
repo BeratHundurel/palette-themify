@@ -97,7 +97,7 @@
 							<div class="flex flex-col gap-0.5">
 								<strong class="text-sm font-semibold text-zinc-300">Theme Inspector</strong>
 								<span class="text-xs leading-tight text-zinc-400"
-									>Generate, tweak, and export VS Code or Zed themes from your palette</span
+									>Generate, tweak, and export VS Code-family or Zed themes from your palette</span
 								>
 							</div>
 						</div>

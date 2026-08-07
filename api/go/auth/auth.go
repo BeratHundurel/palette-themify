@@ -97,18 +97,22 @@ func getGoogleOAuthConfig() *oauth2.Config {
 func getAllowedAuthOrigins() map[string]struct{} {
 	origins := map[string]struct{}{}
 
-	for _, rawOrigin := range []string{
-		"http://localhost:5173",
-		"http://127.0.0.1:5173",
-		"http://wails.localhost:9245",
-		getEnv("FRONTEND_URL", "http://localhost:5173"),
-	} {
-		if origin, err := normalizeAndValidateOrigin(rawOrigin); err == nil {
-			origins[origin] = struct{}{}
-		}
+	configuredOrigins := []string{getEnv("FRONTEND_URL", "http://localhost:5173")}
+	for rawOrigin := range strings.SplitSeq(getEnv("ALLOWED_ORIGINS", ""), ",") {
+		configuredOrigins = append(configuredOrigins, rawOrigin)
+	}
+	for rawOrigin := range strings.SplitSeq(getEnv("ALLOWED_AUTH_ORIGINS", ""), ",") {
+		configuredOrigins = append(configuredOrigins, rawOrigin)
+	}
+	if getEnv("APP_ENV", "development") != "production" {
+		configuredOrigins = append(configuredOrigins,
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+			"http://wails.localhost:9245",
+		)
 	}
 
-	for rawOrigin := range strings.SplitSeq(getEnv("ALLOWED_AUTH_ORIGINS", ""), ",") {
+	for _, rawOrigin := range configuredOrigins {
 		if origin, err := normalizeAndValidateOrigin(rawOrigin); err == nil {
 			origins[origin] = struct{}{}
 		}

@@ -12,6 +12,7 @@ describe('parseThemeExportPreferences', () => {
 	it('keeps valid values', () => {
 		const parsed = parseThemeExportPreferences({
 			editorType: 'zed',
+			vscodeTarget: 'cursor',
 			appearance: 'light',
 			saveOnCopy: false,
 			boostCoefficient: 2.5
@@ -19,6 +20,7 @@ describe('parseThemeExportPreferences', () => {
 
 		expect(parsed).toEqual({
 			editorType: 'zed',
+			vscodeTarget: 'cursor',
 			appearance: 'light',
 			saveOnCopy: false,
 			boostCoefficient: 2.5
@@ -28,6 +30,7 @@ describe('parseThemeExportPreferences', () => {
 	it('clamps boost coefficient and falls back for invalid fields', () => {
 		const parsed = parseThemeExportPreferences({
 			editorType: 'unknown',
+			vscodeTarget: 'unknown',
 			appearance: 'other',
 			saveOnCopy: 'yes',
 			boostCoefficient: 300
@@ -35,6 +38,7 @@ describe('parseThemeExportPreferences', () => {
 
 		expect(parsed).toEqual({
 			editorType: DEFAULT_THEME_EXPORT_PREFERENCES.editorType,
+			vscodeTarget: DEFAULT_THEME_EXPORT_PREFERENCES.vscodeTarget,
 			appearance: DEFAULT_THEME_EXPORT_PREFERENCES.appearance,
 			saveOnCopy: DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy,
 			boostCoefficient: 3

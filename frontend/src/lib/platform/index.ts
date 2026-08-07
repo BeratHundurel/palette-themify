@@ -1,8 +1,8 @@
 import { buildURL } from '$lib/api/base';
-import type { EditorThemeType } from '$lib/types/theme';
+import type { EditorInstallTarget } from '$lib/types/theme';
 
 export type AppTarget = 'web' | 'desktop';
-type SaveBridgeFn = (editorType: EditorThemeType, themeName: string, themeJSON: string) => Promise<string>;
+type SaveBridgeFn = (target: EditorInstallTarget, themeName: string, themeJSON: string) => Promise<string>;
 
 let cachedWailsBridge: SaveBridgeFn | null = null;
 let cachedWailsRuntime: Promise<typeof import('@wailsio/runtime')> | null = null;
@@ -45,25 +45,25 @@ function resolveAppTarget(): AppTarget {
 	return 'web';
 }
 
-async function callWailsFunction(editorType: EditorThemeType, themeName: string, themeJSON: string): Promise<string> {
+async function callWailsFunction(target: EditorInstallTarget, themeName: string, themeJSON: string): Promise<string> {
 	if (typeof window === 'undefined') {
 		throw new Error('Window is not available');
 	}
 
 	if (cachedWailsBridge) {
-		return await cachedWailsBridge(editorType, themeName, themeJSON);
+		return await cachedWailsBridge(target, themeName, themeJSON);
 	}
 
 	const immediateBridge = resolveWindowWailsBridge();
 	if (immediateBridge) {
 		cachedWailsBridge = immediateBridge;
-		return await immediateBridge(editorType, themeName, themeJSON);
+		return await immediateBridge(target, themeName, themeJSON);
 	}
 
 	const runtimeBridge = await resolveRuntimeWailsBridge();
 	if (runtimeBridge) {
 		cachedWailsBridge = runtimeBridge;
-		return await runtimeBridge(editorType, themeName, themeJSON);
+		return await runtimeBridge(target, themeName, themeJSON);
 	}
 
 	const timeoutMs = 400;
@@ -75,14 +75,14 @@ async function callWailsFunction(editorType: EditorThemeType, themeName: string,
 		const deferredBridge = resolveWindowWailsBridge();
 		if (deferredBridge) {
 			cachedWailsBridge = deferredBridge;
-			return await deferredBridge(editorType, themeName, themeJSON);
+			return await deferredBridge(target, themeName, themeJSON);
 		}
 	}
 
 	const runtimeBridgeAfterWait = await resolveRuntimeWailsBridge();
 	if (runtimeBridgeAfterWait) {
 		cachedWailsBridge = runtimeBridgeAfterWait;
-		return await runtimeBridgeAfterWait(editorType, themeName, themeJSON);
+		return await runtimeBridgeAfterWait(target, themeName, themeJSON);
 	}
 
 	throw new Error('Desktop save bridge is not available. Make sure the Wails runtime is loaded.');
@@ -238,7 +238,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export async function saveThemeToEditorTarget(args: {
-	editorType: EditorThemeType;
+	target: EditorInstallTarget;
 	themeName: string;
 	themeJSON: string;
 }): Promise<string> {
@@ -247,8 +247,8 @@ export async function saveThemeToEditorTarget(args: {
 	}
 
 	if (typeof window !== 'undefined' && window.__THEMESMITH_DESKTOP__?.saveThemeToEditorTarget) {
-		return window.__THEMESMITH_DESKTOP__.saveThemeToEditorTarget(args.editorType, args.themeName, args.themeJSON);
+		return window.__THEMESMITH_DESKTOP__.saveThemeToEditorTarget(args.target, args.themeName, args.themeJSON);
 	}
 
-	return await callWailsFunction(args.editorType, args.themeName, args.themeJSON);
+	return await callWailsFunction(args.target, args.themeName, args.themeJSON);
 }

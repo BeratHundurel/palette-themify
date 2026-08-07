@@ -41,6 +41,9 @@ tasks:
     env:
       PRODUCTION: '{{if eq .DEV "true"}}false{{else}}true{{end}}'
       VITE_APP_TARGET: desktop
+      VITE_API_BASE_URL: '{{.THEMESMITH_API_BASE_URL | default "http://localhost:8088"}}'
+      VITE_ZIG_API_BASE_URL: '{{.THEMESMITH_ZIG_API_BASE_URL | default "http://localhost:8089"}}'
+      VITE_TELEMETRY_ENABLED: '{{.THEMESMITH_TELEMETRY_ENABLED | default "false"}}'
       SVELTEKIT_DESKTOP: '1'
       DESKTOP_DIST_DIR: ../desktop/frontend/dist
     vars:
@@ -119,6 +122,9 @@ tasks:
       - npm run dev -- --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
     env:
       VITE_APP_TARGET: desktop
+      VITE_API_BASE_URL: '{{.THEMESMITH_API_BASE_URL | default "http://localhost:8088"}}'
+      VITE_ZIG_API_BASE_URL: '{{.THEMESMITH_ZIG_API_BASE_URL | default "http://localhost:8089"}}'
+      VITE_TELEMETRY_ENABLED: '{{.THEMESMITH_TELEMETRY_ENABLED | default "false"}}'
 
   update:build-assets:
     summary: Updates the build assets

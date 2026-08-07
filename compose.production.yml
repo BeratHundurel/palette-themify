@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-themesmith}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-themesmith}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  go-api:
+    build: ./api/go
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      GIN_MODE: release
+      APP_VERSION: ${APP_VERSION:-unknown}
+      HTTP_HOST: 0.0.0.0
+      PORT: "8088"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-themesmith}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${POSTGRES_DB:-themesmith}
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+      DB_LOG_LEVEL: ${DB_LOG_LEVEL:-warn}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      FRONTEND_URL: ${FRONTEND_PUBLIC_URL:?FRONTEND_PUBLIC_URL is required}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-${FRONTEND_PUBLIC_URL}}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-themesmith-api}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    ports:
+      - "${GO_API_PUBLIC_PORT:-8088}:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8088/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  zig-api:
+    build:
+      context: ./api/zig
+      dockerfile: Dockerfile.production
+    restart: unless-stopped
+    environment:
+      PORT: "8089"
+      MAX_BODY_SIZE_MB: ${MAX_BODY_SIZE_MB:-50}
+      ALLOWED_ORIGIN: ${FRONTEND_PUBLIC_URL:?FRONTEND_PUBLIC_URL is required}
+    ports:
+      - "${ZIG_API_PUBLIC_PORT:-8089}:8089"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_GO_API_URL:?PUBLIC_GO_API_URL is required}
+        VITE_ZIG_API_BASE_URL: ${PUBLIC_ZIG_API_URL:?PUBLIC_ZIG_API_URL is required}
+        VITE_TELEMETRY_ENABLED: ${VITE_TELEMETRY_ENABLED:-false}
+        VITE_APP_ENV: production
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      ORIGIN: ${FRONTEND_PUBLIC_URL:?FRONTEND_PUBLIC_URL is required}
+    ports:
+      - "${FRONTEND_PUBLIC_PORT:-3000}:3000"
+    depends_on:
+      go-api:
+        condition: service_healthy
+      zig-api:
+        condition: service_started
+
+volumes:
+  postgres_data:

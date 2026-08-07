@@ -2,11 +2,12 @@ import { getDesktopSaveErrorMessage, isDesktopApp, saveThemeToEditorTarget } fro
 import { appStore } from '$lib/stores/app/store.svelte';
 import { dialogStore } from '$lib/stores/dialog.svelte';
 import { popoverStore } from '$lib/stores/popovers.svelte';
-import type { EditorThemeType } from '$lib/types/theme';
+import type { EditorInstallTarget, EditorThemeType } from '$lib/types/theme';
 import type { ThemeItem, ThemeGenerationResult } from '$lib/types/theme';
 import toast from 'svelte-french-toast';
 
 import { normalizeThemeName, validateThemeName } from './utils';
+import { getInstallTargetLabel } from './targets';
 
 type SaveThemeArgs = {
 	name: string;
@@ -17,6 +18,10 @@ type SaveThemeArgs = {
 type ExportThemeArgs = SaveThemeArgs & {
 	saveOnCopy: boolean;
 	onExported?: () => void;
+};
+
+type InstallThemeArgs = ExportThemeArgs & {
+	target: EditorInstallTarget;
 };
 
 function buildSavedTheme({
@@ -137,7 +142,13 @@ export async function exportTheme({ name, editorType, themeResult, saveOnCopy, o
 	}
 }
 
-export async function exportThemeToEditorFolder({ name, editorType, themeResult, saveOnCopy }: ExportThemeArgs) {
+export async function exportThemeToEditorFolder({
+	name,
+	editorType,
+	target,
+	themeResult,
+	saveOnCopy
+}: InstallThemeArgs) {
 	if (!themeResult) return;
 	if (!isDesktopApp) {
 		toast.error('Save to editor folder is only available in desktop app.');
@@ -153,7 +164,7 @@ export async function exportThemeToEditorFolder({ name, editorType, themeResult,
 	try {
 		const themeJson = JSON.stringify(themeResult.theme, null, 2);
 		await saveThemeToEditorTarget({
-			editorType,
+			target,
 			themeName: trimmedName,
 			themeJSON: themeJson
 		});
@@ -166,7 +177,7 @@ export async function exportThemeToEditorFolder({ name, editorType, themeResult,
 			});
 		}
 
-		toast.success('Theme installed. Reload your editor if it is already open.');
+		toast.success(`Theme installed in ${getInstallTargetLabel(target)}. Reload the editor if it is already open.`);
 		popoverStore.close('themeExport');
 	} catch (error) {
 		console.error('Error saving theme to editor folder:', error);

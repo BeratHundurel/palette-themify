@@ -72,6 +72,51 @@ func TestResolveZedThemeDirectoryFor(t *testing.T) {
 	}
 }
 
+func TestResolveVSCodeFamilyExtensionDirectory(t *testing.T) {
+	home := filepath.Join("users", "theme-user")
+	tests := []struct {
+		target          string
+		editorDirectory string
+	}{
+		{target: "vscode", editorDirectory: ".vscode"},
+		{target: "cursor", editorDirectory: ".cursor"},
+		{target: "antigravity", editorDirectory: ".antigravity-ide"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.target, func(t *testing.T) {
+			actual, err := resolveVSCodeFamilyExtensionDirectory(home, test.target)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			expected := filepath.Join(home, test.editorDirectory, "extensions", "themesmith-local")
+			if actual != expected {
+				t.Fatalf("expected %q, got %q", expected, actual)
+			}
+		})
+	}
+}
+
+func TestVSCodeFamilySaveUsesSelectedEditorDirectory(t *testing.T) {
+	home := t.TempDir()
+	for _, target := range []string{"cursor", "antigravity"} {
+		t.Run(target, func(t *testing.T) {
+			extensionDirectory, err := saveThemeToVSCodeFamilyAt(home, target, "Sample", `{"type":"dark"}`)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := os.Stat(filepath.Join(extensionDirectory, "themes", "sample.json")); err != nil {
+				t.Fatalf("expected theme in selected editor directory: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(extensionDirectory, "package.json")); err != nil {
+				t.Fatalf("expected extension manifest in selected editor directory: %v", err)
+			}
+		})
+	}
+}
+
 func TestVSCodeSaveRollsBackThemeWhenManifestIsInvalid(t *testing.T) {
 	home := t.TempDir()
 	extensionDirectory := filepath.Join(home, ".vscode", "extensions", "themesmith-local")

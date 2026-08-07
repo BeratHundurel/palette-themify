@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
+import type { EditorThemeType, ThemeAppearance, VSCodeFamilyTarget } from '$lib/types/theme';
 import { DEFAULT_THEME_EXPORT_PREFERENCES, type ThemeExportPreferences } from '$lib/types/theme';
 
 const THEME_EXPORT_STORAGE_KEY = 'themeExportPreferences';
@@ -11,6 +11,12 @@ function asNonNegativeFiniteNumber(value: unknown, fallback: number): number {
 
 function asEditorThemeType(value: unknown): EditorThemeType {
 	return value === 'vscode' || value === 'zed' ? value : DEFAULT_THEME_EXPORT_PREFERENCES.editorType;
+}
+
+function asVSCodeFamilyTarget(value: unknown): VSCodeFamilyTarget {
+	return value === 'vscode' || value === 'cursor' || value === 'antigravity'
+		? value
+		: DEFAULT_THEME_EXPORT_PREFERENCES.vscodeTarget;
 }
 
 function asThemeAppearance(value: unknown): ThemeAppearance {
@@ -25,6 +31,7 @@ export function parseThemeExportPreferences(value: unknown): ThemeExportPreferen
 	const parsed = value as Partial<ThemeExportPreferences>;
 	return {
 		editorType: asEditorThemeType(parsed.editorType),
+		vscodeTarget: asVSCodeFamilyTarget(parsed.vscodeTarget),
 		appearance: asThemeAppearance(parsed.appearance),
 		saveOnCopy:
 			typeof parsed.saveOnCopy === 'boolean' ? parsed.saveOnCopy : DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy,

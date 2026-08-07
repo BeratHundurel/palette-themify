@@ -8,7 +8,7 @@
 	import { appStore } from '$lib/stores/app/store.svelte';
 	import { popoverStore } from '$lib/stores/popovers.svelte';
 	import { tutorialStore } from '$lib/stores/tutorial.svelte';
-	import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
+	import type { EditorThemeType, ThemeAppearance, VSCodeFamilyTarget } from '$lib/types/theme';
 	import type { Theme, ThemeGenerationResult, ThemeOverrides } from '$lib/types/theme';
 	import { cn } from '$lib/utils';
 
@@ -18,6 +18,8 @@
 	import { getRecommendedOverrideColors } from './recommendations';
 	import { exportTheme as exportThemeToClipboard, exportThemeToEditorFolder } from './save';
 	import SaveBehaviorSection from './SaveBehaviorSection.svelte';
+	import VSCodeTargetSelector from './VSCodeTargetSelector.svelte';
+	import { getInstallTarget, getInstallTargetLabel } from './targets';
 	import {
 		buildRequestOverrides,
 		clearThemeVersions,
@@ -38,6 +40,8 @@
 	let paletteVersion = $derived(appStore.state.paletteVersion);
 	let themeName = $derived(appStore.state.themeExport.themeName);
 	let editorType = $derived(appStore.state.themeExport.editorType);
+	let vscodeTarget = $derived(appStore.state.themeExport.vscodeTarget);
+	let installTarget = $derived(getInstallTarget(editorType, vscodeTarget));
 	let themeAppearance = $derived(appStore.state.themeExport.appearance);
 	let themeResult = $derived(appStore.state.themeExport.themeResult);
 	let themeOverrides = $derived(appStore.state.themeExport.themeResult?.themeOverrides ?? {});
@@ -377,6 +381,10 @@
 		});
 	}
 
+	function handleVSCodeTargetChange(target: VSCodeFamilyTarget) {
+		appStore.setThemeExportVSCodeTarget(target);
+	}
+
 	function handleAccentBoostChange(normalized: number) {
 		appStore.setThemeExportBoostCoefficient(normalized);
 		generateThemeFromApi({ bypassCache: true, accentBoostCoefficient: normalized });
@@ -400,6 +408,7 @@
 		await exportThemeToEditorFolder({
 			name: themeName,
 			editorType,
+			target: installTarget,
 			themeResult,
 			saveOnCopy
 		});
@@ -422,7 +431,7 @@
 			<div class="flex items-center justify-between border-b border-zinc-700 bg-zinc-800/50 px-6 py-5">
 				<div>
 					<h2 id="theme-inspector-title" class="text-brand text-2xl font-semibold">
-						{editorType === 'vscode' ? 'VS Code' : 'Zed'} Theme Inspector
+						{editorType === 'vscode' ? 'VS Code Family' : 'Zed'} Theme Inspector
 					</h2>
 					<p class="mt-1 text-sm text-zinc-400">Review the generated theme colors before exporting</p>
 				</div>
@@ -484,6 +493,10 @@
 					<EditorSelector selected={editorType} onSelect={handleEditorTypeChange} />
 				</div>
 
+				{#if editorType === 'vscode'}
+					<VSCodeTargetSelector selected={vscodeTarget} canInstall={isDesktopApp} onSelect={handleVSCodeTargetChange} />
+				{/if}
+
 				<SaveBehaviorSection
 					{saveOnCopy}
 					{accentBoostCoefficient}
@@ -544,7 +557,7 @@
 								disabled={isExportDisabled}
 								class="hover:border-brand/50 rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-[background-color,border-color] duration-300 hover:bg-zinc-800/50 disabled:cursor-not-allowed disabled:opacity-50"
 							>
-								Save To Editor Folder
+								Install in {getInstallTargetLabel(installTarget)}
 							</button>
 						{/if}
 						<button
@@ -554,7 +567,7 @@
 							disabled={isExportDisabled}
 							class="bg-brand shadow-brand/20 hover:shadow-brand/40 rounded-lg px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,box-shadow] duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 						>
-							Copy Theme JSON
+							{editorType === 'vscode' ? `Copy ${getInstallTargetLabel(installTarget)} Theme JSON` : 'Copy Theme JSON'}
 						</button>
 					</div>
 				</div>

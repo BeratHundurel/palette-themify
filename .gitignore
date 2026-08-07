@@ -1,0 +1,3 @@
+# Production environment files may contain deployment secrets.
+env.production
+env.production.*

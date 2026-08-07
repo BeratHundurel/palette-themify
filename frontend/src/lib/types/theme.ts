@@ -4,6 +4,8 @@ import type { ZedTheme } from './zed';
 
 export type ThemeAppearance = 'dark' | 'light';
 export type EditorThemeType = 'vscode' | 'zed';
+export type VSCodeFamilyTarget = 'vscode' | 'cursor' | 'antigravity';
+export type EditorInstallTarget = VSCodeFamilyTarget | 'zed';
 export type AccentBoostCoefficient = number;
 
 export type Theme = VSCodeTheme | ZedTheme;
@@ -62,6 +64,7 @@ export interface ThemeExportState {
 	themeResult: ThemeGenerationResult | null;
 	saveOnCopy: boolean;
 	editorType: EditorThemeType;
+	vscodeTarget: VSCodeFamilyTarget;
 	appearance: ThemeAppearance;
 	boostCoefficient: number;
 	lastGeneratedPaletteVersion: number;
@@ -75,6 +78,7 @@ export interface ThemeExportState {
 
 export type ThemeExportPreferences = {
 	editorType: EditorThemeType;
+	vscodeTarget: VSCodeFamilyTarget;
 	appearance: ThemeAppearance;
 	saveOnCopy: boolean;
 	boostCoefficient: number;
@@ -93,6 +97,7 @@ export type ThemeItem = {
 
 export const DEFAULT_THEME_EXPORT_PREFERENCES: ThemeExportPreferences = {
 	editorType: 'vscode',
+	vscodeTarget: 'vscode',
 	appearance: 'dark',
 	saveOnCopy: true,
 	boostCoefficient: 1

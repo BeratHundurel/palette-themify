@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"themesmith/model"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -25,10 +25,6 @@ type DatabaseConfig struct {
 }
 
 func InitDatabase() error {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: Could not load .env file:", err)
-	}
-
 	config := getDatabaseConfig()
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
@@ -36,7 +32,7 @@ func InitDatabase() error {
 
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(databaseLogLevel()),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
@@ -60,6 +56,19 @@ func InitDatabase() error {
 
 	log.Println("Database connected and migrated successfully")
 	return nil
+}
+
+func databaseLogLevel() logger.LogLevel {
+	switch strings.ToLower(getEnv("DB_LOG_LEVEL", "warn")) {
+	case "silent":
+		return logger.Silent
+	case "error":
+		return logger.Error
+	case "info":
+		return logger.Info
+	default:
+		return logger.Warn
+	}
 }
 
 func getDatabaseConfig() DatabaseConfig {

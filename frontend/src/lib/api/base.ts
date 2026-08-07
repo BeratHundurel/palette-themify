@@ -1,8 +1,7 @@
-export const API_BASE: string =
-	(typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:8088';
+import { API_BASE, ZIG_API_BASE } from '$lib/config';
+import { reportError } from '$lib/telemetry';
 
-export const ZIG_API_BASE: string =
-	(typeof import.meta !== 'undefined' && import.meta.env?.VITE_ZIG_API_BASE_URL) || 'http://localhost:8089';
+export { API_BASE, ZIG_API_BASE };
 
 export type QueryParamValue = string | number | boolean | null;
 
@@ -42,7 +41,9 @@ export async function ensureOk(res: Response): Promise<Response> {
 		} catch {
 			// ignore JSON parse errors
 		}
-		throw new Error(msg);
+		const error = new Error(msg);
+		reportError(error, { source: 'api.response', url: res.url });
+		throw error;
 	}
 	return res;
 }

@@ -9,7 +9,11 @@
 	};
 
 	const EDITOR_OPTIONS: EditorOption[] = [
-		{ value: 'vscode', label: 'VS Code', description: 'Generate theme for Visual Studio Code' },
+		{
+			value: 'vscode',
+			label: 'VS Code family',
+			description: 'One theme for VS Code, Cursor, and Antigravity IDE'
+		},
 		{ value: 'zed', label: 'Zed', description: 'Generate theme for Zed editor' }
 	];
 

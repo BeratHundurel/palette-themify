@@ -15,7 +15,7 @@ import type { Color } from '$lib/types/color';
 import type { PaletteDTO } from '$lib/types/palette';
 import { DEFAULT_THEME_EXPORT_PREFERENCES, type ThemeItem, type ThemeExportPreferences } from '$lib/types/theme';
 import { DEFAULT_WALLHAVEN_SETTINGS, type WallhavenSettings } from '$lib/types/wallhaven';
-import type { EditorThemeType, ThemeAppearance } from '$lib/types/theme';
+import type { EditorThemeType, ThemeAppearance, VSCodeFamilyTarget } from '$lib/types/theme';
 
 import { loadSavedThemes, saveSavedThemes } from '$lib/stores/app/persistence/themes';
 import {
@@ -84,6 +84,7 @@ function createAppStore() {
 			themeName: 'Generated Theme',
 			lastGeneratedPaletteVersion: 0,
 			editorType: themeExportPreferences.editorType,
+			vscodeTarget: themeExportPreferences.vscodeTarget,
 			appearance: themeExportPreferences.appearance,
 			saveOnCopy: themeExportPreferences.saveOnCopy,
 			boostCoefficient: themeExportPreferences.boostCoefficient,
@@ -143,6 +144,7 @@ function createAppStore() {
 
 		const isThemeExportDefault =
 			themeExport.editorType === DEFAULT_THEME_EXPORT_PREFERENCES.editorType &&
+			themeExport.vscodeTarget === DEFAULT_THEME_EXPORT_PREFERENCES.vscodeTarget &&
 			themeExport.appearance === DEFAULT_THEME_EXPORT_PREFERENCES.appearance &&
 			themeExport.saveOnCopy === DEFAULT_THEME_EXPORT_PREFERENCES.saveOnCopy &&
 			themeExport.boostCoefficient === DEFAULT_THEME_EXPORT_PREFERENCES.boostCoefficient;
@@ -309,6 +311,19 @@ function createAppStore() {
 			state.themeExport.editorType = editorType;
 			saveThemeExportPreferences({
 				editorType,
+				vscodeTarget: state.themeExport.vscodeTarget,
+				appearance: state.themeExport.appearance,
+				saveOnCopy: state.themeExport.saveOnCopy,
+				boostCoefficient: state.themeExport.boostCoefficient
+			});
+			this.persistPreferencesLocal();
+		},
+
+		setThemeExportVSCodeTarget(vscodeTarget: VSCodeFamilyTarget) {
+			state.themeExport.vscodeTarget = vscodeTarget;
+			saveThemeExportPreferences({
+				editorType: state.themeExport.editorType,
+				vscodeTarget,
 				appearance: state.themeExport.appearance,
 				saveOnCopy: state.themeExport.saveOnCopy,
 				boostCoefficient: state.themeExport.boostCoefficient
@@ -320,6 +335,7 @@ function createAppStore() {
 			state.themeExport.appearance = appearance;
 			saveThemeExportPreferences({
 				editorType: state.themeExport.editorType,
+				vscodeTarget: state.themeExport.vscodeTarget,
 				appearance,
 				saveOnCopy: state.themeExport.saveOnCopy,
 				boostCoefficient: state.themeExport.boostCoefficient
@@ -331,6 +347,7 @@ function createAppStore() {
 			state.themeExport.saveOnCopy = saveOnCopy;
 			saveThemeExportPreferences({
 				editorType: state.themeExport.editorType,
+				vscodeTarget: state.themeExport.vscodeTarget,
 				appearance: state.themeExport.appearance,
 				saveOnCopy,
 				boostCoefficient: state.themeExport.boostCoefficient
@@ -342,6 +359,7 @@ function createAppStore() {
 			state.themeExport.boostCoefficient = boostCoefficient;
 			saveThemeExportPreferences({
 				editorType: state.themeExport.editorType,
+				vscodeTarget: state.themeExport.vscodeTarget,
 				appearance: state.themeExport.appearance,
 				saveOnCopy: state.themeExport.saveOnCopy,
 				boostCoefficient
@@ -574,6 +592,7 @@ function createAppStore() {
 				wallhavenSettings: state.wallhavenSettings,
 				themeExport: {
 					editorType: state.themeExport.editorType,
+					vscodeTarget: state.themeExport.vscodeTarget,
 					appearance: state.themeExport.appearance,
 					saveOnCopy: state.themeExport.saveOnCopy,
 					boostCoefficient: state.themeExport.boostCoefficient
@@ -611,6 +630,7 @@ function createAppStore() {
 			state.applyPaletteSettings = applyPaletteSettings;
 			state.wallhavenSettings = wallhavenSettings;
 			state.themeExport.editorType = themeExport.editorType;
+			state.themeExport.vscodeTarget = themeExport.vscodeTarget;
 			state.themeExport.appearance = themeExport.appearance;
 			state.themeExport.saveOnCopy = themeExport.saveOnCopy;
 			state.themeExport.boostCoefficient = themeExport.boostCoefficient;

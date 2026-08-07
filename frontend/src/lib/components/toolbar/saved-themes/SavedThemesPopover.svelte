@@ -16,18 +16,20 @@
 	import { generateOverridable } from '$lib/api/theme';
 	import type { EditorThemeType } from '$lib/types/theme';
 	import { hydrateThemeExportResponse } from '../theme-export/session';
+	import { getInstallTarget, getInstallTargetLabel } from '../theme-export/targets';
 
 	async function handleThemeSave(item: ThemeItem) {
 		if (!isDesktopApp) return;
 
 		try {
 			const themeJson = JSON.stringify(item.themeResult.theme, null, 2);
+			const target = getInstallTarget(item.editorType, appStore.state.themeExport.vscodeTarget);
 			await saveThemeToEditorTarget({
-				editorType: item.editorType,
+				target,
 				themeName: item.name,
 				themeJSON: themeJson
 			});
-			toast.success('Theme installed. Reload your editor if it is already open.');
+			toast.success(`Theme installed in ${getInstallTargetLabel(target)}. Reload the editor if it is already open.`);
 			popoverStore.close('themes');
 		} catch (error) {
 			console.error('Error saving theme to editor folder:', error);
@@ -191,7 +193,7 @@
 									<ActionPillButton
 										onclick={() => handleThemeSave(item)}
 										class="gap-1 px-2"
-										title="Save to editor folder"
+										title={`Install in ${getInstallTargetLabel(getInstallTarget(item.editorType, appStore.state.themeExport.vscodeTarget))}`}
 									>
 										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
@@ -201,7 +203,7 @@
 												d="M12 16v-8m0 8l3-3m-3 3l-3-3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
 											></path>
 										</svg>
-										Save
+										Install
 									</ActionPillButton>
 								{/if}
 								<IconDangerButton
